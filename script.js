@@ -231,18 +231,6 @@ function setupGraph() {
         .attr('stroke', '#DAA520')
         .attr('stroke-width', 2);
     
-    // Add background rectangles for text (for better readability)
-    nodeGroups.append('rect')
-        .attr('class', 'label-background')
-        .attr('x', d => -d.name.length * (d.type === 'hero' ? 4 : 3.5))
-        .attr('y', d => d.type === 'hero' ? 35 : -8)
-        .attr('width', d => d.name.length * (d.type === 'hero' ? 8 : 7))
-        .attr('height', d => d.type === 'hero' ? 16 : 14)
-        .attr('rx', 4)
-        .attr('fill', 'rgba(0, 0, 0, 0.7)')
-        .attr('stroke', 'rgba(255, 255, 255, 0.2)')
-        .attr('stroke-width', 1);
-    
     // Add text labels
     labelElements = nodeGroups.append('text')
         .attr('class', 'node-label')

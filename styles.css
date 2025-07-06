@@ -321,23 +321,6 @@ body::before {
     filter: drop-shadow(1px 1px 3px rgba(0, 0, 0, 0.7));
 }
 
-/* Label background styling */
-.label-background {
-    transition: all 0.3s ease;
-    opacity: 0.8;
-}
-
-.node:hover .label-background {
-    opacity: 1;
-    fill: rgba(0, 0, 0, 0.85);
-    stroke: rgba(255, 215, 0, 0.5);
-}
-
-.node.selected .label-background {
-    fill: rgba(218, 165, 32, 0.2);
-    stroke: var(--rich-gold);
-    stroke-width: 2;
-}
 
 /* Link Styling */
 .link {
