@@ -521,7 +521,8 @@
           "Defense-Dependent",
           "Tank",
           "Stun",
-          "Self-Buff"
+          "Self-Buff",
+					"Defense increase"
         ]
       },
       {

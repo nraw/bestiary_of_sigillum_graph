@@ -119,16 +119,23 @@ function getPrimaryType(labels) {
 
 // Categorize labels for coloring
 function getLabelCategory(label) {
+    // Official effects from effects.md
+    const officialEffects = [
+        'Attack increase', 'Attack decrease', 'Defense increase', 'Defense decrease', 
+        'Control increase', 'Control decrease', 'Swiftness', 'Slowness', 'Flying', 
+        'Place obstacle', 'Resistance', 'Vampirism', 'Stun', 'Silence', 'Poison', 'Web'
+    ];
+    
     const combatLabels = ['Melee', 'Ranged', 'AoE', 'Line-Attack', 'Anti-Large', 'Anti-Group'];
-    const magicLabels = ['Support', 'Healing', 'Effect-Copy', 'Effect-Manipulation', 'Vampirism', 'Flying', 'Teleport'];
+    const magicLabels = ['Support', 'Healing', 'Effect-Copy', 'Effect-Manipulation', 'Teleport'];
     const movementLabels = ['Mobility', 'Displacement', 'Speed-Buff', 'Speed-Debuff', 'Conditional-Mobility'];
-    const effectLabels = ['Stun', 'Poison', 'Silence', 'Resistance-Buff', 'Defense-Buff', 'Attack-Buff', 'Control-Buff'];
     const structureLabels = ['Structure-Dependent', 'Structure-Counter', 'Terrain-Control', 'Castle-Defender'];
     
+    // Check for official effects first
+    if (officialEffects.includes(label)) return 'Effect';
     if (combatLabels.includes(label)) return 'Combat';
     if (magicLabels.includes(label)) return 'Magic';
     if (movementLabels.includes(label)) return 'Movement';
-    if (effectLabels.includes(label)) return 'Effect';
     if (structureLabels.includes(label)) return 'Structure';
     return 'label';
 }
@@ -331,6 +338,9 @@ function setupControls() {
     
     // Setup clear filter button
     document.getElementById('clearFilter').addEventListener('click', clearAllFilters);
+    
+    // Setup legend click handlers
+    setupLegendClickHandlers();
 }
 
 // Apply filter for a specific node
@@ -587,6 +597,96 @@ function handleResize() {
 // Event listeners
 window.addEventListener('resize', handleResize);
 document.addEventListener('DOMContentLoaded', init);
+
+// Setup legend click handlers for filtering by node type
+function setupLegendClickHandlers() {
+    const legendItems = document.querySelectorAll('.legend-item');
+    
+    legendItems.forEach(item => {
+        const span = item.querySelector('span');
+        const nodeType = getNodeTypeFromLegendText(span.textContent);
+        
+        item.style.cursor = 'pointer';
+        item.addEventListener('click', () => {
+            filterByNodeType(nodeType);
+        });
+    });
+}
+
+// Get node type from legend text
+function getNodeTypeFromLegendText(text) {
+    switch(text) {
+        case 'Heroes': return 'hero';
+        case 'Combat Labels': return 'Combat';
+        case 'Magic Labels': return 'Magic';
+        case 'Movement Labels': return 'Movement';
+        case 'Structure Labels': return 'Structure';
+        default: 
+            if (text.includes('Official Effects')) return 'Effect';
+            return null;
+    }
+}
+
+// Filter nodes by type/category
+function filterByNodeType(nodeType) {
+    if (!nodeType) return;
+    
+    let filteredNodes;
+    let statusText;
+    
+    if (nodeType === 'hero') {
+        // Show all heroes
+        filteredNodes = nodesData.filter(n => n.type === 'hero');
+        statusText = 'All Heroes';
+    } else {
+        // Show all labels of this category
+        filteredNodes = nodesData.filter(n => 
+            n.type === 'label' && n.category === nodeType
+        );
+        statusText = `${nodeType} Labels`;
+    }
+    
+    if (filteredNodes.length === 0) {
+        clearAllFilters();
+        return;
+    }
+    
+    // Apply visual filtering
+    nodeElements.style('opacity', d => 
+        filteredNodes.some(f => f.id === d.id) ? 1 : 0.2
+    );
+    
+    labelElements.style('opacity', d => 
+        filteredNodes.some(f => f.id === d.id) ? 1 : 0.2
+    );
+    
+    // Show links between visible nodes or links to/from visible nodes
+    linkElements.style('opacity', d => {
+        const sourceVisible = filteredNodes.some(f => f.id === d.source.id);
+        const targetVisible = filteredNodes.some(f => f.id === d.target.id);
+        return (sourceVisible || targetVisible) ? 0.8 : 0.1;
+    });
+    
+    // Clear selections
+    nodeElements.classed('selected', false);
+    linkElements.classed('highlighted', false);
+    
+    // Update filter status
+    updateFilterStatus(statusText);
+    
+    // Reset dropdown and search
+    document.getElementById('labelFilter').value = '';
+    document.getElementById('searchInput').value = '';
+    
+    // Update info panel
+    document.getElementById('heroInfo').innerHTML = `
+        <p>Showing ${filteredNodes.length} ${statusText.toLowerCase()}</p>
+        <p>Click on any node to see details</p>
+    `;
+    
+    // Set current filter for clearing
+    currentFilter = { type: 'nodeType', value: nodeType };
+}
 
 // Export for debugging
 window.BestiaryGraph = {
