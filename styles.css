@@ -239,6 +239,11 @@ body::before {
     border-radius: 10px;
     position: relative;
     overflow: hidden;
+    cursor: grab;
+}
+
+.graph-container:active {
+    cursor: grabbing;
 }
 
 .graph-container::before {

@@ -143,6 +143,26 @@ function setupGraph() {
         .attr('width', width)
         .attr('height', height);
     
+    // Create a main group for panning and zooming
+    const mainGroup = svg.append('g')
+        .attr('class', 'main-group');
+    
+    // Add zoom and pan behavior
+    const zoom = d3.zoom()
+        .scaleExtent([0.3, 3])
+        .on('zoom', (event) => {
+            mainGroup.attr('transform', event.transform);
+        });
+    
+    svg.call(zoom);
+    
+    // Add click handler to clear filter when clicking on empty space
+    svg.on('click', function(event) {
+        if (event.target === this) {
+            clearAllFilters();
+        }
+    });
+    
     // Create simulation with different forces for bipartite graph
     simulation = d3.forceSimulation(nodesData)
         .force('link', d3.forceLink(linksData).id(d => d.id).distance(60).strength(0.8))
@@ -153,7 +173,7 @@ function setupGraph() {
         .force('y', d3.forceY().strength(0.1));
     
     // Create link elements
-    linkElements = svg.append('g')
+    linkElements = mainGroup.append('g')
         .attr('class', 'links')
         .selectAll('line')
         .data(linksData)
@@ -163,7 +183,7 @@ function setupGraph() {
         .attr('stroke-width', 2);
     
     // Create node groups
-    const nodeGroups = svg.append('g')
+    const nodeGroups = mainGroup.append('g')
         .attr('class', 'nodes')
         .selectAll('g')
         .data(nodesData)
@@ -231,8 +251,11 @@ function setupGraph() {
     
     nodeElements = nodeGroups;
     
-    // Add click handlers
-    nodeElements.on('click', showHeroInfo);
+    // Add click handlers with event stopping to prevent bubbling to svg
+    nodeElements.on('click', function(event, d) {
+        event.stopPropagation();
+        showHeroInfo(event, d);
+    });
     
     // Start simulation
     simulation.on('tick', ticked);
@@ -250,8 +273,9 @@ function ticked() {
         .attr('transform', d => `translate(${d.x},${d.y})`);
 }
 
-// Drag functions
+// Drag functions for nodes
 function dragstarted(event, d) {
+    event.sourceEvent.stopPropagation();
     if (!event.active) simulation.alphaTarget(0.3).restart();
     d.fx = d.x;
     d.fy = d.y;
