@@ -1,0 +1,697 @@
+{
+  "bestiary_of_sigilum": {
+    "characters": [
+      {
+        "id": 1,
+        "name": "ARCHITECTUS",
+        "vitality": 5,
+        "core_ability": {
+          "target": "Target any enemy in any hex in a straight line",
+          "effect": "Attack: 0 +1 per catapult tower under control"
+        },
+        "support_abilities": [
+          {
+            "target": "Any adjacent unoccupied hex",
+            "effect": "Place obstacle token"
+          },
+          {
+            "target": "Allied castle if it has suffered any damage",
+            "effect": "Decrease 1 damage point"
+          }
+        ],
+        "labels": [
+          "Support",
+          "Ranged",
+          "Structure-Dependent",
+          "Terrain-Control",
+          "Castle-Defender"
+        ]
+      },
+      {
+        "id": 2,
+        "name": "ARMUS",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Any enemy in an adjacent hex",
+            "effect": "Move the target into an adjacent unoccupied hex in a straight line away from Armus, then move Armus into the target's previous hex. If the target cannot move it gets stun."
+          },
+          {
+            "target": "Armus and all allies",
+            "effect": "Defense increase"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "name": "AQUS",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Any enemy or ally with at least 1 positive effect",
+            "effect": "Copy the most recent positive effect gained by the target to Aqus"
+          },
+          {
+            "target": "Any adjacent unoccupied water hex",
+            "effect": "Move Aqus into the targeted hex. Then he gains attack increase"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "name": "BALLISTARIUS",
+        "vitality": 2,
+        "core_ability": {
+          "target": "Target any enemy in any hex in a straight line from Ballistarius",
+          "effect": "Attack: 0 +1 per unoccupied hex between"
+        },
+        "support_abilities": [
+          {
+            "target": "Ballistarius",
+            "effect": "Attack increase"
+          },
+          {
+            "target": "Any enemy in any hex in a straight line from Ballistarius",
+            "effect": "Move the target one unoccupied hex away from Ballistarius"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "name": "ARBORUS",
+        "vitality": 2,
+        "core_ability": {
+          "target": "Target all enemies in forest hexes",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Any enemy or ally in a hex adjacent to an unoccupied forest hex",
+            "effect": "Move the target into an adjacent unoccupied forest hex"
+          },
+          {
+            "target": "Arborus or any ally",
+            "effect": "Defense increase"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "name": "FIDEA",
+        "vitality": 2,
+        "core_ability": {
+          "target": "Target any enemy in any hex in a straight line (if the target's current vitality is greater than Fidea's)",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Fidea or any ally",
+            "effect": "Target has at least 1 dmg, it restores 1 dmg. Otherwise it gains swiftness"
+          },
+          {
+            "target": "Fidea or any ally",
+            "effect": "Flying"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "name": "CABALLUS",
+        "vitality": 4,
+        "core_ability": {
+          "target": "Target all slowed enemies",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Any character in an adjacent hex",
+            "effect": "Move Caballus in a straight line away into an adjacent unoccupied hex. The target moves in Caballus previous hex."
+          },
+          {
+            "target": "All enemies in adjacent hexes",
+            "effect": "Slowness"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "name": "CARNIFEX",
+        "vitality": 4,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 0 +1 per enemy with at least one negative effect within 2 hexes from Carnifex"
+        },
+        "support_abilities": [
+          {
+            "target": "Any enemy in a straight line",
+            "effect": "Control decrease"
+          },
+          {
+            "target": "Any enemy in a straight line",
+            "effect": "Move it in a straight line into an adjacent hex towards Carnifex and replace all positive effects with negatives"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "name": "CERBERUS",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target all enemies in adjacent hexes",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Any adjacent unoccupied hex",
+            "effect": "Maneuver (only if any enemy has at least 1 dmg)"
+          },
+          {
+            "target": "All enemies in adjacent hexes",
+            "effect": "Attack decrease"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "name": "CORNIBUS",
+        "vitality": 2,
+        "core_ability": {
+          "target": "Target all enemies in any hexes in a straight line",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Cornibus",
+            "effect": "Control increase"
+          },
+          {
+            "target": "Any unoccupied hex in any catapult tower's control area under allied control",
+            "effect": "Move Cornibus into the targeted hex"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "name": "FRIGUS",
+        "vitality": 2,
+        "core_ability": {
+          "target": "Target any enemy with at least 1 negative effect",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Any enemy",
+            "effect": "Slowness"
+          },
+          {
+            "target": "Any enemy",
+            "effect": "Attack decrease"
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "name": "GOETIUM",
+        "vitality": 2,
+        "core_ability": {
+          "target": "Target any enemy that does not have Goetium or one of his allies in adjacent hexes",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Goetium or any ally, if the target has at least 1 dmg",
+            "effect": "Any allied character suffers 1 dmg, and the target restores 1 dmg"
+          },
+          {
+            "target": "Any ally with at least 1 dmg",
+            "effect": "Move the target adjacent to Goetium"
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "name": "CATAPULTUS",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target any medium or big enemy in a straight line",
+          "effect": "Attack: 1 (medium), 2 (big)"
+        },
+        "support_abilities": [
+          {
+            "target": "Any enemy in a straight line",
+            "effect": "Stun"
+          },
+          {
+            "target": "Catapultus",
+            "effect": "Control increase"
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "name": "FERRARIUS",
+        "vitality": 4,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex (except water)",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Any enemy in an adjacent hex",
+            "effect": "Move the target into an adjacent unoccupied hex that is also adjacent to Ferrarius"
+          },
+          {
+            "target": "Any enemy in a straight line",
+            "effect": "Stun"
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "name": "IRATUS",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 1 (2 if there are at least 2 enemies in adjacent hexes to Iratus)"
+        },
+        "support_abilities": [
+          {
+            "target": "Iratus and all allies",
+            "effect": "Resistance"
+          },
+          {
+            "target": "Iratus",
+            "effect": "Attack increase"
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "name": "MORTUM",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 0+1 per enemy with at least 1 dmg within 2 hexes from Mortum"
+        },
+        "support_abilities": [
+          {
+            "target": "Mortum or any ally in an adjacent hex",
+            "effect": "Vampirism"
+          },
+          {
+            "target": "Any adjacent unoccupied hex",
+            "effect": "Move Mortum into the targeted hex"
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "name": "IGNIFER",
+        "vitality": 2,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex to your allied character (if this allied character has at least 1 positive effect)",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Any melee ally",
+            "effect": "Attack increase"
+          },
+          {
+            "target": "Ignifer or any ally in an adjacent hex",
+            "effect": "Swiftness"
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "name": "ILLESEBRA",
+        "vitality": 2,
+        "core_ability": {
+          "target": "Target all stunned enemies",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Any ally",
+            "effect": "Swap the position of Illesebra and the target"
+          },
+          {
+            "target": "Any enemy in any hex in a straight line",
+            "effect": "Stun"
+          }
+        ]
+      },
+      {
+        "id": 19,
+        "name": "MALLEUS",
+        "vitality": 4,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "All enemies in any hexes in a straight line",
+            "effect": "Stun"
+          },
+          {
+            "target": "Malleus or any ally in an adjacent hex (if the target is in a catapult tower hex)",
+            "effect": "Control increase"
+          }
+        ]
+      },
+      {
+        "id": 20,
+        "name": "SAXUM",
+        "vitality": 5,
+        "core_ability": {
+          "target": "Target all enemies in adjacent hexes",
+          "effect": "Attack: 0+1 per Defense point on Saxum"
+        },
+        "support_abilities": [
+          {
+            "target": "Saxum",
+            "effect": "Defense increase"
+          },
+          {
+            "target": "All enemies in adjacent hexes",
+            "effect": "Stun"
+          }
+        ]
+      },
+      {
+        "id": 21,
+        "name": "REDUX",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target all enemies in a circle 1 hex away from Redux",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Redux",
+            "effect": "Defense increase"
+          },
+          {
+            "target": "Any character 1 unoccupied hex away in a straight line",
+            "effect": "Move Redux into an adjacent unoccupied hex towards the target. Then Redux gains Resistance"
+          }
+        ]
+      },
+      {
+        "id": 22,
+        "name": "TEMPUS",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 0+1 for each of the target's support abilities on cooldown"
+        },
+        "support_abilities": [
+          {
+            "target": "Any ally with at least 1 support ability on cooldown",
+            "effect": "Decrease the remaining cooldown for each target's support ability by 1"
+          },
+          {
+            "target": "Tempus or any ally in an adjacent hex",
+            "effect": "Swiftness"
+          }
+        ]
+      },
+      {
+        "id": 23,
+        "name": "LIGNUM",
+        "vitality": 2,
+        "core_ability": {
+          "target": "Target any enemy",
+          "effect": "Attack: 0+1 per target's ally in adjacent hexes to the target"
+        },
+        "support_abilities": [
+          {
+            "target": "Any enemy 1 unoccupied hex away in a straight line from any character",
+            "effect": "Move the enemy into an adjacent hex towards the chosen character"
+          },
+          {
+            "target": "Any enemy",
+            "effect": "Attack decrease"
+          }
+        ]
+      },
+      {
+        "id": 24,
+        "name": "MANUS",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 0+1 per Manus's ally in adjacent hexes to Manus"
+        },
+        "support_abilities": [
+          {
+            "target": "Any character 1 unoccupied hex in a straight line away",
+            "effect": "Move the target into an adjacent hex towards Manus"
+          },
+          {
+            "target": "Manus and all allies in adjacent hexes",
+            "effect": "Defense increase"
+          }
+        ]
+      },
+      {
+        "id": 25,
+        "name": "VINCTUM",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 0+1 per 1 dmg on Vinctum"
+        },
+        "support_abilities": [
+          {
+            "target": "Any character in an adjacent hex",
+            "effect": "Move the target into an adjacent hex in a straight line away from Vinctum"
+          },
+          {
+            "target": "Any enemy in an adjacent hex",
+            "effect": "Stun"
+          }
+        ]
+      },
+      {
+        "id": 26,
+        "name": "MECHANICUS",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target any enemy in a hex in a straight line (except for adjacent hexes)",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Mechanicus",
+            "effect": "Swiftness"
+          },
+          {
+            "target": "All enemies in catapult towers control areas under enemy control",
+            "effect": "Control decrease"
+          }
+        ]
+      },
+      {
+        "id": 27,
+        "name": "TOXICUM",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target all poisoned enemies",
+          "effect": "Attack: 0+1 per poison effect on the target"
+        },
+        "support_abilities": [
+          {
+            "target": "All enemies with at least 1 dmg",
+            "effect": "Poison"
+          },
+          {
+            "target": "Any enemy in any hex in a straight line",
+            "effect": "Move the target into an adjacent water hex, then the target gets poison"
+          }
+        ]
+      },
+      {
+        "id": 28,
+        "name": "ERESIDA",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 1 (2 if the target is stunned)"
+        },
+        "support_abilities": [
+          {
+            "target": "Any unoccupied hex in a straight line (except for castle hexes, or hexes with obstacle)",
+            "effect": "Web"
+          },
+          {
+            "target": "Any enemy in any hex in a straight line",
+            "effect": "Move the target into an adjacent unoccupied hex in a straight line towards Eresida"
+          }
+        ]
+      },
+      {
+        "id": 29,
+        "name": "MESSUM",
+        "vitality": 2,
+        "core_ability": {
+          "target": "Target any enemy that has none of their allies in adjacent hexes",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Any enemy",
+            "effect": "Defense decrease"
+          },
+          {
+            "target": "Any enemy",
+            "effect": "Move the target into any unoccupied adjacent hex"
+          }
+        ]
+      },
+      {
+        "id": 30,
+        "name": "LIBRORUM",
+        "vitality": 2,
+        "core_ability": {
+          "target": "Target any enemy in a hex of a terrain type that differs from the type of Librorum's current hex",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Any character in any catapult's tower's control area",
+            "effect": "Move the target into an adjacent hex in the same area"
+          },
+          {
+            "target": "All enemies",
+            "effect": "Silence"
+          }
+        ]
+      },
+      {
+        "id": 31,
+        "name": "BREWUS",
+        "vitality": 4,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 1 (2 if the sum of remaining cooldowns of the target's support abilities is 8+)"
+        },
+        "support_abilities": [
+          {
+            "target": "All enemies in adjacent hexes (if the target has at least 1 support ability on cooldown)",
+            "effect": "Increase the cooldowns by 1"
+          },
+          {
+            "target": "Any enemy in any hex in a straight line",
+            "effect": "Stun"
+          }
+        ]
+      },
+      {
+        "id": 32,
+        "name": "SATURN",
+        "vitality": 5,
+        "core_ability": {
+          "target": "Target all enemies in adjacent hexes, if their combined current vitality is equal to or greater than Saturn's",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "All enemies within a number of hexes equal to Saturn's dmg",
+            "effect": "Stun"
+          },
+          {
+            "target": "Any ally with at least 1 dmg",
+            "effect": "Saturn suffers 1 dmg, then the target restores 1 dmg"
+          }
+        ]
+      },
+      {
+        "id": 33,
+        "name": "TENEBRIS",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 0 (1 if there are 2-4 unoccupied hexes adjacent to the target, 2 if there are 5 hexes)"
+        },
+        "support_abilities": [
+          {
+            "target": "Any unoccupied hex adjacent to any enemy with at least 1 dmg",
+            "effect": "Move Tenebris into the targeted hex"
+          },
+          {
+            "target": "Any enemy in an adjacent hex",
+            "effect": "Move him 1 hex vertically in direction of its castle"
+          }
+        ]
+      },
+      {
+        "id": 34,
+        "name": "EQUITA",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 1 (2 if Equita is swiftened, 0 if she is slowed)"
+        },
+        "support_abilities": [
+          {
+            "target": "Equita",
+            "effect": "Swiftness"
+          },
+          {
+            "target": "Any enemy in an adjacent hex",
+            "effect": "Poison"
+          }
+        ]
+      },
+      {
+        "id": 35,
+        "name": "MAGNUS",
+        "vitality": 3,
+        "core_ability": {
+          "target": "Target any enemy in an adjacent hex",
+          "effect": "Attack: 0+1 per 2 available support abilities of all enemies"
+        },
+        "support_abilities": [
+          {
+            "target": "Any enemy or ally in a hex adjacent to an unoccupied mountain hex",
+            "effect": "Move the target into an adjacent mountain hex"
+          },
+          {
+            "target": "All enemies in adjacent hexes (within 2 hexes if Magnus has 1 dmg, 3 hexes if 2 dmg)",
+            "effect": "Silence"
+          }
+        ]
+      },
+      {
+        "id": 36,
+        "name": "CLAMORIS",
+        "vitality": 2,
+        "core_ability": {
+          "target": "Target any enemy with at least 1 dmg in any hex in a straight line",
+          "effect": "Attack: 1"
+        },
+        "support_abilities": [
+          {
+            "target": "Clamoris and all allies in adjacent hexes",
+            "effect": "Swiftness"
+          },
+          {
+            "target": "Any enemy",
+            "effect": "Silence"
+          }
+        ]
+      }
+    ]
+  }
+}
