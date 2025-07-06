@@ -310,34 +310,8 @@ function showHeroInfo(event, node) {
 
 // Setup filter controls
 function setupControls() {
-    const select = document.getElementById('labelFilter');
-    
-    // Get all unique labels and add all heroes
-    const allItems = new Set();
-    
-    // Add all hero names
-    heroesData.forEach(hero => {
-        allItems.add(`Hero: ${hero.name}`);
-    });
-    
-    // Add all labels
-    heroesData.forEach(hero => {
-        hero.labels.forEach(label => allItems.add(`Label: ${label}`));
-    });
-    
-    // Populate dropdown
-    Array.from(allItems).sort().forEach(item => {
-        const option = document.createElement('option');
-        option.value = item;
-        option.textContent = item;
-        select.appendChild(option);
-    });
-    
-    // Add change handler
-    select.addEventListener('change', handleQuickFilter);
-    
     // Setup clear filter button
-    document.getElementById('clearFilter').addEventListener('click', clearAllFilters);
+    document.getElementById('clearFilterBtn').addEventListener('click', clearAllFilters);
     
     // Setup legend click handlers
     setupLegendClickHandlers();
@@ -389,30 +363,6 @@ function applyNodeFilter(node) {
     }
 }
 
-// Handle quick filter dropdown
-function handleQuickFilter(event) {
-    const selectedValue = event.target.value;
-    
-    if (!selectedValue) {
-        clearAllFilters();
-        return;
-    }
-    
-    const [type, name] = selectedValue.split(': ');
-    const node = nodesData.find(n => 
-        (type === 'Hero' && n.type === 'hero' && n.name === name) ||
-        (type === 'Label' && n.type === 'label' && n.name === name)
-    );
-    
-    if (node) {
-        applyNodeFilter(node);
-        // Also select the node visually
-        nodeElements.classed('selected', d => d.id === node.id);
-        // Update info panel
-        const infoPanel = document.getElementById('heroInfo');
-        showNodeInfo(node, infoPanel);
-    }
-}
 
 // Clear all filters
 function clearAllFilters() {
@@ -427,11 +377,10 @@ function clearAllFilters() {
     nodeElements.classed('selected', false);
     linkElements.classed('highlighted', false);
     
-    // Reset dropdowns and search
-    document.getElementById('labelFilter').value = '';
+    // Reset search
     document.getElementById('searchInput').value = '';
     
-    updateFilterStatus('All nodes');
+    updateFilterStatus('All Nodes');
     
     // Reset info panel
     document.getElementById('heroInfo').innerHTML = '<p>Click on any node to see details and apply filter</p>';
@@ -439,8 +388,8 @@ function clearAllFilters() {
 
 // Update filter status display
 function updateFilterStatus(status) {
-    document.getElementById('filterStatus').textContent = `Showing: ${status}`;
-    document.getElementById('clearFilter').style.display = status === 'All nodes' ? 'none' : 'inline-block';
+    document.getElementById('graphTitle').textContent = status;
+    document.getElementById('clearFilterBtn').style.display = status === 'All Nodes' ? 'none' : 'block';
 }
 
 // Setup search functionality
@@ -674,8 +623,7 @@ function filterByNodeType(nodeType) {
     // Update filter status
     updateFilterStatus(statusText);
     
-    // Reset dropdown and search
-    document.getElementById('labelFilter').value = '';
+    // Reset search
     document.getElementById('searchInput').value = '';
     
     // Update info panel

@@ -22,16 +22,6 @@
                         <input type="text" id="searchInput" placeholder="Type hero name or label...">
                         <button id="clearSearch">Clear</button>
                     </div>
-                    <div class="filter-controls">
-                        <label for="labelFilter">Quick Filter:</label>
-                        <select id="labelFilter">
-                            <option value="">All Nodes</option>
-                        </select>
-                    </div>
-                    <div class="current-filter">
-                        <span id="filterStatus">Showing: All nodes</span>
-                        <button id="clearFilter" style="display: none;">Clear Filter</button>
-                    </div>
                 </div>
                 
                 <div class="info-panel" id="infoPanel">
@@ -72,6 +62,8 @@
             
             <div class="right-panel">
                 <div class="graph-container" title="Click and drag to pan • Scroll to zoom • Click empty space to clear filter">
+                    <div class="graph-title" id="graphTitle">All Nodes</div>
+                    <button class="clear-filter-btn" id="clearFilterBtn" style="display: none;">Clear Filter</button>
                     <svg id="graph"></svg>
                 </div>
             </div>
