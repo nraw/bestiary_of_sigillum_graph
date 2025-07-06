@@ -509,7 +509,7 @@ function showNodeInfo(node, infoPanel) {
         `).join('');
         
         const labelsHtml = node.labels.map(label => `
-            <span class="label">${label}</span>
+            <span class="label clickable-label" data-label="${label}" onclick="filterByClickableLabel('${label}')">${label}</span>
         `).join('');
         
         infoPanel.innerHTML = `
@@ -542,10 +542,34 @@ function showNodeInfo(node, infoPanel) {
             <div class="ability-section">
                 <h4>Connected Heroes (${connectedHeroes.length})</h4>
                 <div class="connected-heroes">
-                    ${connectedHeroes.map(hero => `<span class="label">${hero}</span>`).join('')}
+                    ${connectedHeroes.map(hero => `<span class="label clickable-hero" data-hero="${hero}" onclick="filterByClickableHero('${hero}')">${hero}</span>`).join('')}
                 </div>
             </div>
         `;
+    }
+}
+
+// Handle clicks on labels in the info panel
+function filterByClickableLabel(labelName) {
+    const node = nodesData.find(n => n.type === 'label' && n.name === labelName);
+    if (node) {
+        applyNodeFilter(node);
+        // Also select the node visually
+        nodeElements.classed('selected', d => d.id === node.id);
+        // Update info panel
+        showNodeInfo(node, document.getElementById('heroInfo'));
+    }
+}
+
+// Handle clicks on heroes in the info panel
+function filterByClickableHero(heroName) {
+    const node = nodesData.find(n => n.type === 'hero' && n.name === heroName);
+    if (node) {
+        applyNodeFilter(node);
+        // Also select the node visually
+        nodeElements.classed('selected', d => d.id === node.id);
+        // Update info panel
+        showNodeInfo(node, document.getElementById('heroInfo'));
     }
 }
 

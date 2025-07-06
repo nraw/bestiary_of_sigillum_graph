@@ -443,6 +443,45 @@ body::before {
     margin-top: 10px;
 }
 
+/* Clickable labels and heroes in info panel */
+.clickable-label,
+.clickable-hero {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.clickable-label:hover,
+.clickable-hero:hover {
+    background: linear-gradient(45deg, var(--warm-amber), var(--glowing-orange));
+    color: var(--deep-charcoal);
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(255, 140, 0, 0.5);
+}
+
+.clickable-label:active,
+.clickable-hero:active {
+    transform: scale(0.95);
+}
+
+.clickable-label::before,
+.clickable-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.clickable-label:hover::before,
+.clickable-hero:hover::before {
+    left: 100%;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
     .main-content {
