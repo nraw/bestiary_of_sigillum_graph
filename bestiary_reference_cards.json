@@ -24,7 +24,8 @@
           "Ranged",
           "Structure-Dependent",
           "Terrain-Control",
-          "Castle-Defender"
+          "Castle-Defender",
+          "Place obstacle"
         ]
       },
       {
@@ -49,7 +50,7 @@
           "Melee",
           "Displacement",
           "Support",
-          "Defense-Buff",
+          "Defense increase",
           "Stun"
         ]
       },
@@ -76,7 +77,8 @@
           "Water-Dependent",
           "Effect-Copy",
           "Self-Buff",
-          "Mobility"
+          "Mobility",
+          "Attack increase"
         ]
       },
       {
@@ -102,7 +104,8 @@
           "Distance-Dependent",
           "Self-Buff",
           "Displacement",
-          "Line-Attack"
+          "Line-Attack",
+          "Attack increase"
         ]
       },
       {
@@ -128,7 +131,7 @@
           "Forest-Dependent",
           "Displacement",
           "Support",
-          "Defense-Buff"
+          "Defense increase"
         ]
       },
       {
@@ -155,7 +158,7 @@
           "Healing",
           "Support",
           "Flying",
-          "Speed-Buff"
+          "Swiftness"
         ]
       },
       {
@@ -180,7 +183,7 @@
           "AoE",
           "Status-Dependent",
           "Displacement",
-          "Speed-Debuff",
+          "Slowness",
           "Mobility"
         ]
       },
@@ -205,7 +208,7 @@
         "labels": [
           "Melee",
           "Status-Dependent",
-          "Control-Debuff",
+          "Control decrease",
           "Effect-Manipulation",
           "Displacement"
         ]
@@ -232,7 +235,7 @@
           "AoE",
           "Melee",
           "Conditional-Mobility",
-          "Attack-Debuff",
+          "Attack decrease",
           "Damage-Dependent"
         ]
       },
@@ -257,7 +260,7 @@
         "labels": [
           "AoE",
           "Line-Attack",
-          "Control-Buff",
+          "Control increase",
           "Structure-Dependent",
           "Mobility"
         ]
@@ -282,8 +285,8 @@
         ],
         "labels": [
           "Status-Dependent",
-          "Speed-Debuff",
-          "Attack-Debuff",
+          "Slowness",
+          "Attack decrease",
           "Debuffer"
         ]
       },
@@ -335,7 +338,7 @@
           "Ranged",
           "Size-Dependent",
           "Stun",
-          "Control-Buff",
+          "Control increase",
           "Anti-Large"
         ]
       },
@@ -387,8 +390,8 @@
           "Melee",
           "Enemy-Count-Dependent",
           "Support",
-          "Resistance-Buff",
-          "Self-Buff"
+          "Resistance",
+          "Attack increase"
         ]
       },
       {
@@ -439,8 +442,8 @@
           "Ally-Dependent",
           "Effect-Dependent",
           "Support",
-          "Attack-Buff",
-          "Speed-Buff"
+          "Attack increase",
+          "Swiftness"
         ]
       },
       {
@@ -492,7 +495,7 @@
           "AoE",
           "Stun",
           "Structure-Dependent",
-          "Control-Buff"
+          "Control increase"
         ]
       },
       {
@@ -542,9 +545,9 @@
         "labels": [
           "AoE",
           "Range-Dependent",
-          "Self-Buff",
+          "Defense increase",
           "Mobility",
-          "Resistance-Buff"
+          "Resistance"
         ]
       },
       {
@@ -570,7 +573,7 @@
           "Cooldown-Dependent",
           "Support",
           "Cooldown-Reduction",
-          "Speed-Buff"
+          "Swiftness"
         ]
       },
       {
@@ -594,7 +597,7 @@
         "labels": [
           "Ally-Count-Dependent",
           "Displacement",
-          "Attack-Debuff",
+          "Attack decrease",
           "Positioning"
         ]
       },
@@ -621,7 +624,7 @@
           "Ally-Count-Dependent",
           "Displacement",
           "Support",
-          "Defense-Buff"
+          "Defense increase"
         ]
       },
       {
@@ -671,9 +674,9 @@
         "labels": [
           "Ranged",
           "Range-Restricted",
-          "Self-Buff",
+          "Swiftness",
           "Structure-Counter",
-          "Control-Debuff"
+          "Control decrease"
         ]
       },
       {
@@ -748,7 +751,7 @@
         ],
         "labels": [
           "Isolation-Dependent",
-          "Defense-Debuff",
+          "Defense decrease",
           "Displacement",
           "Anti-Group"
         ]
@@ -879,7 +882,7 @@
         "labels": [
           "Melee",
           "Speed-Dependent",
-          "Self-Buff",
+          "Swiftness",
           "Poison",
           "Mobile-Striker"
         ]
@@ -933,7 +936,7 @@
           "Ranged",
           "Damage-Dependent",
           "Support",
-          "Speed-Buff",
+          "Swiftness",
           "Silence"
         ]
       }
