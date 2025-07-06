@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bestiary of Sigilum - Hero Network</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">Bestiary of Sigilum</h1>
+            <p class="subtitle">Hero Network Visualization</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="controls">
+                    <div class="search-controls">
+                        <label for="searchInput">Search Nodes:</label>
+                        <input type="text" id="searchInput" placeholder="Type hero name or label...">
+                        <button id="clearSearch">Clear</button>
+                    </div>
+                    <div class="filter-controls">
+                        <label for="labelFilter">Quick Filter:</label>
+                        <select id="labelFilter">
+                            <option value="">All Nodes</option>
+                        </select>
+                    </div>
+                    <div class="current-filter">
+                        <span id="filterStatus">Showing: All nodes</span>
+                        <button id="clearFilter" style="display: none;">Clear Filter</button>
+                    </div>
+                </div>
+                
+                <div class="info-panel" id="infoPanel">
+                    <h3>Node Information</h3>
+                    <div id="heroInfo">
+                        <p>Click on any node to see details and apply filter</p>
+                    </div>
+                </div>
+                
+                <div class="legend">
+                    <h3>Node Types</h3>
+                    <div class="legend-item">
+                        <div class="legend-color hero"></div>
+                        <span>Heroes</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color combat"></div>
+                        <span>Combat Labels</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color magic"></div>
+                        <span>Magic Labels</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color movement"></div>
+                        <span>Movement Labels</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color effect"></div>
+                        <span>Effect Labels</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color structure"></div>
+                        <span>Structure Labels</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <div class="graph-container">
+                    <svg id="graph"></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
