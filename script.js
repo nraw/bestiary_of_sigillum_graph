@@ -27,6 +27,18 @@ const colorMap = {
     'default': '#A0522D'
 };
 
+// Google Analytics helper function
+function trackEvent(action, category = 'Bestiary', label = null, value = null) {
+    if (typeof gtag !== 'undefined') {
+        const eventData = {
+            event_category: category,
+            event_label: label,
+            value: value
+        };
+        gtag('event', action, eventData);
+    }
+}
+
 // Initialize the application
 async function init() {
     try {
@@ -47,9 +59,13 @@ async function init() {
         // Setup search functionality
         setupSearch();
         
+        // Track successful initialization
+        trackEvent('app_loaded', 'Application', `${heroesData.length} heroes loaded`);
+        
         console.log('Application initialized successfully');
     } catch (error) {
         console.error('Error initializing application:', error);
+        trackEvent('app_error', 'Application', error.message);
     }
 }
 
@@ -292,6 +308,9 @@ function dragended(event, d) {
 
 // Show node information and apply filter
 function showHeroInfo(event, node) {
+    // Track node click
+    trackEvent('node_clicked', 'Interaction', `${node.type}: ${node.name}`);
+    
     // Remove previous selection
     nodeElements.classed('selected', false);
     linkElements.classed('highlighted', false);
@@ -369,6 +388,9 @@ function applyNodeFilter(node) {
 
 // Clear all filters
 function clearAllFilters() {
+    // Track filter clearing
+    trackEvent('filter_cleared', 'Filter', 'Clear All');
+    
     currentFilter = null;
     
     // Reset all opacities
@@ -414,6 +436,11 @@ function handleSearch(event) {
     if (!searchTerm) {
         clearAllFilters();
         return;
+    }
+    
+    // Track search usage (debounced to avoid too many events)
+    if (searchTerm.length >= 3) {
+        trackEvent('search_used', 'Search', searchTerm);
     }
     
     // Find matching nodes
@@ -513,6 +540,9 @@ function showNodeInfo(node, infoPanel) {
 
 // Handle clicks on labels in the info panel
 function filterByClickableLabel(labelName) {
+    // Track clickable label usage
+    trackEvent('clickable_label', 'Interaction', labelName);
+    
     const node = nodesData.find(n => n.type === 'label' && n.name === labelName);
     if (node) {
         applyNodeFilter(node);
@@ -525,6 +555,9 @@ function filterByClickableLabel(labelName) {
 
 // Handle clicks on heroes in the info panel
 function filterByClickableHero(heroName) {
+    // Track clickable hero usage
+    trackEvent('clickable_hero', 'Interaction', heroName);
+    
     const node = nodesData.find(n => n.type === 'hero' && n.name === heroName);
     if (node) {
         applyNodeFilter(node);
@@ -590,6 +623,9 @@ function getNodeTypeFromLegendText(text) {
 // Filter nodes by type/category
 function filterByNodeType(nodeType) {
     if (!nodeType) return;
+    
+    // Track legend filter usage
+    trackEvent('legend_filter', 'Filter', nodeType);
     
     let filteredNodes;
     let statusText;
