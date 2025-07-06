@@ -44,6 +44,13 @@
             "target": "Armus and all allies",
             "effect": "Defense increase"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Displacement",
+          "Support",
+          "Defense-Buff",
+          "Stun"
         ]
       },
       {
@@ -63,6 +70,13 @@
             "target": "Any adjacent unoccupied water hex",
             "effect": "Move Aqus into the targeted hex. Then he gains attack increase"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Water-Dependent",
+          "Effect-Copy",
+          "Self-Buff",
+          "Mobility"
         ]
       },
       {
@@ -82,6 +96,13 @@
             "target": "Any enemy in any hex in a straight line from Ballistarius",
             "effect": "Move the target one unoccupied hex away from Ballistarius"
           }
+        ],
+        "labels": [
+          "Ranged",
+          "Distance-Dependent",
+          "Self-Buff",
+          "Displacement",
+          "Line-Attack"
         ]
       },
       {
@@ -101,6 +122,13 @@
             "target": "Arborus or any ally",
             "effect": "Defense increase"
           }
+        ],
+        "labels": [
+          "AoE",
+          "Forest-Dependent",
+          "Displacement",
+          "Support",
+          "Defense-Buff"
         ]
       },
       {
@@ -120,6 +148,14 @@
             "target": "Fidea or any ally",
             "effect": "Flying"
           }
+        ],
+        "labels": [
+          "Ranged",
+          "Vitality-Dependent",
+          "Healing",
+          "Support",
+          "Flying",
+          "Speed-Buff"
         ]
       },
       {
@@ -139,6 +175,13 @@
             "target": "All enemies in adjacent hexes",
             "effect": "Slowness"
           }
+        ],
+        "labels": [
+          "AoE",
+          "Status-Dependent",
+          "Displacement",
+          "Speed-Debuff",
+          "Mobility"
         ]
       },
       {
@@ -158,6 +201,13 @@
             "target": "Any enemy in a straight line",
             "effect": "Move it in a straight line into an adjacent hex towards Carnifex and replace all positive effects with negatives"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Status-Dependent",
+          "Control-Debuff",
+          "Effect-Manipulation",
+          "Displacement"
         ]
       },
       {
@@ -177,6 +227,13 @@
             "target": "All enemies in adjacent hexes",
             "effect": "Attack decrease"
           }
+        ],
+        "labels": [
+          "AoE",
+          "Melee",
+          "Conditional-Mobility",
+          "Attack-Debuff",
+          "Damage-Dependent"
         ]
       },
       {
@@ -196,6 +253,13 @@
             "target": "Any unoccupied hex in any catapult tower's control area under allied control",
             "effect": "Move Cornibus into the targeted hex"
           }
+        ],
+        "labels": [
+          "AoE",
+          "Line-Attack",
+          "Control-Buff",
+          "Structure-Dependent",
+          "Mobility"
         ]
       },
       {
@@ -215,6 +279,12 @@
             "target": "Any enemy",
             "effect": "Attack decrease"
           }
+        ],
+        "labels": [
+          "Status-Dependent",
+          "Speed-Debuff",
+          "Attack-Debuff",
+          "Debuffer"
         ]
       },
       {
@@ -234,6 +304,13 @@
             "target": "Any ally with at least 1 dmg",
             "effect": "Move the target adjacent to Goetium"
           }
+        ],
+        "labels": [
+          "Isolation-Dependent",
+          "Healing",
+          "Support",
+          "Displacement",
+          "Self-Sacrifice"
         ]
       },
       {
@@ -253,6 +330,13 @@
             "target": "Catapultus",
             "effect": "Control increase"
           }
+        ],
+        "labels": [
+          "Ranged",
+          "Size-Dependent",
+          "Stun",
+          "Control-Buff",
+          "Anti-Large"
         ]
       },
       {
@@ -272,6 +356,13 @@
             "target": "Any enemy in a straight line",
             "effect": "Stun"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Terrain-Restricted",
+          "Displacement",
+          "Stun",
+          "Line-Attack"
         ]
       },
       {
@@ -291,6 +382,13 @@
             "target": "Iratus",
             "effect": "Attack increase"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Enemy-Count-Dependent",
+          "Support",
+          "Resistance-Buff",
+          "Self-Buff"
         ]
       },
       {
@@ -310,6 +408,13 @@
             "target": "Any adjacent unoccupied hex",
             "effect": "Move Mortum into the targeted hex"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Damage-Dependent",
+          "Vampirism",
+          "Support",
+          "Mobility"
         ]
       },
       {
@@ -329,6 +434,13 @@
             "target": "Ignifer or any ally in an adjacent hex",
             "effect": "Swiftness"
           }
+        ],
+        "labels": [
+          "Ally-Dependent",
+          "Effect-Dependent",
+          "Support",
+          "Attack-Buff",
+          "Speed-Buff"
         ]
       },
       {
@@ -348,6 +460,13 @@
             "target": "Any enemy in any hex in a straight line",
             "effect": "Stun"
           }
+        ],
+        "labels": [
+          "Status-Dependent",
+          "Teleport",
+          "Support",
+          "Stun",
+          "Line-Attack"
         ]
       },
       {
@@ -367,6 +486,13 @@
             "target": "Malleus or any ally in an adjacent hex (if the target is in a catapult tower hex)",
             "effect": "Control increase"
           }
+        ],
+        "labels": [
+          "Melee",
+          "AoE",
+          "Stun",
+          "Structure-Dependent",
+          "Control-Buff"
         ]
       },
       {
@@ -386,6 +512,13 @@
             "target": "All enemies in adjacent hexes",
             "effect": "Stun"
           }
+        ],
+        "labels": [
+          "AoE",
+          "Defense-Dependent",
+          "Tank",
+          "Stun",
+          "Self-Buff"
         ]
       },
       {
@@ -405,6 +538,13 @@
             "target": "Any character 1 unoccupied hex away in a straight line",
             "effect": "Move Redux into an adjacent unoccupied hex towards the target. Then Redux gains Resistance"
           }
+        ],
+        "labels": [
+          "AoE",
+          "Range-Dependent",
+          "Self-Buff",
+          "Mobility",
+          "Resistance-Buff"
         ]
       },
       {
@@ -424,6 +564,13 @@
             "target": "Tempus or any ally in an adjacent hex",
             "effect": "Swiftness"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Cooldown-Dependent",
+          "Support",
+          "Cooldown-Reduction",
+          "Speed-Buff"
         ]
       },
       {
@@ -443,6 +590,12 @@
             "target": "Any enemy",
             "effect": "Attack decrease"
           }
+        ],
+        "labels": [
+          "Ally-Count-Dependent",
+          "Displacement",
+          "Attack-Debuff",
+          "Positioning"
         ]
       },
       {
@@ -462,6 +615,13 @@
             "target": "Manus and all allies in adjacent hexes",
             "effect": "Defense increase"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Ally-Count-Dependent",
+          "Displacement",
+          "Support",
+          "Defense-Buff"
         ]
       },
       {
@@ -481,6 +641,13 @@
             "target": "Any enemy in an adjacent hex",
             "effect": "Stun"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Self-Damage-Dependent",
+          "Displacement",
+          "Stun",
+          "Berserker"
         ]
       },
       {
@@ -500,6 +667,13 @@
             "target": "All enemies in catapult towers control areas under enemy control",
             "effect": "Control decrease"
           }
+        ],
+        "labels": [
+          "Ranged",
+          "Range-Restricted",
+          "Self-Buff",
+          "Structure-Counter",
+          "Control-Debuff"
         ]
       },
       {
@@ -519,6 +693,13 @@
             "target": "Any enemy in any hex in a straight line",
             "effect": "Move the target into an adjacent water hex, then the target gets poison"
           }
+        ],
+        "labels": [
+          "Status-Dependent",
+          "Poison",
+          "Damage-Dependent",
+          "Displacement",
+          "Water-Synergy"
         ]
       },
       {
@@ -538,6 +719,13 @@
             "target": "Any enemy in any hex in a straight line",
             "effect": "Move the target into an adjacent unoccupied hex in a straight line towards Eresida"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Status-Dependent",
+          "Terrain-Control",
+          "Displacement",
+          "Web"
         ]
       },
       {
@@ -557,6 +745,12 @@
             "target": "Any enemy",
             "effect": "Move the target into any unoccupied adjacent hex"
           }
+        ],
+        "labels": [
+          "Isolation-Dependent",
+          "Defense-Debuff",
+          "Displacement",
+          "Anti-Group"
         ]
       },
       {
@@ -576,6 +770,13 @@
             "target": "All enemies",
             "effect": "Silence"
           }
+        ],
+        "labels": [
+          "Terrain-Dependent",
+          "Displacement",
+          "Silence",
+          "AoE",
+          "Utility"
         ]
       },
       {
@@ -595,6 +796,13 @@
             "target": "Any enemy in any hex in a straight line",
             "effect": "Stun"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Cooldown-Dependent",
+          "Cooldown-Manipulation",
+          "Stun",
+          "Counter-Magic"
         ]
       },
       {
@@ -614,6 +822,14 @@
             "target": "Any ally with at least 1 dmg",
             "effect": "Saturn suffers 1 dmg, then the target restores 1 dmg"
           }
+        ],
+        "labels": [
+          "AoE",
+          "Vitality-Dependent",
+          "Self-Damage-Dependent",
+          "Stun",
+          "Healing",
+          "Self-Sacrifice"
         ]
       },
       {
@@ -633,6 +849,13 @@
             "target": "Any enemy in an adjacent hex",
             "effect": "Move him 1 hex vertically in direction of its castle"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Positioning-Dependent",
+          "Mobility",
+          "Displacement",
+          "Assassin"
         ]
       },
       {
@@ -652,6 +875,13 @@
             "target": "Any enemy in an adjacent hex",
             "effect": "Poison"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Speed-Dependent",
+          "Self-Buff",
+          "Poison",
+          "Mobile-Striker"
         ]
       },
       {
@@ -671,6 +901,14 @@
             "target": "All enemies in adjacent hexes (within 2 hexes if Magnus has 1 dmg, 3 hexes if 2 dmg)",
             "effect": "Silence"
           }
+        ],
+        "labels": [
+          "Melee",
+          "Ability-Count-Dependent",
+          "Mountain-Synergy",
+          "Displacement",
+          "Silence",
+          "Scaling-AoE"
         ]
       },
       {
@@ -690,6 +928,13 @@
             "target": "Any enemy",
             "effect": "Silence"
           }
+        ],
+        "labels": [
+          "Ranged",
+          "Damage-Dependent",
+          "Support",
+          "Speed-Buff",
+          "Silence"
         ]
       }
     ]
