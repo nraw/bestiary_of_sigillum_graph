@@ -501,6 +501,23 @@ body::before {
     overflow: hidden;
 }
 
+/* Separate styling for clickable heroes and labels to improve readability */
+.clickable-hero {
+    background: linear-gradient(45deg, var(--mystical-purple), var(--primary-burgundy));
+    color: var(--rich-gold);
+    border: 1px solid var(--mystical-purple);
+    font-weight: 700;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.clickable-label {
+    background: linear-gradient(45deg, var(--deep-charcoal), var(--dark-brown));
+    color: var(--warm-amber);
+    border: 1px solid var(--weathered-copper);
+    font-weight: 600;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9);
+}
+
 .clickable-label:hover,
 .clickable-hero:hover {
     background: linear-gradient(45deg, var(--warm-amber), var(--glowing-orange));
