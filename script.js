@@ -163,6 +163,9 @@ function setupGraph() {
     
     svg.call(zoom);
     
+    // Set initial zoom to be slightly zoomed out
+    svg.call(zoom.transform, d3.zoomIdentity.scale(0.8));
+    
     // Add click handler to clear filter when clicking on empty space
     svg.on('click', function(event) {
         if (event.target === this) {
@@ -172,12 +175,12 @@ function setupGraph() {
     
     // Create simulation with different forces for bipartite graph
     simulation = d3.forceSimulation(nodesData)
-        .force('link', d3.forceLink(linksData).id(d => d.id).distance(60).strength(0.8))
-        .force('charge', d3.forceManyBody().strength(d => d.type === 'hero' ? -400 : -200))
+        .force('link', d3.forceLink(linksData).id(d => d.id).distance(80).strength(0.7))
+        .force('charge', d3.forceManyBody().strength(d => d.type === 'hero' ? -500 : -250))
         .force('center', d3.forceCenter(width / 2, height / 2))
-        .force('collision', d3.forceCollide().radius(d => d.size + 5))
-        .force('x', d3.forceX().strength(0.1))
-        .force('y', d3.forceY().strength(0.1));
+        .force('collision', d3.forceCollide().radius(d => d.size + 8))
+        .force('x', d3.forceX().strength(0.08))
+        .force('y', d3.forceY().strength(0.08));
     
     // Create link elements
     linkElements = mainGroup.append('g')
