@@ -562,6 +562,14 @@ function setupLegendClickHandlers() {
         item.addEventListener('click', () => {
             filterByNodeType(nodeType);
         });
+        
+        // Add keyboard support
+        item.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                filterByNodeType(nodeType);
+            }
+        });
     });
 }
 

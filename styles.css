@@ -735,6 +735,42 @@ body::before {
     }
 }
 
+/* Screen reader only content */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Focus styles for accessibility */
+.legend-item:focus {
+    outline: 2px solid var(--glowing-orange);
+    outline-offset: 2px;
+    background: rgba(218, 165, 32, 0.3);
+}
+
+button:focus,
+input:focus,
+select:focus {
+    outline: 2px solid var(--glowing-orange);
+    outline-offset: 2px;
+}
+
+/* Improve heading hierarchy */
+.info-panel h2,
+.legend h2 {
+    font-family: 'Cinzel', serif;
+    font-size: 1.3em;
+    color: var(--rich-gold);
+    margin-bottom: 10px;
+}
+
 /* Animation for page load */
 @keyframes fadeInUp {
     from {

@@ -3,7 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bestiary of Sigilum - Hero Network</title>
+    <title>Bestiary of Sigilum - Interactive Hero Network Visualization | Character Database</title>
+    <meta name="description" content="Explore the complete Bestiary of Sigilum character database with an interactive network visualization. Discover heroes, their abilities, labels, and connections in this comprehensive guide to the fantasy game.">
+    <meta name="keywords" content="Bestiary of Sigilum, heroes, characters, network visualization, fantasy game, Intaglyph, character database, abilities, interactive guide">
+    <meta name="author" content="nraw">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="">
+    <meta property="og:title" content="Bestiary of Sigilum - Interactive Hero Network Visualization">
+    <meta property="og:description" content="Explore the complete Bestiary of Sigilum character database with an interactive network visualization. Discover heroes, their abilities, and connections.">
+    <meta property="og:image" content="">
+    <meta property="og:site_name" content="Bestiary of Sigilum Network">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="">
+    <meta property="twitter:title" content="Bestiary of Sigilum - Interactive Hero Network Visualization">
+    <meta property="twitter:description" content="Explore the complete Bestiary of Sigilum character database with an interactive network visualization.">
+    <meta property="twitter:image" content="">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="">
+    
+    <!-- Schema.org structured data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Bestiary of Sigilum Network Visualization",
+        "description": "Interactive network visualization of characters from the Bestiary of Sigilum fantasy game",
+        "url": "",
+        "applicationCategory": "VisualizationApplication",
+        "operatingSystem": "Web Browser",
+        "author": {
+            "@type": "Person",
+            "name": "nraw"
+        },
+        "about": {
+            "@type": "Game",
+            "name": "Bestiary of Sigilum",
+            "publisher": {
+                "@type": "Organization",
+                "name": "Intaglyph",
+                "url": "https://www.intaglyph.ru"
+            }
+        },
+        "featureList": [
+            "Interactive character network visualization",
+            "Search and filter heroes by name or abilities",
+            "View character details and abilities",
+            "Filter by character types and labels",
+            "Mobile-responsive design"
+        ]
+    }
+    </script>
+    
     <link rel="stylesheet" href="styles.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
@@ -11,63 +70,64 @@
     <div class="container">
         <header class="header">
             <h1 class="title">Bestiary of Sigilum</h1>
-            <p class="subtitle">Hero Network Visualization</p>
+            <p class="subtitle">Interactive Hero Network Visualization</p>
         </header>
         
-        <div class="main-content">
-            <div class="left-panel">
-                <div class="controls">
+        <main class="main-content">
+            <aside class="left-panel" role="complementary" aria-label="Controls and Information">
+                <section class="controls" aria-label="Search and Filter Controls">
                     <div class="search-controls">
-                        <label for="searchInput">Search Nodes:</label>
-                        <input type="text" id="searchInput" placeholder="Type hero name or label...">
-                        <button id="clearSearch">Clear</button>
+                        <label for="searchInput">Search Heroes and Labels:</label>
+                        <input type="text" id="searchInput" placeholder="Type hero name or label..." aria-describedby="search-help">
+                        <small id="search-help" class="sr-only">Search through all heroes and labels in the network</small>
+                        <button id="clearSearch" aria-label="Clear search">Clear</button>
                     </div>
-                </div>
+                </section>
                 
-                <div class="info-panel" id="infoPanel">
-                    <h3>Node Information</h3>
+                <section class="info-panel" id="infoPanel" aria-label="Selected Node Information">
+                    <h2>Node Information</h2>
                     <div id="heroInfo">
                         <p>Click on any node to see details and apply filter</p>
                     </div>
-                </div>
+                </section>
                 
-                <div class="legend">
-                    <h3>Node Types</h3>
-                    <div class="legend-item">
-                        <div class="legend-color hero"></div>
+                <section class="legend" aria-label="Network Legend">
+                    <h2>Node Types</h2>
+                    <div class="legend-item" role="button" tabindex="0" aria-label="Filter by Heroes">
+                        <div class="legend-color hero" aria-hidden="true"></div>
                         <span>Heroes</span>
                     </div>
-                    <div class="legend-item">
-                        <div class="legend-color combat"></div>
+                    <div class="legend-item" role="button" tabindex="0" aria-label="Filter by Combat Labels">
+                        <div class="legend-color combat" aria-hidden="true"></div>
                         <span>Combat Labels</span>
                     </div>
-                    <div class="legend-item">
-                        <div class="legend-color magic"></div>
+                    <div class="legend-item" role="button" tabindex="0" aria-label="Filter by Magic Labels">
+                        <div class="legend-color magic" aria-hidden="true"></div>
                         <span>Magic Labels</span>
                     </div>
-                    <div class="legend-item">
-                        <div class="legend-color movement"></div>
+                    <div class="legend-item" role="button" tabindex="0" aria-label="Filter by Movement Labels">
+                        <div class="legend-color movement" aria-hidden="true"></div>
                         <span>Movement Labels</span>
                     </div>
-                    <div class="legend-item">
-                        <div class="legend-color effect"></div>
+                    <div class="legend-item" role="button" tabindex="0" aria-label="Filter by Official Effects">
+                        <div class="legend-color effect" aria-hidden="true"></div>
                         <span title="Effects defined in effects.md: Attack/Defense/Control increase/decrease, Swiftness, Slowness, Flying, Place obstacle, Resistance, Vampirism, Stun, Silence, Poison, Web">Official Effects</span>
                     </div>
-                    <div class="legend-item">
-                        <div class="legend-color structure"></div>
+                    <div class="legend-item" role="button" tabindex="0" aria-label="Filter by Structure Labels">
+                        <div class="legend-color structure" aria-hidden="true"></div>
                         <span>Structure Labels</span>
                     </div>
-                </div>
-            </div>
+                </section>
+            </aside>
             
-            <div class="right-panel">
-                <div class="graph-container" title="Click and drag to pan • Scroll to zoom • Click empty space to clear filter">
-                    <div class="graph-title" id="graphTitle">All Nodes</div>
-                    <button class="clear-filter-btn" id="clearFilterBtn" style="display: none;">Clear Filter</button>
-                    <svg id="graph"></svg>
+            <section class="right-panel" role="main" aria-label="Network Visualization">
+                <div class="graph-container" title="Interactive network graph: Click and drag to pan • Scroll to zoom • Click empty space to clear filter">
+                    <div class="graph-title" id="graphTitle" aria-live="polite">All Nodes</div>
+                    <button class="clear-filter-btn" id="clearFilterBtn" style="display: none;" aria-label="Clear current filter">Clear Filter</button>
+                    <svg id="graph" role="img" aria-label="Interactive network visualization of Bestiary of Sigilum heroes and their connections"></svg>
                 </div>
-            </div>
-        </div>
+            </section>
+        </main>
     </div>
     
     <footer class="footer">
