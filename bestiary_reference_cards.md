@@ -1,4 +1,4 @@
-# Bestiary of Sigilum - Reference Cards
+# Bestiary of Sigillum - Reference Cards
 
 ## Characters
 

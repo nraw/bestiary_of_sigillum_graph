@@ -45,7 +45,7 @@ async function init() {
         // Load the JSON data
         const response = await fetch('bestiary_reference_cards.json');
         const data = await response.json();
-        heroesData = data.bestiary_of_sigilum.characters;
+        heroesData = data.bestiary_of_sigillum.characters;
         
         // Process the data to create nodes and links
         processData();

@@ -1,12 +1,12 @@
-# Bestiary of Sigilum - Interactive Hero Network Visualization
+# Bestiary of Sigillum - Interactive Hero Network Visualization
 
-An interactive network visualization of heroes and their connections from the Bestiary of Sigilum fantasy game. Explore character relationships, abilities, and labels through an intuitive graph interface.
+An interactive network visualization of heroes and their connections from the Bestiary of Sigillum fantasy game. Explore character relationships, abilities, and labels through an intuitive graph interface.
 
 ## About
 
-This project visualizes the complete character database from the Bestiary of Sigilum game using an interactive network graph. Each hero is connected to their associated labels (Combat, Magic, Movement, etc.), creating a web of relationships that reveals patterns and connections between characters.
+This project visualizes the complete character database from the Bestiary of Sigillum game using an interactive network graph. Each hero is connected to their associated labels (Combat, Magic, Movement, etc.), creating a web of relationships that reveals patterns and connections between characters.
 
-**This is unofficial fan work.** All rights to the original Bestiary of Sigilum game belong to [Intaglyph](https://www.intaglyph.ru).
+**This is unofficial fan work.** All rights to the original Bestiary of Sigillum game belong to [Intaglyph](https://www.intaglyph.ru).
 
 ## Features
 
@@ -45,14 +45,14 @@ php -S localhost:8000
 ### File Structure
 
 ```
-bestiary_of_sigilum/
+bestiary_of_sigillum/
 ├── index.html                           # Main application
 ├── styles.css                          # Styling and theme
 ├── script.js                           # Application logic
 ├── bestiary_reference_cards.json       # Character data source
 ├── hero_images/                        # Character portraits
 ├── download_heroes.sh                  # Image download script
-├── bestiary_of_sigilum_reference_cards.pdf # Taken from bgg
+├── bestiary_of_sigillum_reference_cards.pdf # Taken from bgg
 └── bestiary_reference_cards.md         # obtained from the pdf
 ```
 
@@ -87,5 +87,5 @@ This is a fan project. Contributions welcome.
 
 This project is for educational and fan purposes only. The visualization code is available for learning and modification, but all game content belongs to Intaglyph.
 
-**Game Rights**: Bestiary of Sigilum © [Intaglyph](https://www.intaglyph.ru)  
+**Game Rights**: Bestiary of Sigillum © [Intaglyph](https://www.intaglyph.ru)  
 **Visualization**: © 2025 nraw
