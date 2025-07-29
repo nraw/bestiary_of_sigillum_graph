@@ -581,7 +581,18 @@ function handleResize() {
 
 // Event listeners
 window.addEventListener('resize', handleResize);
-document.addEventListener('DOMContentLoaded', init);
+
+// Wait for both DOM and D3 to be ready
+function waitForD3AndInit() {
+    if (typeof d3 !== 'undefined') {
+        init();
+    } else {
+        // Check again in 100ms
+        setTimeout(waitForD3AndInit, 100);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', waitForD3AndInit);
 
 // Setup legend click handlers for filtering by node type
 function setupLegendClickHandlers() {
