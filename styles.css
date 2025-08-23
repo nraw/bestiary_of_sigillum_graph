@@ -10,7 +10,7 @@
     --bronze: #CD7F32;
     --weathered-copper: #A0522D;
     --glowing-orange: #FF4500;
-    --mystical-purple: #663399;
+    --mystical-purple: #9966CC;
     --deep-charcoal: #1C1C1C;
     --dark-parchment: #2D2A26;
 }
@@ -431,7 +431,16 @@ body::before {
     font-family: 'Cinzel', serif;
     font-size: 1.8em;
     color: var(--warm-amber);
+    margin-bottom: 5px;
+}
+
+.hero-id {
+    font-family: 'Crimson Text', serif;
+    font-size: 1em;
+    color: var(--bronze);
     margin-bottom: 10px;
+    font-style: italic;
+    opacity: 0.9;
 }
 
 .hero-vitality {
@@ -460,7 +469,7 @@ body::before {
 
 .ability-target {
     font-weight: 600;
-    color: var(--mystical-purple);
+    color: #B19CD9;
 }
 
 .ability-effect {

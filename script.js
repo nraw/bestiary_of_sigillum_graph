@@ -20,7 +20,7 @@ const colorMap = {
     // Label type colors
     'label': '#DAA520',
     'Combat': '#8B1538',
-    'Magic': '#663399',
+    'Magic': '#9966CC',
     'Movement': '#FF8C00',
     'Effect': '#FF4500',
     'Structure': '#CD7F32',
@@ -80,6 +80,7 @@ function processData() {
     // Create hero nodes
     const heroNodes = heroesData.map(hero => ({
         id: `hero_${hero.id}`,
+        originalId: hero.id,
         name: hero.name,
         type: 'hero',
         vitality: hero.vitality,
@@ -503,6 +504,7 @@ function showNodeInfo(node, infoPanel) {
         
         infoPanel.innerHTML = `
             <div class="hero-name">${node.name}</div>
+            <div class="hero-id">${node.originalId}</div>
             <div class="hero-vitality">Vitality: ${node.vitality}</div>
             
             <div class="ability-section">
