@@ -86,8 +86,8 @@
                 <section class="controls" aria-label="Search and Filter Controls">
                     <div class="search-controls">
                         <label for="searchInput">Search Heroes and Labels:</label>
-                        <input type="text" id="searchInput" placeholder="Type hero name or label..." aria-describedby="search-help">
-                        <small id="search-help" class="sr-only">Search through all heroes and labels in the network</small>
+                        <input type="text" id="searchInput" placeholder="Type hero name, id or label..." aria-describedby="search-help">
+                        <small id="search-help" class="sr-only">Search through all heroes and labels in the network by name, or heroes by id number</small>
                         <button id="clearSearch" aria-label="Clear search">Clear</button>
                     </div>
                 </section>
@@ -150,6 +150,7 @@
     </footer>
     
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="search.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
