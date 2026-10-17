@@ -445,9 +445,7 @@ function handleSearch(event) {
     }
     
     // Find matching nodes
-    const matchingNodes = nodesData.filter(node => 
-        node.name.toLowerCase().includes(searchTerm)
-    );
+    const matchingNodes = nodesData.filter(node => nodeMatchesSearch(node, searchTerm));
     
     if (matchingNodes.length === 0) {
         // No matches - hide all
