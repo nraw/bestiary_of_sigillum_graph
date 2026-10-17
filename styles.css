@@ -327,6 +327,12 @@ body::before {
     filter: drop-shadow(0 0 8px var(--warm-amber));
 }
 
+/* Reveal nodes dimmed by a filter while hovered (overrides inline opacity) */
+.node:hover,
+.node:hover .node-label {
+    opacity: 1 !important;
+}
+
 .node.selected {
     filter: drop-shadow(0 0 15px var(--rich-gold));
 }
