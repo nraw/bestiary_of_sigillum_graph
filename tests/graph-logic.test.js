@@ -28,11 +28,12 @@ test('buildGraph creates hero and unique label nodes with links', () => {
     assert.deepStrictEqual([links[0].source, links[0].target], ['hero_1', 'label_Melee']);
 });
 
-test('hero nodes carry primary type, image and vitality-based radius', () => {
+test('hero nodes carry primary type, image and a uniform radius', () => {
     const alpha = byId.get('hero_1');
     assert.strictEqual(alpha.primaryType, 'Melee');
     assert.strictEqual(alpha.image, 'hero_images/alpha.png');
-    assert.ok(alpha.radius > byId.get('hero_2').radius, 'higher vitality = bigger node');
+    assert.strictEqual(alpha.radius, G.HERO_RADIUS);
+    assert.strictEqual(byId.get('hero_2').radius, alpha.radius, 'size does not depend on vitality');
     assert.strictEqual(byId.get('hero_4').primaryType, 'Other');
 });
 
@@ -52,12 +53,6 @@ test('getPrimaryType prefers AoE > Ranged > Melee', () => {
     assert.strictEqual(G.getPrimaryType(['Tank']), 'Other');
 });
 
-test('vitalityRadius is clamped and monotonic', () => {
-    assert.ok(G.vitalityRadius(2) < G.vitalityRadius(3));
-    assert.ok(G.vitalityRadius(3) < G.vitalityRadius(5));
-    assert.strictEqual(G.vitalityRadius(99), G.vitalityRadius(5));
-    assert.strictEqual(G.vitalityRadius(0), G.vitalityRadius(2));
-});
 
 test('buildAdjacency is symmetric and accepts resolved link objects', () => {
     assert.ok(adjacency.get('hero_1').has('label_Stun'));
@@ -204,3 +199,14 @@ test('every ability in the data has an icon on disk', () => {
     }));
 });
 
+
+test('filterNodes by heroType keeps only heroes of that primary type', () => {
+    assert.deepStrictEqual([...G.filterNodes(nodes, { heroType: 'Ranged' })].sort(), ['hero_2', 'hero_3']);
+    assert.deepStrictEqual([...G.filterNodes(nodes, { heroType: 'Other' })], ['hero_4']);
+});
+
+test('focusIds is the selection plus its direct neighbours', () => {
+    assert.deepStrictEqual([...G.focusIds('hero_1', adjacency)].sort(), ['hero_1', 'label_Melee', 'label_Stun']);
+    assert.deepStrictEqual([...G.focusIds('label_Stun', adjacency)].sort(), ['hero_1', 'hero_2', 'label_Stun']);
+    assert.deepStrictEqual([...G.focusIds('missing', adjacency)], ['missing']);
+});

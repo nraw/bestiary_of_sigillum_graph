@@ -2,7 +2,7 @@
 // Pure logic lives in graph-logic.js (GraphLogic) and search.js; this file owns
 // the DOM, D3 rendering and interaction state.
 const {
-    buildGraph, buildAdjacency, computeHighlight, linkState, arcPath,
+    buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, arcPath,
     filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
     ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment
 } = window.GraphLogic;
@@ -29,6 +29,7 @@ const state = {
     term: '',
     category: 'All',
     labelCategory: null,
+    heroType: null,
     role: null,
     showAllNames: false,
     showSynergies: false
@@ -373,7 +374,7 @@ function fitView(nodes, duration = 450) {
 function currentFilter() {
     if (state.role) return filterByRole(linksData, state.role);
     return {
-        nodeIds: filterNodes(nodesData, { term: state.term, category: state.category, labelCategory: state.labelCategory }),
+        nodeIds: filterNodes(nodesData, { term: state.term, category: state.category, labelCategory: state.labelCategory, heroType: state.heroType }),
         links: null
     };
 }
@@ -428,14 +429,20 @@ function runAction(action) {
 // State changes
 // ---------------------------------------------------------------------------
 
-function selectNode(id, { source = 'graph', center = source !== 'graph' } = {}) {
+function selectNode(id, { source = 'graph', center = true } = {}) {
     const node = nodesById.get(id);
     if (!node) return;
     state.selectedId = id;
     trackEvent('node_selected', 'Interaction', `${source}: ${node.name}`);
     render();
     if (state.showSynergies && node.type === 'hero') fitToSynergies(node);
-    else if (center) centerOn(node);
+    else if (center) fitToFocus(node);
+}
+
+// Frame the selection together with the nodes it links to directly
+function fitToFocus(node) {
+    const ids = focusIds(node.id, adjacency);
+    fitView(nodesData.filter(n => ids.has(n.id)));
 }
 
 // Frame the selected hero together with every hero it has a synergy line to
@@ -451,7 +458,7 @@ function clearSelection() {
 }
 
 function clearAll() {
-    Object.assign(state, { selectedId: null, term: '', category: 'All', labelCategory: null, role: null });
+    Object.assign(state, { selectedId: null, term: '', category: 'All', labelCategory: null, heroType: null, role: null });
     document.getElementById('searchInput').value = '';
     closeSuggestions();
     trackEvent('filter_cleared', 'Filter', 'Clear All');
@@ -539,6 +546,7 @@ function updateHeaderState(filterSet) {
         : heroesData.length;
     const active = [];
     if (state.category !== 'All') active.push(state.category);
+    if (state.heroType) active.push(`${HERO_TYPES[state.heroType].label} heroes`);
     if (state.labelCategory) active.push(`${LABEL_SHAPES[state.labelCategory].label} traits`);
     if (state.role) active.push(`${ROLE_INFO[state.role].label} edges`);
     if (state.term.trim()) active.push(`“${state.term.trim()}”`);
@@ -573,6 +581,9 @@ function updateHeaderState(filterSet) {
     });
     document.querySelectorAll('.legend-filter[data-label-category]').forEach(item => {
         item.setAttribute('aria-pressed', String(item.dataset.labelCategory === state.labelCategory));
+    });
+    document.querySelectorAll('.legend-filter[data-hero-type]').forEach(item => {
+        item.setAttribute('aria-pressed', String(item.dataset.heroType === state.heroType));
     });
     document.querySelectorAll('.legend-filter[data-role]').forEach(item => {
         item.setAttribute('aria-pressed', String(item.dataset.role === state.role));
@@ -942,6 +953,7 @@ function setupSearch() {
     input.addEventListener('input', () => {
         state.term = input.value;
         state.role = null;
+        state.heroType = null;
         state.selectedId = null;
         updateSuggestions();
         render();
@@ -1049,6 +1061,7 @@ function setupChips() {
         if (!chip) return;
         state.category = chip.dataset.category;
         state.labelCategory = null;
+        state.heroType = null;
         state.role = null;
         state.selectedId = null;
         trackEvent('category_filter', 'Filter', state.category);
@@ -1089,9 +1102,11 @@ function renderLegend() {
     const edgeSwatch = cls => `<svg width="34" height="12" viewBox="0 0 34 12" aria-hidden="true"><line x1="1" y1="6" x2="33" y2="6" class="link ${cls}"/></svg>`;
 
     document.getElementById('legendBody').innerHTML = `
-        <h3 class="legend-title">Hero type <small>ring colour + glyph</small></h3>
+        <h3 class="legend-title">Hero type <small>ring colour + glyph · click to filter</small></h3>
         <ul class="legend-list legend-cols">
-            ${Object.entries(HERO_TYPES).map(([key, t]) => `<li>${heroGlyph(key, 18)} ${t.label}</li>`).join('')}
+            ${Object.entries(HERO_TYPES).map(([key, t]) => `
+                <li><button type="button" class="legend-filter" data-hero-type="${key}" aria-pressed="false">
+                    ${heroGlyph(key, 18)} ${t.label}</button></li>`).join('')}
         </ul>
 
         <h3 class="legend-title">Trait group <small>shape · click to filter</small></h3>
@@ -1134,14 +1149,11 @@ function renderLegend() {
         </ul>
         </div>
 
-        <h3 class="legend-title">Size</h3>
+        <h3 class="legend-title">Trait size</h3>
         <ul class="legend-list legend-sizes">
-            <li><svg width="56" height="26" viewBox="0 0 56 26" aria-hidden="true">
-                <circle cx="8" cy="13" r="5" /><circle cx="24" cy="13" r="7.5"/><circle cx="45" cy="13" r="10.5"/></svg>
-                Hero: vitality 2 → 5</li>
             <li><svg width="56" height="26" viewBox="0 0 56 26" aria-hidden="true" class="trait-sizes">
                 <path transform="translate(10 13)" d="${symbolPath('diamond', 40)}"/><path transform="translate(30 13)" d="${symbolPath('diamond', 120)}"/></svg>
-                Trait: heroes sharing it</li>
+                Heroes sharing it</li>
         </ul>`;
 
     document.getElementById('legendBody').addEventListener('click', event => {
@@ -1149,7 +1161,7 @@ function renderLegend() {
         if (!item) return;
         if (item.dataset.role) {
             state.role = state.role === item.dataset.role ? null : item.dataset.role;
-            Object.assign(state, { labelCategory: null, category: 'All', term: '', selectedId: null, path: null });
+            Object.assign(state, { labelCategory: null, heroType: null, category: 'All', term: '', selectedId: null, path: null });
             document.getElementById('searchInput').value = '';
             trackEvent('legend_filter', 'Filter', `role: ${item.dataset.role}`);
             render();
@@ -1157,6 +1169,17 @@ function renderLegend() {
             return;
         }
         state.role = null;
+        if (item.dataset.heroType) {
+            const type = item.dataset.heroType;
+            Object.assign(state, { heroType: state.heroType === type ? null : type, labelCategory: null,
+                category: 'All', term: '', selectedId: null });
+            document.getElementById('searchInput').value = '';
+            trackEvent('legend_filter', 'Filter', `hero type: ${type}`);
+            render();
+            fitToFilter();
+            return;
+        }
+        state.heroType = null;
         const category = item.dataset.labelCategory;
         state.labelCategory = state.labelCategory === category ? null : category;
         state.category = 'All';

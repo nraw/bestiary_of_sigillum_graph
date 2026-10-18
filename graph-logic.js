@@ -152,11 +152,8 @@
         return group || 'Trait';
     }
 
-    // Vitality in the data ranges 2-5; map to a radius in px
-    function vitalityRadius(vitality) {
-        const v = Math.min(5, Math.max(2, vitality));
-        return 20 + (v - 2) * 4;
-    }
+    // All hero nodes share one size; vitality is shown in the tooltip and card instead
+    const HERO_RADIUS = 26;
 
     function labelRadius(degree) {
         return 5 + Math.min(10, Math.sqrt(degree) * 2.5);
@@ -177,7 +174,7 @@
             sync_note: hero.sync_note || null,
             image: `hero_images/${hero.name.toLowerCase()}.png`,
             primaryType: getPrimaryType(hero.labels),
-            radius: vitalityRadius(hero.vitality)
+            radius: HERO_RADIUS
         }));
 
         const degree = new Map();
@@ -239,6 +236,11 @@
         return state;
     }
 
+    // The selection and its direct neighbours: what the view zooms to on select
+    function focusIds(selectedId, adjacency) {
+        return new Set([selectedId, ...(adjacency.get(selectedId) || [])]);
+    }
+
     function linkState(link, highlight) {
         const s = highlight.get(endId(link.source));
         const t = highlight.get(endId(link.target));
@@ -250,7 +252,12 @@
 
 
     // Returns a Set of matching node ids, or null when no filter is active
-    function filterNodes(nodes, { term = '', category = null, labelCategory = null } = {}) {
+    function filterNodes(nodes, { term = '', category = null, labelCategory = null, heroType = null } = {}) {
+        if (heroType) {
+            return new Set(nodes
+                .filter(node => node.type === 'hero' && node.primaryType === heroType)
+                .map(node => node.id));
+        }
         if (labelCategory) {
             return new Set(nodes
                 .filter(node => node.type === 'label' && node.category === labelCategory)
@@ -328,8 +335,8 @@
         (root.nodeMatchesSearch || require('./search.js').nodeMatchesSearch)(node, term);
 
     const api = {
-        PRIMARY_TYPES, getPrimaryType, getLabelCategory, vitalityRadius, labelRadius,
-        buildGraph, buildAdjacency, computeHighlight, linkState, arcPath,
+        PRIMARY_TYPES, getPrimaryType, getLabelCategory, HERO_RADIUS, labelRadius,
+        buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, arcPath,
         filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
         ROLES, ROLE_INFO, linkKind, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment
     };
