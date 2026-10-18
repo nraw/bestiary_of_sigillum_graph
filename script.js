@@ -3,7 +3,8 @@
 // the DOM, D3 rendering and interaction state.
 const {
     buildGraph, buildAdjacency, computeHighlight, linkState, relatedHeroes,
-    findPath, filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange
+    findPath, filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange,
+    ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment
 } = window.GraphLogic;
 
 let heroesData = [];
@@ -17,12 +18,14 @@ let viewport;
 let zoom;
 let nodeElements;
 let linkElements;
+let linkHitElements;
 
 const state = {
     selectedId: null,
     term: '',
     category: 'All',
     labelCategory: null,
+    role: null,
     path: null,
     showAllNames: false
 };
@@ -48,6 +51,18 @@ const LABEL_SHAPES = {
     Structure: { symbol: 'square',   label: 'Structure & terrain' },
     Trait:     { symbol: 'circle',   label: 'Other trait' }
 };
+
+// Edge roles: hue = group (harm enemies / help own side / condition), dash = variant
+// (self only / works against), arrow = direction. Three hues validated for CVD on --bg;
+// colours live in styles.css (--role-*), this table drives legend and markers.
+const ROLE_STYLE = {
+    inflicts:      { hue: 'harm',      dashed: false, hint: 'on enemies' },
+    grants:        { hue: 'help',      dashed: false, hint: 'to allies' },
+    gains:         { hue: 'help',      dashed: true,  hint: 'on itself' },
+    benefits_from: { hue: 'condition', dashed: false, hint: 'condition' },
+    hindered_by:   { hue: 'condition', dashed: true,  hint: 'works against' }
+};
+const SUBJECT_LABEL = { self: 'self', ally: 'allies', enemy: 'enemies' };
 
 const SYMBOLS = {
     times: d3.symbolTimes,
@@ -117,6 +132,14 @@ function setupGraph() {
             .append('circle').attr('r', n.radius - 1.5);
     });
 
+    ['harm', 'help', 'condition', 'mixed'].forEach(hue => {
+        defs.append('marker').attr('id', `arrow-${hue}`)
+            .attr('viewBox', '0 -5 10 10').attr('refX', 9).attr('refY', 0)
+            .attr('markerWidth', 4.5).attr('markerHeight', 4.5).attr('markerUnits', 'strokeWidth')
+            .attr('orient', 'auto-start-reverse')
+            .append('path').attr('class', `arrow arrow--${hue}`).attr('d', 'M0,-5L10,0L0,5Z');
+    });
+
     viewport = svg.append('g').attr('class', 'viewport');
 
     zoom = d3.zoom()
@@ -155,6 +178,15 @@ function setupGraph() {
         .data(linksData)
         .join('line')
         .attr('class', 'link');
+
+    // Wide invisible strokes under the nodes make thin edges hoverable
+    linkHitElements = viewport.append('g').attr('class', 'link-hits')
+        .selectAll('line')
+        .data(linksData)
+        .join('line')
+        .attr('class', 'link-hit')
+        .on('mouseenter', (event, d) => showLinkTooltip(d))
+        .on('mouseleave', hideTooltip);
 
     nodeElements = viewport.append('g').attr('class', 'nodes')
         .selectAll('g')
@@ -247,11 +279,13 @@ function nodeAriaLabel(d) {
 }
 
 function ticked() {
-    linkElements
-        .attr('x1', d => d.source.x)
-        .attr('y1', d => d.source.y)
-        .attr('x2', d => d.target.x)
-        .attr('y2', d => d.target.y);
+    // Stop edges at the node rims so arrowheads aren't hidden under the nodes
+    linksData.forEach(d => { d.seg = trimSegment(d.source, d.target, d.source.radius + 3, d.target.radius + 4); });
+    [linkElements, linkHitElements].forEach(sel => sel
+        .attr('x1', d => d.seg.x1)
+        .attr('y1', d => d.seg.y1)
+        .attr('x2', d => d.seg.x2)
+        .attr('y2', d => d.seg.y2));
     nodeElements.attr('transform', d => `translate(${d.x},${d.y})`);
 }
 
@@ -295,11 +329,19 @@ function fitView(nodes, duration = 450) {
     applyTransform(fitTransform(bounds, width, height, 20, 1.6), duration);
 }
 
+// { nodeIds, links } for the active filter; nodeIds is null when nothing filters.
+// links is only set by the role filter (other filters keep links whose ends match)
+function currentFilter() {
+    if (state.role) return filterByRole(linksData, state.role);
+    return {
+        nodeIds: filterNodes(nodesData, { term: state.term, category: state.category, labelCategory: state.labelCategory }),
+        links: null
+    };
+}
+
 function fitToFilter() {
-    const ids = filterNodes(nodesData, {
-        term: state.term, category: state.category, labelCategory: state.labelCategory
-    });
-    fitView(ids ? nodesData.filter(n => ids.has(n.id)) : nodesData);
+    const { nodeIds } = currentFilter();
+    fitView(nodeIds ? nodesData.filter(n => nodeIds.has(n.id)) : nodesData);
 }
 
 function centerOn(node, duration = 450) {
@@ -353,7 +395,7 @@ function clearSelection() {
 }
 
 function clearAll() {
-    Object.assign(state, { selectedId: null, term: '', category: 'All', labelCategory: null, path: null });
+    Object.assign(state, { selectedId: null, term: '', category: 'All', labelCategory: null, role: null, path: null });
     document.getElementById('searchInput').value = '';
     closeSuggestions();
     trackEvent('filter_cleared', 'Filter', 'Clear All');
@@ -362,9 +404,7 @@ function clearAll() {
 
 // One function maps state -> visuals so every interaction stays consistent
 function render() {
-    const filterSet = filterNodes(nodesData, {
-        term: state.term, category: state.category, labelCategory: state.labelCategory
-    });
+    const { nodeIds: filterSet, links: filterLinks } = currentFilter();
 
     let highlight = null;
     let pathLinks = null;
@@ -384,19 +424,41 @@ function render() {
         .classed('is-match', d => !highlight && filterSet ? filterSet.has(d.id) : false)
         .attr('aria-pressed', d => String(d.id === state.selectedId));
 
+    // Role colours and arrows show on edges in focus: the selection's own edges or the role filter's
+    const roleShown = new Set();
     linkElements.attr('class', d => {
         if (pathLinks) {
             return pathLinks.has([d.source.id, d.target.id].sort().join('|')) ? 'link link--path' : 'link link--dim';
         }
-        if (highlight) return `link link--${linkState(d, highlight)}`;
+        if (highlight) {
+            const st = linkState(d, highlight);
+            if (st === 'direct') roleShown.add(d);
+            return `link link--${st}`;
+        }
+        if (filterLinks) {
+            if (!filterLinks.has(d)) return 'link link--dim';
+            roleShown.add(d);
+            return 'link link--role';
+        }
         if (filterSet) return filterSet.has(d.source.id) && filterSet.has(d.target.id) ? 'link' : 'link link--dim';
         return 'link';
+    });
+    linkElements.each(function (d) {
+        // Under a role filter a mixed edge is drawn as the filtered role
+        const roles = filterLinks && !highlight && !pathLinks ? d.roles.filter(r => r.role === state.role) : d.roles;
+        const kind = filterLinks && !highlight && !pathLinks ? state.role : d.kind;
+        const shown = roleShown.has(d) && kind !== 'has';
+        const line = d3.select(this).classed(`kind--${kind}`, shown);
+        const dir = linkDirection(roles);
+        const hue = kind === 'mixed' ? 'mixed' : ROLE_STYLE[kind]?.hue;
+        line.attr('marker-end', shown && dir.toTrait ? `url(#arrow-${hue})` : null)
+            .attr('marker-start', shown && dir.toHero ? `url(#arrow-${hue})` : null);
     });
 
     // Raise highlighted nodes so they draw above the dimmed crowd
     nodeElements.filter(d => highlight && highlight.get(d.id) !== 'dim' && d.type === 'hero').raise();
     nodeElements.filter(d => highlight && highlight.get(d.id) !== 'dim' && d.type === 'label').raise();
-    linkElements.filter(function () { return /--(direct|path)/.test(this.getAttribute('class')); }).raise();
+    linkElements.filter(function () { return /--(direct|path|role)/.test(this.getAttribute('class')); }).raise();
 
     svg.classed('has-highlight', Boolean(highlight || filterSet));
     svg.classed('show-all-names', state.showAllNames);
@@ -413,9 +475,13 @@ function updateHeaderState(filterSet) {
     const active = [];
     if (state.category !== 'All') active.push(state.category);
     if (state.labelCategory) active.push(`${LABEL_SHAPES[state.labelCategory].label} traits`);
+    if (state.role) active.push(`${ROLE_INFO[state.role].label} edges`);
     if (state.term.trim()) active.push(`“${state.term.trim()}”`);
 
-    document.getElementById('matchCount').textContent = state.labelCategory
+    const roleLinks = state.role ? filterByRole(linksData, state.role).links.size : 0;
+    document.getElementById('matchCount').textContent = state.role
+        ? `${roleLinks} ${ROLE_INFO[state.role].label.toLowerCase()} edge${roleLinks === 1 ? '' : 's'}`
+        : state.labelCategory
         ? `${filterSet.size} matching trait${filterSet.size === 1 ? '' : 's'}`
         : `${heroCount} ${filterSet ? 'matching ' : ''}hero${heroCount === 1 ? '' : 'es'}`;
     document.getElementById('activeFilters').textContent = active.join(' · ') || 'None';
@@ -437,8 +503,11 @@ function updateHeaderState(filterSet) {
     document.querySelectorAll('#categoryChips .chip').forEach(chip => {
         chip.setAttribute('aria-pressed', String(chip.dataset.category === state.category));
     });
-    document.querySelectorAll('.legend-filter').forEach(item => {
+    document.querySelectorAll('.legend-filter[data-label-category]').forEach(item => {
         item.setAttribute('aria-pressed', String(item.dataset.labelCategory === state.labelCategory));
+    });
+    document.querySelectorAll('.legend-filter[data-role]').forEach(item => {
+        item.setAttribute('aria-pressed', String(item.dataset.role === state.role));
     });
 }
 
@@ -495,7 +564,18 @@ function renderDetails() {
     if (node.type === 'hero') {
         const type = HERO_TYPES[node.primaryType];
         const related = relatedHeroes(node, heroesData);
-        const ability = a => {
+        const groups = abilityTraits(node);
+        const roleChip = l => {
+            const n = nodesById.get(`label_${l.label}`);
+            return `<button type="button" class="trait-chip role-chip kind--${l.role}" data-node="${n.id}"
+                        title="${escapeHtml(linkSummary(node.name, l.label, [l])[0])}">
+                ${l.role === 'has' ? '' : `<span class="role-tag">${ROLE_INFO[l.role].label}</span>`}
+                ${labelGlyph(n.category, 14, n.name)} ${escapeHtml(l.label)}${
+                SUBJECT_LABEL[l.on] ? ` <span class="role-on">· ${SUBJECT_LABEL[l.on]}</span>` : ''}</button>`;
+        };
+        const chips = links => links.length
+            ? `<div class="trait-chips ability-traits">${links.map(roleChip).join('')}</div>` : '';
+        const ability = (a, i) => {
             const range = abilityRange(a.range);
             return `
             <article class="ability-card">
@@ -506,6 +586,7 @@ function renderDetails() {
                 <p><span class="ability-key">Target</span> ${escapeHtml(tidyTarget(a.target))}</p>
                 <p><span class="ability-key">Effect</span> ${escapeHtml(a.effect)}</p>
                 ${a.cooldown ? `<p class="ability-cooldown"><span class="ability-key">Cooldown</span> ${escapeHtml(a.cooldown)}</p>` : ''}
+                ${chips(groups[i].links)}
             </article>`;
         };
 
@@ -535,25 +616,19 @@ function renderDetails() {
 
             <section class="detail-section">
                 <h4 class="section-title">Core Ability</h4>
-                ${ability(node.core_ability)}
+                ${ability(node.core_ability, 0)}
             </section>
 
             <section class="detail-section">
                 <h4 class="section-title">Support Abilities <span class="count">${node.support_abilities.length}</span></h4>
-                ${node.support_abilities.map(ability).join('')}
+                ${node.support_abilities.map((a, i) => ability(a, i + 1)).join('')}
             </section>
 
+            ${groups.at(-1).links.length ? `
             <section class="detail-section">
-                <h4 class="section-title">Traits <span class="count">${node.labels.length}</span></h4>
-                <div class="trait-chips">
-                    ${node.labels.map(label => {
-                        const l = nodesById.get(`label_${label}`);
-                        return `<button type="button" class="trait-chip" data-node="${l.id}"
-                                    title="${escapeHtml(LABEL_SHAPES[l.category].label)} · ${l.degree} heroes">
-                                    ${labelGlyph(l.category, 14, l.name)} ${escapeHtml(label)}</button>`;
-                    }).join('')}
-                </div>
-            </section>
+                <h4 class="section-title">Card Traits <span class="count">${groups.at(-1).links.length}</span></h4>
+                ${chips(groups.at(-1).links)}
+            </section>` : ''}
 
             <section class="detail-section">
                 <h4 class="section-title">Related Heroes <span class="count">${related.length}</span></h4>
@@ -576,10 +651,14 @@ function renderDetails() {
                     <div class="badges"><span class="badge">${heroes.length} hero${heroes.length === 1 ? '' : 'es'}</span></div>
                 </div>
             </header>
+            ${traitHeroesByRole(node.name, nodesData).map(group => `
             <section class="detail-section">
-                <h4 class="section-title">Heroes with this trait</h4>
-                <div class="hero-list">${heroes.map(h => heroButton(h)).join('')}</div>
-            </section>`;
+                <h4 class="section-title"><span class="role-dot kind--${group.role}"></span>${ROLE_INFO[group.role].label}
+                    <span class="count">${group.entries.length}</span></h4>
+                <div class="hero-list">${group.entries.map(e => heroButton(heroesData.find(h => h.name === e.hero.name),
+                    `<span class="shared">${escapeHtml([e.sources.join(' & '), SUBJECT_LABEL[e.on] && `on ${SUBJECT_LABEL[e.on]}`]
+                        .filter(Boolean).join(' · '))}</span>`)).join('')}</div>
+            </section>`).join('')}`;
     }
 }
 
@@ -622,18 +701,33 @@ function showTooltip(d) {
                 <div><strong>${escapeHtml(d.name)}</strong>
                 <div class="tt-sub">${escapeHtml(LABEL_SHAPES[d.category].label)}</div></div>
             </div>
-            <div class="tt-meta">Shared by ${d.degree} hero${d.degree === 1 ? '' : 'es'}</div>`;
+            <div class="tt-meta">Shared by ${d.degree} hero${d.degree === 1 ? '' : 'es'}<br>${
+                traitHeroesByRole(d.name, nodesData).map(g => `${g.entries.length} ${ROLE_INFO[g.role].label.toLowerCase()}`).join(' · ')}</div>`;
     }
+    placeTooltip(d.x, d.y, d.radius);
+}
 
+function showLinkTooltip(d) {
+    const tooltip = document.getElementById('tooltip');
+    tooltip.innerHTML = `
+        <div class="tt-head"><div><strong>${escapeHtml(d.source.name)}</strong> · ${escapeHtml(d.target.name)}</div></div>
+        <ul class="tt-roles">${d.roles.map(r => `<li><span class="role-dot kind--${r.role}"></span>${
+            escapeHtml(linkSummary(d.source.name, d.target.name, [r])[0])}</li>`).join('')}</ul>`;
+    placeTooltip((d.seg.x1 + d.seg.x2) / 2, (d.seg.y1 + d.seg.y2) / 2, 2);
+}
+
+// Position the tooltip beside a point given in graph coordinates
+function placeTooltip(gx, gy, radius) {
+    const tooltip = document.getElementById('tooltip');
     const container = document.querySelector('.graph-panel').getBoundingClientRect();
     const t = d3.zoomTransform(svg.node());
     const svgRect = svg.node().getBoundingClientRect();
-    const x = svgRect.left - container.left + t.applyX(d.x);
-    const y = svgRect.top - container.top + t.applyY(d.y);
+    const x = svgRect.left - container.left + t.applyX(gx);
+    const y = svgRect.top - container.top + t.applyY(gy);
     tooltip.hidden = false;
     const tw = tooltip.offsetWidth;
     const th = tooltip.offsetHeight;
-    const offset = d.radius * t.k + 14;
+    const offset = radius * t.k + 14;
     const left = x + offset + tw > container.width ? x - offset - tw : x + offset;
     tooltip.style.left = `${Math.max(8, left)}px`;
     tooltip.style.top = `${Math.min(Math.max(8, y - th / 2), container.height - th - 8)}px`;
@@ -656,6 +750,7 @@ function setupSearch() {
 
     input.addEventListener('input', () => {
         state.term = input.value;
+        state.role = null;
         state.selectedId = null;
         state.path = null;
         updateSuggestions();
@@ -764,6 +859,7 @@ function setupChips() {
         if (!chip) return;
         state.category = chip.dataset.category;
         state.labelCategory = null;
+        state.role = null;
         state.selectedId = null;
         state.path = null;
         trackEvent('category_filter', 'Filter', state.category);
@@ -775,6 +871,18 @@ function setupChips() {
 // ---------------------------------------------------------------------------
 // Legend
 // ---------------------------------------------------------------------------
+
+// Mini "hero — trait" diagram with the role's line style and arrow direction
+function roleSwatch(kind) {
+    const hue = kind === 'mixed' ? 'mixed' : ROLE_STYLE[kind].hue;
+    const dir = kind === 'mixed' ? 'both' : ROLE_INFO[kind].direction;
+    const arrowRight = '<path d="M33 2 L39 6 L33 10 Z"/>';
+    const arrowLeft = '<path d="M13 2 L7 6 L13 10 Z"/>';
+    return `<svg class="role-swatch hue--${hue}" width="50" height="12" viewBox="0 0 50 12" aria-hidden="true">
+        <circle cx="4" cy="6" r="3.5" class="sw-hero"/><rect x="42" y="2.5" width="7" height="7" class="sw-trait"/>
+        <line x1="8" y1="6" x2="38" y2="6" class="sw-line${kind !== 'mixed' && ROLE_STYLE[kind].dashed ? ' sw-dashed' : ''}"/>
+        <g class="sw-arrow">${dir === 'out' || dir === 'both' ? arrowRight : ''}${dir === 'in' || dir === 'both' ? arrowLeft : ''}</g></svg>`;
+}
 
 function renderLegend() {
     const stateSwatch = cls => `<svg width="22" height="22" viewBox="-11 -11 22 22" aria-hidden="true" class="legend-state ${cls}">
@@ -810,6 +918,14 @@ function renderLegend() {
             <li>${edgeSwatch('link--dim')} Unrelated</li>
         </ul>
 
+        <h3 class="legend-title">Edge roles <small>colour · dash · arrow · click to filter</small></h3>
+        <ul class="legend-list">
+            ${ROLES.filter(r => r !== 'has').map(r => `
+                <li><button type="button" class="legend-filter" data-role="${r}" aria-pressed="false">
+                    ${roleSwatch(r)} ${ROLE_INFO[r].label} <small class="legend-hint">${ROLE_STYLE[r].hint}</small></button></li>`).join('')}
+            <li>${roleSwatch('mixed')} Several roles <small class="legend-hint">hover the edge</small></li>
+        </ul>
+
         <h3 class="legend-title">Size</h3>
         <ul class="legend-list legend-sizes">
             <li><svg width="56" height="26" viewBox="0 0 56 26" aria-hidden="true">
@@ -823,6 +939,16 @@ function renderLegend() {
     document.getElementById('legendBody').addEventListener('click', event => {
         const item = event.target.closest('.legend-filter');
         if (!item) return;
+        if (item.dataset.role) {
+            state.role = state.role === item.dataset.role ? null : item.dataset.role;
+            Object.assign(state, { labelCategory: null, category: 'All', term: '', selectedId: null, path: null });
+            document.getElementById('searchInput').value = '';
+            trackEvent('legend_filter', 'Filter', `role: ${item.dataset.role}`);
+            render();
+            fitToFilter();
+            return;
+        }
+        state.role = null;
         const category = item.dataset.labelCategory;
         state.labelCategory = state.labelCategory === category ? null : category;
         state.category = 'All';

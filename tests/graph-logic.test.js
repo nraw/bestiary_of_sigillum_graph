@@ -25,7 +25,7 @@ test('buildGraph creates hero and unique label nodes with links', () => {
         ['Healing', 'Melee', 'Ranged', 'Stun', 'Tank']
     );
     assert.strictEqual(links.length, 7);
-    assert.deepStrictEqual(links[0], { source: 'hero_1', target: 'label_Melee' });
+    assert.deepStrictEqual([links[0].source, links[0].target], ['hero_1', 'label_Melee']);
 });
 
 test('hero nodes carry primary type, image and vitality-based radius', () => {
@@ -206,4 +206,11 @@ test('every range key in the data has a description', () => {
     const ranges = data.flatMap(c => [c.core_ability, ...c.support_abilities]).map(a => a.range).filter(Boolean);
     assert.ok(ranges.length > 0);
     ranges.forEach(r => assert.ok(G.abilityRange(r), `no description for ${r}`));
+});
+
+test('relatedHeroes never lists the hero itself when given its graph node', () => {
+    const alphaNode = byId.get('hero_1');
+    const related = G.relatedHeroes(alphaNode, heroes);
+    assert.ok(!related.some(r => r.hero.id === 1), 'ALPHA must not be related to itself');
+    assert.deepStrictEqual(related.map(r => r.hero.name), ['BETA']);
 });

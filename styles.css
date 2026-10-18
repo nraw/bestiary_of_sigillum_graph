@@ -22,6 +22,13 @@
     --crimson-bright: #B8324A;
     --ember: #FF9A4A;
 
+    /* Edge-role hues: harm enemies / help own side / condition. Validated as a set
+       (dataviz validate_palette.js, dark, surface --bg, all pairs: CVD ΔE 9.4, normal 20.9) */
+    --role-harm: #d95926;
+    --role-help: #199e70;
+    --role-condition: #3987e5;
+    --role-mixed: #EFE3CC;
+
     --radius: 10px;
     --gap: 14px;
     --header-h: 64px;
@@ -809,6 +816,21 @@ kbd {
 }
 .link--dim { stroke-opacity: 0.05; }
 
+/* Role edges (selection's own edges, or the role filter) */
+.link--role { stroke: var(--gold-bright); stroke-opacity: 1; stroke-width: 2.5; }
+.link.kind--inflicts { stroke: var(--role-harm); }
+.link.kind--grants, .link.kind--gains { stroke: var(--role-help); }
+.link.kind--benefits_from, .link.kind--hindered_by { stroke: var(--role-condition); }
+.link.kind--mixed { stroke: var(--role-mixed); }
+.link.kind--gains, .link.kind--hindered_by { stroke-dasharray: 7 4; }
+.link[class*="kind--"] { filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8)); }
+.arrow--harm { fill: var(--role-harm); }
+.arrow--help { fill: var(--role-help); }
+.arrow--condition { fill: var(--role-condition); }
+.arrow--mixed { fill: var(--role-mixed); }
+
+.link-hit { stroke: transparent; stroke-width: 10; pointer-events: stroke; cursor: help; }
+
 @keyframes path-flow { to { stroke-dashoffset: -16; } }
 
 /* Tooltip */
@@ -897,6 +919,19 @@ kbd {
 .legend-list .link { stroke-opacity: 0.6; }
 .legend-list .link--dim { stroke-opacity: 0.18; }
 .legend-list .link--path { animation: none; }
+
+.legend-hint { color: var(--text-faint); font-size: 0.82rem; }
+.role-swatch { flex-shrink: 0; }
+.role-swatch .sw-hero { fill: var(--surface-3); stroke: var(--bronze); stroke-width: 1.2; }
+.role-swatch .sw-trait { fill: #4A3A2D; stroke: var(--bronze); stroke-width: 1.2; }
+.role-swatch .sw-line { stroke-width: 2.5; }
+.role-swatch .sw-dashed { stroke-dasharray: 5 3; }
+.role-swatch.hue--harm { --sw: var(--role-harm); }
+.role-swatch.hue--help { --sw: var(--role-help); }
+.role-swatch.hue--condition { --sw: var(--role-condition); }
+.role-swatch.hue--mixed { --sw: var(--role-mixed); }
+.role-swatch .sw-line { stroke: var(--sw); }
+.role-swatch .sw-arrow { fill: var(--sw); }
 
 .legend-sizes svg circle { fill: var(--surface-3); stroke: var(--bronze); stroke-width: 1.5; }
 .legend-sizes .trait-sizes path { fill: #4A3A2D; stroke: var(--bronze); stroke-width: 1.2; }
@@ -1023,3 +1058,38 @@ kbd {
     .link--direct, .link--path { stroke: Highlight; }
     .node.is-selected .halo { stroke: Highlight; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Role chips (traits under each ability) and role markers            */
+/* ------------------------------------------------------------------ */
+.ability-traits { margin-top: 8px; }
+.role-chip { border-left-width: 3px; }
+.role-chip.kind--inflicts { border-left-color: var(--role-harm); }
+.role-chip.kind--grants, .role-chip.kind--gains { border-left-color: var(--role-help); }
+.role-chip.kind--benefits_from, .role-chip.kind--hindered_by { border-left-color: var(--role-condition); }
+.role-chip.kind--gains, .role-chip.kind--hindered_by { border-left-style: dashed; }
+.role-tag {
+    font-family: 'Cinzel', serif;
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.role-on { color: var(--text-faint); font-size: 0.85em; }
+
+.role-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 6px;
+    border-radius: 50%;
+    border: 2px solid var(--bronze);
+    vertical-align: middle;
+}
+.role-dot.kind--inflicts { border-color: var(--role-harm); background: var(--role-harm); }
+.role-dot.kind--grants { border-color: var(--role-help); background: var(--role-help); }
+.role-dot.kind--gains { border-color: var(--role-help); border-style: dashed; }
+.role-dot.kind--benefits_from { border-color: var(--role-condition); background: var(--role-condition); }
+.role-dot.kind--hindered_by { border-color: var(--role-condition); border-style: dashed; }
+
+.tt-roles { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 3px; font-size: 0.92rem; }

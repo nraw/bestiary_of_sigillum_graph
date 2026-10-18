@@ -10,11 +10,11 @@
         'Place obstacle', 'Resistance', 'Vampirism', 'Stun', 'Silence', 'Poison', 'Web'
     ];
     const LABEL_GROUPS = {
-        Combat: ['Melee', 'Ranged', 'AoE', 'Line-Attack', 'Anti-Large', 'Anti-Group'],
+        Combat: ['Melee', 'Ranged', 'AoE', 'Line-Attack', 'Anti-Group'],
         Magic: ['Support', 'Healing', 'Effect-Copy', 'Effect-Manipulation', 'Teleport'],
         Movement: ['Mobility', 'Displacement', 'Speed-Buff', 'Speed-Debuff', 'Conditional-Mobility'],
-        Structure: ['Structure-Dependent', 'Structure-Counter', 'Terrain-Control', 'Castle-Defender',
-            'Mountain-Synergy', 'Water-Synergy', 'Forest-Synergy']
+        Structure: ['Tower control', 'Structure-Counter', 'Terrain-Control', 'Castle-Defender',
+            'Mountain', 'Water', 'Forest']
     };
 
     // Ability range symbols (ability_images/<key>.png), worded as on the rulebook sheet
@@ -32,6 +32,84 @@
     function abilityRange(key) {
         if (!Object.prototype.hasOwnProperty.call(ABILITY_RANGES, key)) return null;
         return { src: `ability_images/${key}.png`, label: ABILITY_RANGES[key] };
+    }
+
+    // Edge roles: what a hero does with a trait. Giving roles point hero -> trait,
+    // conditions point trait -> hero; "has" is an undirected trait
+    const ROLES = ['inflicts', 'grants', 'gains', 'benefits_from', 'hindered_by', 'has'];
+    const ROLE_INFO = {
+        inflicts:      { label: 'Inflicts',      verb: 'inflicts',      direction: 'out' },
+        grants:        { label: 'Grants',        verb: 'grants',        direction: 'out' },
+        gains:         { label: 'Gains',         verb: 'gains',         direction: 'out' },
+        benefits_from: { label: 'Benefits from', verb: 'benefits from', direction: 'in' },
+        hindered_by:   { label: 'Hindered by',   verb: 'is hindered by', direction: 'in' },
+        has:           { label: 'Has',           verb: 'has',           direction: 'none' }
+    };
+    const SUBJECT_TEXT = { self: 'self', ally: 'allies', enemy: 'enemies' };
+
+    // Colour/marker kind of a link: its one meaningful role, or 'mixed'
+    function linkKind(roles) {
+        const kinds = [...new Set(roles.map(r => r.role).filter(r => r !== 'has'))];
+        if (!kinds.length) return 'has';
+        return kinds.length === 1 ? kinds[0] : 'mixed';
+    }
+
+    function linkDirection(roles) {
+        const dirs = roles.map(r => ROLE_INFO[r.role].direction);
+        return { toTrait: dirs.includes('out'), toHero: dirs.includes('in') };
+    }
+
+    function linkSummary(heroName, label, roles) {
+        return roles.map(r => {
+            const on = SUBJECT_TEXT[r.on] ? ` on ${SUBJECT_TEXT[r.on]}` : '';
+            const via = r.sources && r.sources.length ? `, via ${r.sources.join(' & ')}` : '';
+            return `${heroName} ${ROLE_INFO[r.role].verb} ${label}${on}${via}`;
+        });
+    }
+
+    // [{ ability, links }] for the core and support abilities in card order, then
+    // { ability: null } for card-level traits (no single ability causes them)
+    function abilityTraits(hero) {
+        const abilities = [hero.core_ability, ...hero.support_abilities];
+        const groups = abilities.map(ability => ({
+            ability,
+            links: hero.trait_links.filter(l => ability.name && l.sources.includes(ability.name))
+        }));
+        const named = new Set(abilities.map(a => a.name).filter(Boolean));
+        groups.push({ ability: null, links: hero.trait_links.filter(l => !l.sources.some(s => named.has(s))) });
+        return groups;
+    }
+
+    function traitHeroesByRole(label, nodes) {
+        const heroes = nodes.filter(n => n.type === 'hero');
+        return ROLES.map(role => ({
+            role,
+            entries: heroes.flatMap(hero => hero.trait_links
+                .filter(l => l.label === label && l.role === role)
+                .map(l => ({ hero, on: l.on, sources: l.sources })))
+        })).filter(group => group.entries.length);
+    }
+
+    function filterByRole(links, role) {
+        const kept = new Set(links.filter(l => l.roles.some(r => r.role === role)));
+        const nodeIds = new Set();
+        kept.forEach(l => { nodeIds.add(endId(l.source)); nodeIds.add(endId(l.target)); });
+        return { nodeIds, links: kept };
+    }
+
+    // Line between two circles, trimmed to their rims so arrowheads stay visible
+    function trimSegment(a, b, ra, rb) {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const len = Math.hypot(dx, dy);
+        if (len <= ra + rb) {
+            const mx = (a.x + b.x) / 2;
+            const my = (a.y + b.y) / 2;
+            return { x1: mx, y1: my, x2: mx, y2: my };
+        }
+        const ux = dx / len;
+        const uy = dy / len;
+        return { x1: a.x + ux * ra, y1: a.y + uy * ra, x2: b.x - ux * rb, y2: b.y - uy * rb };
     }
 
     function getPrimaryType(labels) {
@@ -64,6 +142,7 @@
             labels: hero.labels,
             core_ability: hero.core_ability,
             support_abilities: hero.support_abilities,
+            trait_links: hero.trait_links || hero.labels.map(label => ({ label, role: 'has', sources: [] })),
             features: hero.features || [],
             sync_note: hero.sync_note || null,
             image: `hero_images/${hero.name.toLowerCase()}.png`,
@@ -76,7 +155,8 @@
         heroNodes.forEach(hero => {
             hero.labels.forEach(label => {
                 degree.set(label, (degree.get(label) || 0) + 1);
-                links.push({ source: hero.id, target: `label_${label}` });
+                const roles = hero.trait_links.filter(l => l.label === label).map(({ label: _, ...role }) => role);
+                links.push({ source: hero.id, target: `label_${label}`, roles, kind: linkKind(roles) });
             });
         });
 
@@ -138,9 +218,11 @@
         return 'dim';
     }
 
+    // hero may be a raw card or its graph node (whose id is "hero_<n>", card id in originalId)
     function relatedHeroes(hero, heroes) {
+        const selfId = hero.originalId ?? hero.id;
         return heroes
-            .filter(other => other.id !== hero.id)
+            .filter(other => other.id !== selfId)
             .map(other => ({
                 hero: other,
                 shared: hero.labels.filter(label => other.labels.includes(label))
@@ -253,7 +335,8 @@
     const api = {
         PRIMARY_TYPES, getPrimaryType, getLabelCategory, vitalityRadius, labelRadius,
         buildGraph, buildAdjacency, computeHighlight, linkState, relatedHeroes,
-        findPath, filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange
+        findPath, filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange,
+        ROLES, ROLE_INFO, linkKind, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment
     };
 
     if (typeof module !== 'undefined' && module.exports) {

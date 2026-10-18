@@ -30,17 +30,68 @@
         "labels": [
           "Support",
           "Ranged",
-          "Structure-Dependent",
+          "Tower control",
           "Terrain-Control",
           "Castle-Defender",
           "Place obstacle",
-          "Mountain-Synergy"
+          "Mountain"
         ],
         "features": [
           "Blocks movement.",
           "Repairs castle damage."
         ],
-        "sync_note": "Architectus needs Catapult Tower control to sync with its core attack."
+        "sync_note": "Architectus needs Catapult Tower control to sync with its core attack.",
+        "trait_links": [
+          {
+            "label": "Support",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "TOWER BARRAGE"
+            ]
+          },
+          {
+            "label": "Tower control",
+            "role": "benefits_from",
+            "sources": [
+              "TOWER BARRAGE"
+            ],
+            "on": "ally"
+          },
+          {
+            "label": "Terrain-Control",
+            "role": "has",
+            "sources": [
+              "FORTIFICATION"
+            ]
+          },
+          {
+            "label": "Castle-Defender",
+            "role": "has",
+            "sources": [
+              "RECONSTRUCTION"
+            ]
+          },
+          {
+            "label": "Place obstacle",
+            "role": "has",
+            "sources": [
+              "FORTIFICATION"
+            ]
+          },
+          {
+            "label": "Mountain",
+            "role": "benefits_from",
+            "sources": [
+              "RECONSTRUCTION"
+            ],
+            "on": "ally"
+          }
+        ]
       },
       {
         "id": 2,
@@ -79,7 +130,42 @@
           "Mass Defense buffs.",
           "Repositions enemies."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "SHIELD SLAM"
+            ]
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "CHARGE"
+            ]
+          },
+          {
+            "label": "Support",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Defense increase",
+            "role": "grants",
+            "sources": [
+              "ANCESTRAL PROTECTION"
+            ]
+          },
+          {
+            "label": "Stun",
+            "role": "inflicts",
+            "sources": [
+              "CHARGE"
+            ]
+          }
+        ]
       },
       {
         "id": 3,
@@ -109,9 +195,9 @@
         ],
         "labels": [
           "Melee",
-          "Water-Synergy",
+          "Water",
           "Effect-Copy",
-          "Self-Buff",
+          "Positive effect",
           "Mobility",
           "Attack increase"
         ],
@@ -119,7 +205,53 @@
           "Big single-target damage.",
           "Copies buffs."
         ],
-        "sync_note": "Aqus needs to be in water to pull off its most powerful move."
+        "sync_note": "Aqus needs to be in water to pull off its most powerful move.",
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "POURING RAIN"
+            ]
+          },
+          {
+            "label": "Water",
+            "role": "benefits_from",
+            "sources": [
+              "MIGHT OF WATER"
+            ],
+            "on": "self"
+          },
+          {
+            "label": "Effect-Copy",
+            "role": "has",
+            "sources": [
+              "FLUIDITY"
+            ]
+          },
+          {
+            "label": "Positive effect",
+            "role": "benefits_from",
+            "sources": [
+              "FLUIDITY"
+            ],
+            "on": null
+          },
+          {
+            "label": "Mobility",
+            "role": "has",
+            "sources": [
+              "MIGHT OF WATER"
+            ]
+          },
+          {
+            "label": "Attack increase",
+            "role": "gains",
+            "sources": [
+              "MIGHT OF WATER"
+            ]
+          }
+        ]
       },
       {
         "id": 4,
@@ -149,18 +281,63 @@
         ],
         "labels": [
           "Ranged",
-          "Distance-Dependent",
-          "Self-Buff",
+          "Distance",
           "Displacement",
           "Line-Attack",
           "Attack increase",
-          "Mountain-Synergy"
+          "Mountain"
         ],
         "features": [
           "Big single-target damage.",
           "Repositions enemies."
         ],
-        "sync_note": "Ballistarius needs distance from its target to sync with its core attack."
+        "sync_note": "Ballistarius needs distance from its target to sync with its core attack.",
+        "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "BALLISTA"
+            ]
+          },
+          {
+            "label": "Distance",
+            "role": "benefits_from",
+            "sources": [
+              "BALLISTA"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "WINCH"
+            ]
+          },
+          {
+            "label": "Line-Attack",
+            "role": "has",
+            "sources": [
+              "BALLISTA"
+            ]
+          },
+          {
+            "label": "Attack increase",
+            "role": "gains",
+            "sources": [
+              "OPTICAL SIGHT"
+            ]
+          },
+          {
+            "label": "Mountain",
+            "role": "benefits_from",
+            "sources": [
+              "OPTICAL SIGHT"
+            ],
+            "on": "self"
+          }
+        ]
       },
       {
         "id": 5,
@@ -190,7 +367,7 @@
         ],
         "labels": [
           "AoE",
-          "Forest-Synergy",
+          "Forest",
           "Displacement",
           "Support",
           "Defense increase"
@@ -200,7 +377,44 @@
           "Repositions units.",
           "Defense buffs."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "ROOTS"
+            ]
+          },
+          {
+            "label": "Forest",
+            "role": "benefits_from",
+            "sources": [
+              "ROOTS",
+              "CALL OF THE WOODS"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "CALL OF THE WOODS"
+            ]
+          },
+          {
+            "label": "Support",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Defense increase",
+            "role": "grants",
+            "sources": [
+              "SHIELD OF THE FOREST"
+            ]
+          }
+        ]
       },
       {
         "id": 6,
@@ -230,7 +444,7 @@
         ],
         "labels": [
           "Ranged",
-          "Vitality-Dependent",
+          "High-vitality enemies",
           "Healing",
           "Support",
           "Flying",
@@ -241,7 +455,65 @@
           "High mobility.",
           "Heals wounds."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "RETRIBUTION"
+            ]
+          },
+          {
+            "label": "High-vitality enemies",
+            "role": "benefits_from",
+            "sources": [
+              "RETRIBUTION"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Healing",
+            "role": "has",
+            "sources": [
+              "RESURRECTION"
+            ]
+          },
+          {
+            "label": "Support",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Flying",
+            "role": "grants",
+            "sources": [
+              "ASCENSION"
+            ]
+          },
+          {
+            "label": "Swiftness",
+            "role": "grants",
+            "sources": [
+              "RESURRECTION"
+            ]
+          },
+          {
+            "label": "Swiftness",
+            "role": "hindered_by",
+            "sources": [
+              "RESURRECTION"
+            ],
+            "on": "ally"
+          },
+          {
+            "label": "Mobility",
+            "role": "has",
+            "sources": [
+              "ASCENSION"
+            ]
+          }
+        ]
       },
       {
         "id": 7,
@@ -271,9 +543,8 @@
         ],
         "labels": [
           "AoE",
-          "Status-Dependent",
-          "Displacement",
           "Slowness",
+          "Displacement",
           "Mobility",
           "Scaling-Cooldown"
         ],
@@ -282,7 +553,53 @@
           "Repositions units.",
           "Mass Slows."
         ],
-        "sync_note": "Caballus needs enemies to be affected by Slowness to sync with its core attack."
+        "sync_note": "Caballus needs enemies to be affected by Slowness to sync with its core attack.",
+        "trait_links": [
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "WHIP",
+              "HEAVY HOVES"
+            ]
+          },
+          {
+            "label": "Slowness",
+            "role": "benefits_from",
+            "sources": [
+              "WHIP"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "LASSO"
+            ]
+          },
+          {
+            "label": "Slowness",
+            "role": "inflicts",
+            "sources": [
+              "HEAVY HOVES"
+            ]
+          },
+          {
+            "label": "Mobility",
+            "role": "has",
+            "sources": [
+              "LASSO"
+            ]
+          },
+          {
+            "label": "Scaling-Cooldown",
+            "role": "has",
+            "sources": [
+              "HEAVY HOVES"
+            ]
+          }
+        ]
       },
       {
         "id": 8,
@@ -312,7 +629,7 @@
         ],
         "labels": [
           "Melee",
-          "Status-Dependent",
+          "Negative effect",
           "Control decrease",
           "Effect-Manipulation",
           "Displacement"
@@ -322,7 +639,45 @@
           "Tower Control debuffs.",
           "Reverse Ability effects."
         ],
-        "sync_note": "Carnifex needs enemies to be debuffed to sync with its core attack."
+        "sync_note": "Carnifex needs enemies to be debuffed to sync with its core attack.",
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "AX"
+            ]
+          },
+          {
+            "label": "Negative effect",
+            "role": "benefits_from",
+            "sources": [
+              "AX"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Control decrease",
+            "role": "inflicts",
+            "sources": [
+              "STOCKADES"
+            ]
+          },
+          {
+            "label": "Effect-Manipulation",
+            "role": "has",
+            "sources": [
+              "CONVICT THE GUILLTY"
+            ]
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "CONVICT THE GUILLTY"
+            ]
+          }
+        ]
       },
       {
         "id": 9,
@@ -355,15 +710,87 @@
           "Melee",
           "Conditional-Mobility",
           "Attack decrease",
-          "Damage-Dependent",
-          "Mobility"
+          "Wound",
+          "Mobility",
+          "Mountain",
+          "Forest",
+          "Water"
         ],
         "features": [
           "Hits multiple targets.",
           "High mobility.",
           "Mass Attack debuffs."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "THREE-HEADED BITE"
+            ]
+          },
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "THREE-HEADED BITE"
+            ]
+          },
+          {
+            "label": "Conditional-Mobility",
+            "role": "has",
+            "sources": [
+              "VEHEMENCE"
+            ]
+          },
+          {
+            "label": "Attack decrease",
+            "role": "inflicts",
+            "sources": [
+              "HOWL"
+            ]
+          },
+          {
+            "label": "Wound",
+            "role": "benefits_from",
+            "sources": [
+              "VEHEMENCE"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Mobility",
+            "role": "has",
+            "sources": [
+              "VEHEMENCE"
+            ]
+          },
+          {
+            "label": "Mountain",
+            "role": "hindered_by",
+            "sources": [
+              "VEHEMENCE"
+            ],
+            "on": "self"
+          },
+          {
+            "label": "Forest",
+            "role": "hindered_by",
+            "sources": [
+              "VEHEMENCE"
+            ],
+            "on": "self"
+          },
+          {
+            "label": "Water",
+            "role": "hindered_by",
+            "sources": [
+              "VEHEMENCE"
+            ],
+            "on": "self"
+          }
+        ]
       },
       {
         "id": 10,
@@ -395,7 +822,7 @@
           "AoE",
           "Line-Attack",
           "Control increase",
-          "Structure-Dependent",
+          "Tower control",
           "Mobility"
         ],
         "features": [
@@ -403,7 +830,45 @@
           "High mobility.",
           "Tower Control buffs."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "NOSEDIVE"
+            ]
+          },
+          {
+            "label": "Line-Attack",
+            "role": "has",
+            "sources": [
+              "NOSEDIVE"
+            ]
+          },
+          {
+            "label": "Control increase",
+            "role": "gains",
+            "sources": [
+              "GARGOYLE"
+            ]
+          },
+          {
+            "label": "Tower control",
+            "role": "benefits_from",
+            "sources": [
+              "FLIGHT"
+            ],
+            "on": "ally"
+          },
+          {
+            "label": "Mobility",
+            "role": "has",
+            "sources": [
+              "FLIGHT"
+            ]
+          }
+        ]
       },
       {
         "id": 11,
@@ -432,17 +897,49 @@
           }
         ],
         "labels": [
-          "Status-Dependent",
+          "Negative effect",
           "Slowness",
           "Attack decrease",
-          "Debuffer",
-          "Water-Synergy"
+          "Water"
         ],
         "features": [
           "Attack debuffs.",
           "Slowness effects."
         ],
-        "sync_note": "Frigus needs Water hexes to make efficient use of its Abilities."
+        "sync_note": "Frigus needs Water hexes to make efficient use of its Abilities.",
+        "trait_links": [
+          {
+            "label": "Negative effect",
+            "role": "benefits_from",
+            "sources": [
+              "RAIN OF ICE"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Slowness",
+            "role": "inflicts",
+            "sources": [
+              "SHACKLING COLD"
+            ]
+          },
+          {
+            "label": "Attack decrease",
+            "role": "inflicts",
+            "sources": [
+              "SPELL OF FROST"
+            ]
+          },
+          {
+            "label": "Water",
+            "role": "benefits_from",
+            "sources": [
+              "SHACKLING COLD",
+              "SPELL OF FROST"
+            ],
+            "on": null
+          }
+        ]
       },
       {
         "id": 12,
@@ -471,7 +968,7 @@
           }
         ],
         "labels": [
-          "Isolation-Dependent",
+          "Isolated enemies",
           "Healing",
           "Support",
           "Displacement",
@@ -481,7 +978,43 @@
           "Repositions allies.",
           "Heals wounds."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "Isolated enemies",
+            "role": "benefits_from",
+            "sources": [
+              "LIGHTNING"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Healing",
+            "role": "has",
+            "sources": [
+              "RITUAL OF VITALITY"
+            ]
+          },
+          {
+            "label": "Support",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "SUMMONING RITUAL"
+            ]
+          },
+          {
+            "label": "Self-Sacrifice",
+            "role": "has",
+            "sources": [
+              "RITUAL OF VITALITY"
+            ]
+          }
+        ]
       },
       {
         "id": 13,
@@ -511,17 +1044,47 @@
         ],
         "labels": [
           "Ranged",
-          "Size-Dependent",
+          "Big enemies",
           "Stun",
-          "Control increase",
-          "Anti-Large"
+          "Control increase"
         ],
         "features": [
           "Big damage vs big targets.",
           "Stuns.",
           "Tower Control buffs."
         ],
-        "sync_note": "Cannot hit small targets."
+        "sync_note": "Cannot hit small targets.",
+        "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "CATAPULT"
+            ]
+          },
+          {
+            "label": "Big enemies",
+            "role": "benefits_from",
+            "sources": [
+              "CATAPULT"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Stun",
+            "role": "inflicts",
+            "sources": [
+              "BOULDER"
+            ]
+          },
+          {
+            "label": "Control increase",
+            "role": "gains",
+            "sources": [
+              "SIEGE STANCE"
+            ]
+          }
+        ]
       },
       {
         "id": 14,
@@ -551,7 +1114,7 @@
         ],
         "labels": [
           "Melee",
-          "Terrain-Restricted",
+          "Water",
           "Displacement",
           "Stun",
           "Line-Attack"
@@ -560,7 +1123,45 @@
           "Repositions enemies.",
           "Stuns."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "HEARTH OF HELL"
+            ]
+          },
+          {
+            "label": "Water",
+            "role": "hindered_by",
+            "sources": [
+              "HEARTH OF HELL"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "HAMMER"
+            ]
+          },
+          {
+            "label": "Stun",
+            "role": "inflicts",
+            "sources": [
+              "ANVIL"
+            ]
+          },
+          {
+            "label": "Line-Attack",
+            "role": "has",
+            "sources": [
+              "ANVIL"
+            ]
+          }
+        ]
       },
       {
         "id": 15,
@@ -590,17 +1191,61 @@
         ],
         "labels": [
           "Melee",
-          "Enemy-Count-Dependent",
+          "Adjacent enemies",
           "Support",
           "Resistance",
           "Attack increase",
-          "Wound-Synergy"
+          "Wound"
         ],
         "features": [
           "Big single-target damage.",
           "Mass Resistance."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "PICKAXES OF RAGE"
+            ]
+          },
+          {
+            "label": "Adjacent enemies",
+            "role": "benefits_from",
+            "sources": [
+              "PICKAXES OF RAGE"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Support",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Resistance",
+            "role": "grants",
+            "sources": [
+              "BOODSTONE"
+            ]
+          },
+          {
+            "label": "Attack increase",
+            "role": "gains",
+            "sources": [
+              "FRENZY"
+            ]
+          },
+          {
+            "label": "Wound",
+            "role": "benefits_from",
+            "sources": [
+              "FRENZY"
+            ],
+            "on": "self"
+          }
+        ]
       },
       {
         "id": 16,
@@ -630,17 +1275,60 @@
         ],
         "labels": [
           "Melee",
-          "Damage-Dependent",
+          "Wound",
           "Vampirism",
           "Support",
-          "Mobility",
-          "Wound-Synergy"
+          "Mobility"
         ],
         "features": [
           "High mobility.",
           "Vampiric Attack buffs."
         ],
-        "sync_note": "Needs enemies to be wounded to sync with its core attack."
+        "sync_note": "Needs enemies to be wounded to sync with its core attack.",
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "BLOODLUST"
+            ]
+          },
+          {
+            "label": "Wound",
+            "role": "benefits_from",
+            "sources": [
+              "BLOODLUST"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Vampirism",
+            "role": "grants",
+            "sources": [
+              "VAMPIRIC DRAIN"
+            ]
+          },
+          {
+            "label": "Support",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Mobility",
+            "role": "has",
+            "sources": [
+              "BAT SWARM"
+            ]
+          },
+          {
+            "label": "Wound",
+            "role": "benefits_from",
+            "sources": [
+              "VAMPIRIC DRAIN"
+            ],
+            "on": "self"
+          }
+        ]
       },
       {
         "id": 17,
@@ -669,8 +1357,8 @@
           }
         ],
         "labels": [
-          "Ally-Dependent",
-          "Effect-Dependent",
+          "Allies near enemies",
+          "Positive effect",
           "Support",
           "Attack increase",
           "Swiftness"
@@ -679,7 +1367,44 @@
           "Attack buffs.",
           "Swiftness."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "Allies near enemies",
+            "role": "benefits_from",
+            "sources": [
+              "FLAMING ARTIFACT"
+            ],
+            "on": "ally"
+          },
+          {
+            "label": "Positive effect",
+            "role": "benefits_from",
+            "sources": [
+              "FLAMING ARTIFACT"
+            ],
+            "on": "ally"
+          },
+          {
+            "label": "Support",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Attack increase",
+            "role": "grants",
+            "sources": [
+              "MIGHT OF FIRE"
+            ]
+          },
+          {
+            "label": "Swiftness",
+            "role": "grants",
+            "sources": [
+              "QUICKENING FLARE"
+            ]
+          }
+        ]
       },
       {
         "id": 18,
@@ -708,10 +1433,9 @@
           }
         ],
         "labels": [
-          "Status-Dependent",
+          "Stun",
           "Teleport",
           "Support",
-          "Stun",
           "Line-Attack",
           "AoE",
           "Displacement"
@@ -721,7 +1445,57 @@
           "Repositions allies.",
           "Stun."
         ],
-        "sync_note": "Illesebra needs enemies to be Stunned to sync with her core attack."
+        "sync_note": "Illesebra needs enemies to be Stunned to sync with her core attack.",
+        "trait_links": [
+          {
+            "label": "Stun",
+            "role": "benefits_from",
+            "sources": [
+              "HYPNOSIS"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Teleport",
+            "role": "has",
+            "sources": [
+              "PORTAL TO THE UNDERWORLD"
+            ]
+          },
+          {
+            "label": "Support",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Stun",
+            "role": "inflicts",
+            "sources": [
+              "TEMPTATION"
+            ]
+          },
+          {
+            "label": "Line-Attack",
+            "role": "has",
+            "sources": [
+              "TEMPTATION"
+            ]
+          },
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "HYPNOSIS"
+            ]
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "PORTAL TO THE UNDERWORLD"
+            ]
+          }
+        ]
       },
       {
         "id": 19,
@@ -753,7 +1527,7 @@
           "Melee",
           "AoE",
           "Stun",
-          "Structure-Dependent",
+          "Tower control",
           "Control increase",
           "Scaling-Cooldown"
         ],
@@ -761,7 +1535,52 @@
           "Mass Stuns.",
           "Tower Control."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "PICK HAMMER"
+            ]
+          },
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "FISSURE"
+            ]
+          },
+          {
+            "label": "Stun",
+            "role": "inflicts",
+            "sources": [
+              "FISSURE"
+            ]
+          },
+          {
+            "label": "Tower control",
+            "role": "benefits_from",
+            "sources": [
+              "DITCH"
+            ],
+            "on": "ally"
+          },
+          {
+            "label": "Control increase",
+            "role": "grants",
+            "sources": [
+              "DITCH"
+            ]
+          },
+          {
+            "label": "Scaling-Cooldown",
+            "role": "has",
+            "sources": [
+              "FISSURE"
+            ]
+          }
+        ]
       },
       {
         "id": 20,
@@ -791,19 +1610,62 @@
         ],
         "labels": [
           "AoE",
-          "Defense-Dependent",
+          "Defense increase",
           "Tank",
           "Stun",
-          "Self-Buff",
-          "Defense increase",
-          "Mountain-Synergy"
+          "Mountain"
         ],
         "features": [
           "Hits multiple targets.",
           "Mass Stuns.",
           "Defense buffs."
         ],
-        "sync_note": "Saxum needs to be buffed with Defense points to sync with its core attack."
+        "sync_note": "Saxum needs to be buffed with Defense points to sync with its core attack.",
+        "trait_links": [
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "ROCK BLAST",
+              "SHAKING EARTH"
+            ]
+          },
+          {
+            "label": "Defense increase",
+            "role": "benefits_from",
+            "sources": [
+              "ROCK BLAST"
+            ],
+            "on": "self"
+          },
+          {
+            "label": "Tank",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Stun",
+            "role": "inflicts",
+            "sources": [
+              "SHAKING EARTH"
+            ]
+          },
+          {
+            "label": "Defense increase",
+            "role": "gains",
+            "sources": [
+              "STONESKIN"
+            ]
+          },
+          {
+            "label": "Mountain",
+            "role": "benefits_from",
+            "sources": [
+              "STONESKIN"
+            ],
+            "on": "self"
+          }
+        ]
       },
       {
         "id": 21,
@@ -833,17 +1695,64 @@
         ],
         "labels": [
           "AoE",
-          "Range-Dependent",
+          "Enemies 1 hex away",
           "Defense increase",
           "Mobility",
-          "Resistance"
+          "Resistance",
+          "Adjacent enemies"
         ],
         "features": [
           "Hits multiple targets.",
           "High mobility.",
           "Defense and Resistance buffs."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "BONE BOOMERANG"
+            ]
+          },
+          {
+            "label": "Enemies 1 hex away",
+            "role": "benefits_from",
+            "sources": [
+              "BONE BOOMERANG"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Defense increase",
+            "role": "gains",
+            "sources": [
+              "LIFE-GIVING BINDINGS"
+            ]
+          },
+          {
+            "label": "Mobility",
+            "role": "has",
+            "sources": [
+              "DASH"
+            ]
+          },
+          {
+            "label": "Resistance",
+            "role": "gains",
+            "sources": [
+              "DASH"
+            ]
+          },
+          {
+            "label": "Adjacent enemies",
+            "role": "benefits_from",
+            "sources": [
+              "LIFE-GIVING BINDINGS"
+            ],
+            "on": "enemy"
+          }
+        ]
       },
       {
         "id": 22,
@@ -873,7 +1782,7 @@
         ],
         "labels": [
           "Melee",
-          "Cooldown-Dependent",
+          "Abilities on cooldown",
           "Support",
           "Cooldown-Manipulation",
           "Swiftness"
@@ -882,7 +1791,43 @@
           "Swiftness.",
           "Affects enemies Ability Cooldowns."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "PENDULUM"
+            ]
+          },
+          {
+            "label": "Abilities on cooldown",
+            "role": "benefits_from",
+            "sources": [
+              "PENDULUM"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Support",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Cooldown-Manipulation",
+            "role": "grants",
+            "sources": [
+              "TIMEPIECE"
+            ]
+          },
+          {
+            "label": "Swiftness",
+            "role": "grants",
+            "sources": [
+              "TIME LOOP"
+            ]
+          }
+        ]
       },
       {
         "id": 23,
@@ -911,7 +1856,7 @@
           }
         ],
         "labels": [
-          "Ally-Count-Dependent",
+          "Clustered enemies",
           "Displacement",
           "Attack decrease",
           "Positioning"
@@ -920,7 +1865,39 @@
           "Repositions enemies.",
           "Attack debuffs"
         ],
-        "sync_note": "Lignum needs enemies to be adjacent to each other to sync with its core attack."
+        "sync_note": "Lignum needs enemies to be adjacent to each other to sync with its core attack.",
+        "trait_links": [
+          {
+            "label": "Clustered enemies",
+            "role": "benefits_from",
+            "sources": [
+              "PUPPET",
+              "LIMP HANDS"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "DARKSTRINGS"
+            ]
+          },
+          {
+            "label": "Attack decrease",
+            "role": "inflicts",
+            "sources": [
+              "LIMP HANDS"
+            ]
+          },
+          {
+            "label": "Positioning",
+            "role": "has",
+            "sources": [
+              "DARKSTRINGS"
+            ]
+          }
+        ]
       },
       {
         "id": 24,
@@ -950,17 +1927,61 @@
         ],
         "labels": [
           "Melee",
-          "Ally-Count-Dependent",
+          "Adjacent allies",
           "Displacement",
           "Support",
           "Defense increase",
-          "Forest-Synergy"
+          "Forest"
         ],
         "features": [
           "Repositions units.",
           "Mass Defense buffs."
         ],
-        "sync_note": "Manus needs to be adjacent to allies to sync with its core attack."
+        "sync_note": "Manus needs to be adjacent to allies to sync with its core attack.",
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "JOINT ASSAULT"
+            ]
+          },
+          {
+            "label": "Adjacent allies",
+            "role": "benefits_from",
+            "sources": [
+              "JOINT ASSAULT"
+            ],
+            "on": "ally"
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "MECHANICAL HAND"
+            ]
+          },
+          {
+            "label": "Support",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Defense increase",
+            "role": "grants",
+            "sources": [
+              "SMOKESCREEN"
+            ]
+          },
+          {
+            "label": "Forest",
+            "role": "benefits_from",
+            "sources": [
+              "SMOKESCREEN"
+            ],
+            "on": "self"
+          }
+        ]
       },
       {
         "id": 25,
@@ -990,16 +2011,55 @@
         ],
         "labels": [
           "Melee",
-          "Self-Damage-Dependent",
+          "Wound",
           "Displacement",
-          "Stun",
-          "Wound-Synergy"
+          "Stun"
         ],
         "features": [
           "Repositions units.",
           "Frequent Stuns."
         ],
-        "sync_note": "Vinctum needs to be wounded to sync with its core attack."
+        "sync_note": "Vinctum needs to be wounded to sync with its core attack.",
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "BURDEN OF VENGEANCE"
+            ]
+          },
+          {
+            "label": "Wound",
+            "role": "benefits_from",
+            "sources": [
+              "BURDEN OF VENGEANCE",
+              "IRON MASK"
+            ],
+            "on": "self"
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "IRON MASK"
+            ]
+          },
+          {
+            "label": "Stun",
+            "role": "inflicts",
+            "sources": [
+              "PRISONER'S SHACKLES"
+            ]
+          },
+          {
+            "label": "Wound",
+            "role": "hindered_by",
+            "sources": [
+              "PRISONER'S SHACKLES"
+            ],
+            "on": "self"
+          }
+        ]
       },
       {
         "id": 26,
@@ -1033,13 +2093,66 @@
           "Swiftness",
           "Structure-Counter",
           "Control decrease",
-          "Mobility"
+          "Mobility",
+          "Wound"
         ],
         "features": [
           "High mobility.",
           "Mass enemy Tower Control debuffs."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "ANCESTRAL CANNON"
+            ]
+          },
+          {
+            "label": "Range-Restricted",
+            "role": "has",
+            "sources": [
+              "ANCESTRAL CANNON"
+            ]
+          },
+          {
+            "label": "Swiftness",
+            "role": "gains",
+            "sources": [
+              "SEPARATE THRUST FEED"
+            ]
+          },
+          {
+            "label": "Structure-Counter",
+            "role": "has",
+            "sources": [
+              "SIEGE TANK"
+            ]
+          },
+          {
+            "label": "Control decrease",
+            "role": "inflicts",
+            "sources": [
+              "SIEGE TANK"
+            ]
+          },
+          {
+            "label": "Mobility",
+            "role": "has",
+            "sources": [
+              "SEPARATE THRUST FEED"
+            ]
+          },
+          {
+            "label": "Wound",
+            "role": "hindered_by",
+            "sources": [
+              "SEPARATE THRUST FEED"
+            ],
+            "on": "self"
+          }
+        ]
       },
       {
         "id": 27,
@@ -1068,11 +2181,10 @@
           }
         ],
         "labels": [
-          "Status-Dependent",
           "Poison",
-          "Damage-Dependent",
+          "Wound",
           "Displacement",
-          "Water-Synergy",
+          "Water",
           "Scaling-Cooldown",
           "Cooldown-Manipulation",
           "AoE"
@@ -1082,7 +2194,71 @@
           "Affects cooldowns.",
           "Repositions enemies."
         ],
-        "sync_note": "Toxicum needs enemies to be Poisoned to sync with its core attack."
+        "sync_note": "Toxicum needs enemies to be Poisoned to sync with its core attack.",
+        "trait_links": [
+          {
+            "label": "Poison",
+            "role": "benefits_from",
+            "sources": [
+              "POISONOUS INFLUENCE"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Poison",
+            "role": "inflicts",
+            "sources": [
+              "POISONER'S KIT",
+              "VIAL OF VENOM"
+            ]
+          },
+          {
+            "label": "Wound",
+            "role": "benefits_from",
+            "sources": [
+              "POISONER'S KIT"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "VIAL OF VENOM"
+            ]
+          },
+          {
+            "label": "Water",
+            "role": "benefits_from",
+            "sources": [
+              "VIAL OF VENOM"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Scaling-Cooldown",
+            "role": "has",
+            "sources": [
+              "POISONER'S KIT"
+            ]
+          },
+          {
+            "label": "Cooldown-Manipulation",
+            "role": "inflicts",
+            "sources": [
+              "POISONER'S KIT",
+              "VIAL OF VENOM"
+            ]
+          },
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "POISONOUS INFLUENCE",
+              "POISONER'S KIT"
+            ]
+          }
+        ]
       },
       {
         "id": 28,
@@ -1112,16 +2288,69 @@
         ],
         "labels": [
           "Melee",
-          "Status-Dependent",
+          "Stun",
           "Terrain-Control",
           "Displacement",
-          "Web"
+          "Web",
+          "Swiftness"
         ],
         "features": [
           "Web effect (Stun or Swiftness).",
           "Repositions enemies."
         ],
-        "sync_note": "Eresida needs enemies to be Stunned to make efficient use of its core attack."
+        "sync_note": "Eresida needs enemies to be Stunned to make efficient use of its core attack.",
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "SPIDERLINGS"
+            ]
+          },
+          {
+            "label": "Stun",
+            "role": "benefits_from",
+            "sources": [
+              "SPIDERLINGS"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Terrain-Control",
+            "role": "has",
+            "sources": [
+              "WEBBING"
+            ]
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "COCOON THREAD"
+            ]
+          },
+          {
+            "label": "Web",
+            "role": "has",
+            "sources": [
+              "WEBBING"
+            ]
+          },
+          {
+            "label": "Stun",
+            "role": "inflicts",
+            "sources": [
+              "WEBBING"
+            ]
+          },
+          {
+            "label": "Swiftness",
+            "role": "grants",
+            "sources": [
+              "WEBBING"
+            ]
+          }
+        ]
       },
       {
         "id": 29,
@@ -1150,7 +2379,7 @@
           }
         ],
         "labels": [
-          "Isolation-Dependent",
+          "Isolated enemies",
           "Defense decrease",
           "Displacement",
           "Anti-Group"
@@ -1159,7 +2388,40 @@
           "Repositions enemies.",
           "Defense debuffs."
         ],
-        "sync_note": "Messum needs enemies spread out and not adjacent to each other to sync with its core attack."
+        "sync_note": "Messum needs enemies spread out and not adjacent to each other to sync with its core attack.",
+        "trait_links": [
+          {
+            "label": "Isolated enemies",
+            "role": "benefits_from",
+            "sources": [
+              "HARVEST",
+              "FRAILTY",
+              "FACES OF DEATH"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Defense decrease",
+            "role": "inflicts",
+            "sources": [
+              "FRAILTY"
+            ]
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "FACES OF DEATH"
+            ]
+          },
+          {
+            "label": "Anti-Group",
+            "role": "has",
+            "sources": [
+              "HARVEST"
+            ]
+          }
+        ]
       },
       {
         "id": 30,
@@ -1188,7 +2450,7 @@
           }
         ],
         "labels": [
-          "Terrain-Dependent",
+          "Terrain difference",
           "Displacement",
           "Silence",
           "AoE",
@@ -1198,7 +2460,43 @@
           "Repositions characters.",
           "Mass silence."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "Terrain difference",
+            "role": "benefits_from",
+            "sources": [
+              "KNOWLEDGE IS POWER"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "TORCH"
+            ]
+          },
+          {
+            "label": "Silence",
+            "role": "inflicts",
+            "sources": [
+              "COMPLETE SILENCE"
+            ]
+          },
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "COMPLETE SILENCE"
+            ]
+          },
+          {
+            "label": "Utility",
+            "role": "has",
+            "sources": []
+          }
+        ]
       },
       {
         "id": 31,
@@ -1228,7 +2526,7 @@
         ],
         "labels": [
           "Melee",
-          "Cooldown-Dependent",
+          "Abilities on cooldown",
           "Cooldown-Manipulation",
           "Stun",
           "Counter-Magic",
@@ -1238,7 +2536,53 @@
           "Affects enemies Ability Cooldowns.",
           "Stuns."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "BREWER'S TANKARD"
+            ]
+          },
+          {
+            "label": "Abilities on cooldown",
+            "role": "benefits_from",
+            "sources": [
+              "BREWER'S TANKARD",
+              "BEER CASK"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Cooldown-Manipulation",
+            "role": "inflicts",
+            "sources": [
+              "FRAGRANT HOP"
+            ]
+          },
+          {
+            "label": "Stun",
+            "role": "inflicts",
+            "sources": [
+              "BEER CASK"
+            ]
+          },
+          {
+            "label": "Counter-Magic",
+            "role": "has",
+            "sources": [
+              "FRAGRANT HOP"
+            ]
+          },
+          {
+            "label": "Scaling-Cooldown",
+            "role": "has",
+            "sources": [
+              "FRAGRANT HOP"
+            ]
+          }
+        ]
       },
       {
         "id": 32,
@@ -1268,8 +2612,8 @@
         ],
         "labels": [
           "AoE",
-          "Vitality-Dependent",
-          "Self-Damage-Dependent",
+          "High-vitality enemies",
+          "Wound",
           "Stun",
           "Healing",
           "Self-Sacrifice"
@@ -1278,7 +2622,54 @@
           "Mass Stuns.",
           "Heals wounds."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "COLLISION",
+              "ASTEROID BELT"
+            ]
+          },
+          {
+            "label": "High-vitality enemies",
+            "role": "benefits_from",
+            "sources": [
+              "COLLISION"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Wound",
+            "role": "benefits_from",
+            "sources": [
+              "ASTEROID BELT"
+            ],
+            "on": "self"
+          },
+          {
+            "label": "Stun",
+            "role": "inflicts",
+            "sources": [
+              "ASTEROID BELT"
+            ]
+          },
+          {
+            "label": "Healing",
+            "role": "has",
+            "sources": [
+              "GRAVITY LINK"
+            ]
+          },
+          {
+            "label": "Self-Sacrifice",
+            "role": "has",
+            "sources": [
+              "GRAVITY LINK"
+            ]
+          }
+        ]
       },
       {
         "id": 33,
@@ -1308,16 +2699,61 @@
         ],
         "labels": [
           "Melee",
-          "Positioning-Dependent",
+          "Isolated enemies",
           "Mobility",
           "Displacement",
-          "Assassin"
+          "Assassin",
+          "Wound"
         ],
         "features": [
           "High mobility.",
           "Repositions enemies."
         ],
-        "sync_note": "Tenebris needs enemies to be non-adjacent to each other to make efficient use of its core attack."
+        "sync_note": "Tenebris needs enemies to be non-adjacent to each other to make efficient use of its core attack.",
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "SHADES"
+            ]
+          },
+          {
+            "label": "Isolated enemies",
+            "role": "benefits_from",
+            "sources": [
+              "SHADES"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Mobility",
+            "role": "has",
+            "sources": [
+              "EVERPRESENCE"
+            ]
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "OMINOUS DARK"
+            ]
+          },
+          {
+            "label": "Assassin",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Wound",
+            "role": "benefits_from",
+            "sources": [
+              "EVERPRESENCE"
+            ],
+            "on": "enemy"
+          }
+        ]
       },
       {
         "id": 34,
@@ -1347,8 +2783,8 @@
         ],
         "labels": [
           "Melee",
-          "Speed-Dependent",
           "Swiftness",
+          "Slowness",
           "Poison",
           "Mobile-Striker",
           "Cooldown-Manipulation"
@@ -1357,7 +2793,58 @@
           "Swiftness.",
           "Affects cooldowns."
         ],
-        "sync_note": "Equita's core attack is enhanced by Swiftness, but weakened by Slowness."
+        "sync_note": "Equita's core attack is enhanced by Swiftness, but weakened by Slowness.",
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "KNIGHTLY SMITE"
+            ]
+          },
+          {
+            "label": "Swiftness",
+            "role": "benefits_from",
+            "sources": [
+              "KNIGHTLY SMITE"
+            ],
+            "on": "self"
+          },
+          {
+            "label": "Slowness",
+            "role": "hindered_by",
+            "sources": [
+              "KNIGHTLY SMITE"
+            ],
+            "on": "self"
+          },
+          {
+            "label": "Swiftness",
+            "role": "gains",
+            "sources": [
+              "TWILIGHT MOMENTUM"
+            ]
+          },
+          {
+            "label": "Poison",
+            "role": "inflicts",
+            "sources": [
+              "POISON-TIPPED LANCE"
+            ]
+          },
+          {
+            "label": "Mobile-Striker",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Cooldown-Manipulation",
+            "role": "inflicts",
+            "sources": [
+              "POISON-TIPPED LANCE"
+            ]
+          }
+        ]
       },
       {
         "id": 35,
@@ -1387,18 +2874,72 @@
         ],
         "labels": [
           "Melee",
-          "Ability-Count-Dependent",
-          "Mountain-Synergy",
+          "Abilities on cooldown",
+          "Mountain",
           "Displacement",
           "Silence",
-          "Scaling-AoE",
+          "Wound",
           "Scaling-Cooldown"
         ],
         "features": [
           "Repositions characters.",
           "Mass Silence."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "MAGNETIC HAND"
+            ]
+          },
+          {
+            "label": "Abilities on cooldown",
+            "role": "hindered_by",
+            "sources": [
+              "MAGNETIC HAND"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Mountain",
+            "role": "benefits_from",
+            "sources": [
+              "DARKSTONE"
+            ],
+            "on": null
+          },
+          {
+            "label": "Displacement",
+            "role": "has",
+            "sources": [
+              "DARKSTONE"
+            ]
+          },
+          {
+            "label": "Silence",
+            "role": "inflicts",
+            "sources": [
+              "MAGNETISM"
+            ]
+          },
+          {
+            "label": "Wound",
+            "role": "benefits_from",
+            "sources": [
+              "MAGNETISM"
+            ],
+            "on": "self"
+          },
+          {
+            "label": "Scaling-Cooldown",
+            "role": "has",
+            "sources": [
+              "MAGNETISM"
+            ]
+          }
+        ]
       },
       {
         "id": 36,
@@ -1428,7 +2969,7 @@
         ],
         "labels": [
           "Ranged",
-          "Damage-Dependent",
+          "Wound",
           "Support",
           "Swiftness",
           "Silence",
@@ -1438,7 +2979,50 @@
           "Mass Swiftness.",
           "Silence."
         ],
-        "sync_note": null
+        "sync_note": null,
+        "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "LIFE-PIERCING CRY"
+            ]
+          },
+          {
+            "label": "Wound",
+            "role": "benefits_from",
+            "sources": [
+              "LIFE-PIERCING CRY"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Support",
+            "role": "has",
+            "sources": []
+          },
+          {
+            "label": "Swiftness",
+            "role": "grants",
+            "sources": [
+              "BROKEN HEART"
+            ]
+          },
+          {
+            "label": "Silence",
+            "role": "inflicts",
+            "sources": [
+              "SORROW"
+            ]
+          },
+          {
+            "label": "Scaling-Cooldown",
+            "role": "has",
+            "sources": [
+              "BROKEN HEART"
+            ]
+          }
+        ]
       }
     ]
   }
