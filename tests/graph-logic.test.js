@@ -171,3 +171,39 @@ test('nearestInDirection picks the closest node within the direction cone', () =
     assert.strictEqual(G.nearestInDirection(from, pts, 'down').id, 'diag');
     assert.strictEqual(G.nearestInDirection(from, pts, 'left'), null);
 });
+
+test('hero nodes carry card features, sync note and ability names/ranges/cooldowns', () => {
+    const [hero] = G.buildGraph([{
+        id: 9, name: 'EPSILON', vitality: 3, labels: ['Melee'],
+        features: ['Blocks movement.'], sync_note: 'Needs water.',
+        core_ability: { name: 'BITE', target: 't', effect: 'e', range: 'adjacent' },
+        support_abilities: [{ name: 'DASH', target: 't', effect: 'e', range: null, cooldown: '3' }]
+    }]).nodes;
+    assert.deepStrictEqual(hero.features, ['Blocks movement.']);
+    assert.strictEqual(hero.sync_note, 'Needs water.');
+    assert.strictEqual(hero.core_ability.name, 'BITE');
+    assert.strictEqual(hero.support_abilities[0].cooldown, '3');
+});
+
+test('hero nodes default missing card fields', () => {
+    const alpha = byId.get('hero_1');
+    assert.deepStrictEqual(alpha.features, []);
+    assert.strictEqual(alpha.sync_note, null);
+});
+
+test('abilityRange maps a range key to its image and description', () => {
+    assert.deepStrictEqual(G.abilityRange('one_hex_gap_line'), {
+        src: 'ability_images/one_hex_gap_line.png',
+        label: 'The target is in any hex 1 unoccupied hex away in a straight line'
+    });
+    assert.strictEqual(G.abilityRange('self').label, 'The target is the Ability bearer');
+    assert.strictEqual(G.abilityRange(null), null);
+    assert.strictEqual(G.abilityRange('nonsense'), null);
+});
+
+test('every range key in the data has a description', () => {
+    const data = require('../bestiary_reference_cards.json').bestiary_of_sigillum.characters;
+    const ranges = data.flatMap(c => [c.core_ability, ...c.support_abilities]).map(a => a.range).filter(Boolean);
+    assert.ok(ranges.length > 0);
+    ranges.forEach(r => assert.ok(G.abilityRange(r), `no description for ${r}`));
+});

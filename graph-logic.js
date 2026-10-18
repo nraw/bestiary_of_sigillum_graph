@@ -16,6 +16,23 @@
         Structure: ['Structure-Dependent', 'Structure-Counter', 'Terrain-Control', 'Castle-Defender']
     };
 
+    // Ability range symbols (ability_images/<key>.png), worded as on the rulebook sheet
+    const ABILITY_RANGES = {
+        self: 'The target is the Ability bearer',
+        adjacent: 'The target is in an adjacent hex',
+        adjacent_or_self: 'The target is in an adjacent hex or the target is the Ability bearer',
+        all_hexes_in_line: 'The targets are in any hexes in a straight line',
+        any_hex: 'The target is in any hex on the field',
+        any_hex_or_self: 'The target is in any hex on the field or the target is the Ability bearer',
+        one_hex_gap_line: 'The target is in any hex 1 unoccupied hex away in a straight line',
+        any_hex_in_line: 'The target is in any hex in a straight line'
+    };
+
+    function abilityRange(key) {
+        if (!Object.prototype.hasOwnProperty.call(ABILITY_RANGES, key)) return null;
+        return { src: `ability_images/${key}.png`, label: ABILITY_RANGES[key] };
+    }
+
     function getPrimaryType(labels) {
         return PRIMARY_TYPES.find(type => labels.includes(type)) || 'Other';
     }
@@ -46,6 +63,8 @@
             labels: hero.labels,
             core_ability: hero.core_ability,
             support_abilities: hero.support_abilities,
+            features: hero.features || [],
+            sync_note: hero.sync_note || null,
             image: `hero_images/${hero.name.toLowerCase()}.png`,
             primaryType: getPrimaryType(hero.labels),
             radius: vitalityRadius(hero.vitality)
@@ -233,7 +252,7 @@
     const api = {
         PRIMARY_TYPES, getPrimaryType, getLabelCategory, vitalityRadius, labelRadius,
         buildGraph, buildAdjacency, computeHighlight, linkState, relatedHeroes,
-        findPath, filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml
+        findPath, filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange
     };
 
     if (typeof module !== 'undefined' && module.exports) {

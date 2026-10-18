@@ -6,17 +6,25 @@
         "name": "ARCHITECTUS",
         "vitality": 5,
         "core_ability": {
+          "name": "TOWER BARRAGE",
           "target": "Target any enemy in any hex in a straight line",
-          "effect": "Attack: 0 +1 per catapult tower under control"
+          "effect": "Attack: 0 +1 per catapult tower under control",
+          "range": "any_hex_in_line"
         },
         "support_abilities": [
           {
+            "name": "FORTIFICATION",
             "target": "Any adjacent unoccupied hex",
-            "effect": "Place obstacle token"
+            "effect": "Place obstacle token",
+            "range": "adjacent",
+            "cooldown": "3"
           },
           {
+            "name": "RECONSTRUCTION",
             "target": "Allied castle if it has suffered any damage",
-            "effect": "Decrease 1 damage point"
+            "effect": "Decrease 1 damage point",
+            "range": null,
+            "cooldown": "5 - 1 per allied character in a Mountain hex"
           }
         ],
         "labels": [
@@ -26,24 +34,37 @@
           "Terrain-Control",
           "Castle-Defender",
           "Place obstacle"
-        ]
+        ],
+        "features": [
+          "Blocks movement.",
+          "Repairs castle damage."
+        ],
+        "sync_note": "Architectus needs Catapult Tower control to sync with its core attack."
       },
       {
         "id": 2,
         "name": "ARMUS",
         "vitality": 3,
         "core_ability": {
+          "name": "SHIELD SLAM",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "CHARGE",
             "target": "Any enemy in an adjacent hex",
-            "effect": "Move the target into an adjacent unoccupied hex in a straight line away from Armus, then move Armus into the target's previous hex. If the target cannot move it gets stun."
+            "effect": "Move the target into an adjacent unoccupied hex in a straight line away from Armus, then move Armus into the target's previous hex. If the target cannot move it gets stun.",
+            "range": "adjacent",
+            "cooldown": "3"
           },
           {
+            "name": "ANCESTRAL PROTECTION",
             "target": "Armus and all allies",
-            "effect": "Defense increase"
+            "effect": "Defense increase",
+            "range": null,
+            "cooldown": "4"
           }
         ],
         "labels": [
@@ -52,24 +73,37 @@
           "Support",
           "Defense increase",
           "Stun"
-        ]
+        ],
+        "features": [
+          "Mass Defense buffs.",
+          "Repositions enemies."
+        ],
+        "sync_note": null
       },
       {
         "id": 3,
         "name": "AQUS",
         "vitality": 3,
         "core_ability": {
+          "name": "POURING RAIN",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "FLUIDITY",
             "target": "Any enemy or ally with at least 1 positive effect",
-            "effect": "Copy the most recent positive effect gained by the target to Aqus"
+            "effect": "Copy the most recent positive effect gained by the target to Aqus",
+            "range": "any_hex",
+            "cooldown": "3"
           },
           {
+            "name": "MIGHT OF WATER",
             "target": "Any adjacent unoccupied water hex",
-            "effect": "Move Aqus into the targeted hex. Then he gains attack increase"
+            "effect": "Move Aqus into the targeted hex. Then he gains attack increase",
+            "range": "adjacent",
+            "cooldown": "3"
           }
         ],
         "labels": [
@@ -79,24 +113,37 @@
           "Self-Buff",
           "Mobility",
           "Attack increase"
-        ]
+        ],
+        "features": [
+          "Big single-target damage.",
+          "Copies buffs."
+        ],
+        "sync_note": "Aqus needs to be in water to pull off its most powerful move."
       },
       {
         "id": 4,
         "name": "BALLISTARIUS",
         "vitality": 2,
         "core_ability": {
+          "name": "BALLISTA",
           "target": "Target any enemy in any hex in a straight line from Ballistarius",
-          "effect": "Attack: 0 +1 per unoccupied hex between"
+          "effect": "Attack: 0 +1 per unoccupied hex between",
+          "range": "any_hex_in_line"
         },
         "support_abilities": [
           {
+            "name": "OPTICAL SIGHT",
             "target": "Ballistarius",
-            "effect": "Attack increase"
+            "effect": "Attack increase",
+            "range": "self",
+            "cooldown": "4 (3 if Ballistarius is in a Mountain hex)"
           },
           {
+            "name": "WINCH",
             "target": "Any enemy in any hex in a straight line from Ballistarius",
-            "effect": "Move the target one unoccupied hex away from Ballistarius"
+            "effect": "Move the target one unoccupied hex away from Ballistarius",
+            "range": "any_hex_in_line",
+            "cooldown": "4"
           }
         ],
         "labels": [
@@ -106,24 +153,37 @@
           "Displacement",
           "Line-Attack",
           "Attack increase"
-        ]
+        ],
+        "features": [
+          "Big single-target damage.",
+          "Repositions enemies."
+        ],
+        "sync_note": "Ballistarius needs distance from its target to sync with its core attack."
       },
       {
         "id": 5,
         "name": "ARBORUS",
         "vitality": 2,
         "core_ability": {
+          "name": "ROOTS",
           "target": "Target all enemies in forest hexes",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": null
         },
         "support_abilities": [
           {
+            "name": "CALL OF THE WOODS",
             "target": "Any enemy or ally in a hex adjacent to an unoccupied forest hex",
-            "effect": "Move the target into an adjacent unoccupied forest hex"
+            "effect": "Move the target into an adjacent unoccupied forest hex",
+            "range": null,
+            "cooldown": "3"
           },
           {
+            "name": "SHIELD OF THE FOREST",
             "target": "Arborus or any ally",
-            "effect": "Defense increase"
+            "effect": "Defense increase",
+            "range": "any_hex_or_self",
+            "cooldown": "3"
           }
         ],
         "labels": [
@@ -132,24 +192,38 @@
           "Displacement",
           "Support",
           "Defense increase"
-        ]
+        ],
+        "features": [
+          "Hits multiple targets.",
+          "Repositions units.",
+          "Defense buffs."
+        ],
+        "sync_note": null
       },
       {
         "id": 6,
         "name": "FIDEA",
         "vitality": 2,
         "core_ability": {
+          "name": "RETRIBUTION",
           "target": "Target any enemy in any hex in a straight line (if the target's current vitality is greater than Fidea's)",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": "any_hex_in_line"
         },
         "support_abilities": [
           {
+            "name": "RESURRECTION",
             "target": "Fidea or any ally",
-            "effect": "Target has at least 1 dmg, it restores 1 dmg. Otherwise it gains swiftness"
+            "effect": "Target has at least 1 dmg, it restores 1 dmg. Otherwise it gains swiftness",
+            "range": "any_hex_or_self",
+            "cooldown": "3 (5 if the target has gained Swiftness)"
           },
           {
+            "name": "ASCENSION",
             "target": "Fidea or any ally",
-            "effect": "Flying"
+            "effect": "Flying",
+            "range": "any_hex_or_self",
+            "cooldown": "4"
           }
         ],
         "labels": [
@@ -159,24 +233,37 @@
           "Support",
           "Flying",
           "Swiftness"
-        ]
+        ],
+        "features": [
+          "High mobility.",
+          "Heals wounds."
+        ],
+        "sync_note": null
       },
       {
         "id": 7,
         "name": "CABALLUS",
         "vitality": 4,
         "core_ability": {
+          "name": "WHIP",
           "target": "Target all slowed enemies",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": "any_hex"
         },
         "support_abilities": [
           {
+            "name": "LASSO",
             "target": "Any character in an adjacent hex",
-            "effect": "Move Caballus in a straight line away into an adjacent unoccupied hex. The target moves in Caballus previous hex."
+            "effect": "Move Caballus in a straight line away into an adjacent unoccupied hex. The target moves in Caballus previous hex.",
+            "range": "adjacent",
+            "cooldown": "4"
           },
           {
+            "name": "HEAVY HOVES",
             "target": "All enemies in adjacent hexes",
-            "effect": "Slowness"
+            "effect": "Slowness",
+            "range": null,
+            "cooldown": "1 + 1 per enemy affected by this Ability"
           }
         ],
         "labels": [
@@ -185,24 +272,38 @@
           "Displacement",
           "Slowness",
           "Mobility"
-        ]
+        ],
+        "features": [
+          "Hits multiple targets.",
+          "Repositions units.",
+          "Mass Slows."
+        ],
+        "sync_note": "Caballus needs enemies to be affected by Slowness to sync with its core attack."
       },
       {
         "id": 8,
         "name": "CARNIFEX",
         "vitality": 4,
         "core_ability": {
+          "name": "AX",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 0 +1 per enemy with at least one negative effect within 2 hexes from Carnifex"
+          "effect": "Attack: 0 +1 per enemy with at least one negative effect within 2 hexes from Carnifex",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "STOCKADES",
             "target": "Any enemy in a straight line",
-            "effect": "Control decrease"
+            "effect": "Control decrease",
+            "range": "any_hex_in_line",
+            "cooldown": "5 - 1 per hex between Carnifex and the target"
           },
           {
+            "name": "CONVICT THE GUILLTY",
             "target": "Any enemy in a straight line",
-            "effect": "Move it in a straight line into an adjacent hex towards Carnifex and replace all positive effects with negatives"
+            "effect": "Move it in a straight line into an adjacent hex towards Carnifex and replace all positive effects with negatives",
+            "range": "any_hex_in_line",
+            "cooldown": "5 (3 if the target had any effect)"
           }
         ],
         "labels": [
@@ -211,24 +312,38 @@
           "Control decrease",
           "Effect-Manipulation",
           "Displacement"
-        ]
+        ],
+        "features": [
+          "Big single-target damage.",
+          "Tower Control debuffs.",
+          "Reverse Ability effects."
+        ],
+        "sync_note": "Carnifex needs enemies to be debuffed to sync with its core attack."
       },
       {
         "id": 9,
         "name": "CERBERUS",
         "vitality": 3,
         "core_ability": {
+          "name": "THREE-HEADED BITE",
           "target": "Target all enemies in adjacent hexes",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": null
         },
         "support_abilities": [
           {
+            "name": "VEHEMENCE",
             "target": "Any adjacent unoccupied hex",
-            "effect": "Maneuver (only if any enemy has at least 1 dmg)"
+            "effect": "Maneuver (only if any enemy has at least 1 dmg)",
+            "range": "adjacent",
+            "cooldown": "3 (4 if Cerberus moves from a Forest/ Mountain hex; 5 if from a Water hex)"
           },
           {
+            "name": "HOWL",
             "target": "All enemies in adjacent hexes",
-            "effect": "Attack decrease"
+            "effect": "Attack decrease",
+            "range": null,
+            "cooldown": "4"
           }
         ],
         "labels": [
@@ -237,24 +352,38 @@
           "Conditional-Mobility",
           "Attack decrease",
           "Damage-Dependent"
-        ]
+        ],
+        "features": [
+          "Hits multiple targets.",
+          "High mobility.",
+          "Mass Attack debuffs."
+        ],
+        "sync_note": null
       },
       {
         "id": 10,
         "name": "CORNIBUS",
         "vitality": 2,
         "core_ability": {
+          "name": "NOSEDIVE",
           "target": "Target all enemies in any hexes in a straight line",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": "all_hexes_in_line"
         },
         "support_abilities": [
           {
+            "name": "GARGOYLE",
             "target": "Cornibus",
-            "effect": "Control increase"
+            "effect": "Control increase",
+            "range": "self",
+            "cooldown": "4"
           },
           {
+            "name": "FLIGHT",
             "target": "Any unoccupied hex in any catapult tower's control area under allied control",
-            "effect": "Move Cornibus into the targeted hex"
+            "effect": "Move Cornibus into the targeted hex",
+            "range": "any_hex",
+            "cooldown": "4"
           }
         ],
         "labels": [
@@ -263,24 +392,38 @@
           "Control increase",
           "Structure-Dependent",
           "Mobility"
-        ]
+        ],
+        "features": [
+          "Hits multiple targets.",
+          "High mobility.",
+          "Tower Control buffs."
+        ],
+        "sync_note": null
       },
       {
         "id": 11,
         "name": "FRIGUS",
         "vitality": 2,
         "core_ability": {
+          "name": "RAIN OF ICE",
           "target": "Target any enemy with at least 1 negative effect",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": "any_hex"
         },
         "support_abilities": [
           {
+            "name": "SHACKLING COLD",
             "target": "Any enemy",
-            "effect": "Slowness"
+            "effect": "Slowness",
+            "range": "any_hex",
+            "cooldown": "3 (2 if the target is in a Water hex)"
           },
           {
+            "name": "SPELL OF FROST",
             "target": "Any enemy",
-            "effect": "Attack decrease"
+            "effect": "Attack decrease",
+            "range": "any_hex",
+            "cooldown": "4 (3 if Frigus is in a water hex)"
           }
         ],
         "labels": [
@@ -288,24 +431,37 @@
           "Slowness",
           "Attack decrease",
           "Debuffer"
-        ]
+        ],
+        "features": [
+          "Attack debuffs.",
+          "Slowness effects."
+        ],
+        "sync_note": "Frigus needs Water hexes to make efficient use of its Abilities."
       },
       {
         "id": 12,
         "name": "GOETIUM",
         "vitality": 2,
         "core_ability": {
+          "name": "LIGHTNING",
           "target": "Target any enemy that does not have Goetium or one of his allies in adjacent hexes",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": "any_hex"
         },
         "support_abilities": [
           {
+            "name": "RITUAL OF VITALITY",
             "target": "Goetium or any ally, if the target has at least 1 dmg",
-            "effect": "Any allied character suffers 1 dmg, and the target restores 1 dmg"
+            "effect": "Any allied character suffers 1 dmg, and the target restores 1 dmg",
+            "range": "any_hex_or_self",
+            "cooldown": "2"
           },
           {
+            "name": "SUMMONING RITUAL",
             "target": "Any ally with at least 1 dmg",
-            "effect": "Move the target adjacent to Goetium"
+            "effect": "Move the target adjacent to Goetium",
+            "range": "any_hex",
+            "cooldown": "4"
           }
         ],
         "labels": [
@@ -314,24 +470,37 @@
           "Support",
           "Displacement",
           "Self-Sacrifice"
-        ]
+        ],
+        "features": [
+          "Repositions allies.",
+          "Heals wounds."
+        ],
+        "sync_note": null
       },
       {
         "id": 13,
         "name": "CATAPULTUS",
         "vitality": 3,
         "core_ability": {
+          "name": "CATAPULT",
           "target": "Target any medium or big enemy in a straight line",
-          "effect": "Attack: 1 (medium), 2 (big)"
+          "effect": "Attack: 1 (medium), 2 (big)",
+          "range": "any_hex_in_line"
         },
         "support_abilities": [
           {
+            "name": "BOULDER",
             "target": "Any enemy in a straight line",
-            "effect": "Stun"
+            "effect": "Stun",
+            "range": "any_hex_in_line",
+            "cooldown": "4"
           },
           {
+            "name": "SIEGE STANCE",
             "target": "Catapultus",
-            "effect": "Control increase"
+            "effect": "Control increase",
+            "range": "self",
+            "cooldown": "4"
           }
         ],
         "labels": [
@@ -340,24 +509,38 @@
           "Stun",
           "Control increase",
           "Anti-Large"
-        ]
+        ],
+        "features": [
+          "Big damage vs big targets.",
+          "Stuns.",
+          "Tower Control buffs."
+        ],
+        "sync_note": "Cannot hit small targets."
       },
       {
         "id": 14,
         "name": "FERRARIUS",
         "vitality": 4,
         "core_ability": {
+          "name": "HEARTH OF HELL",
           "target": "Target any enemy in an adjacent hex (except water)",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "HAMMER",
             "target": "Any enemy in an adjacent hex",
-            "effect": "Move the target into an adjacent unoccupied hex that is also adjacent to Ferrarius"
+            "effect": "Move the target into an adjacent unoccupied hex that is also adjacent to Ferrarius",
+            "range": "adjacent",
+            "cooldown": "4"
           },
           {
+            "name": "ANVIL",
             "target": "Any enemy in a straight line",
-            "effect": "Stun"
+            "effect": "Stun",
+            "range": "any_hex_in_line",
+            "cooldown": "3 + 1 per hex between Ferrarius and the target"
           }
         ],
         "labels": [
@@ -366,24 +549,37 @@
           "Displacement",
           "Stun",
           "Line-Attack"
-        ]
+        ],
+        "features": [
+          "Repositions enemies.",
+          "Stuns."
+        ],
+        "sync_note": null
       },
       {
         "id": 15,
         "name": "IRATUS",
         "vitality": 3,
         "core_ability": {
+          "name": "PICKAXES OF RAGE",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 1 (2 if there are at least 2 enemies in adjacent hexes to Iratus)"
+          "effect": "Attack: 1 (2 if there are at least 2 enemies in adjacent hexes to Iratus)",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "BOODSTONE",
             "target": "Iratus and all allies",
-            "effect": "Resistance"
+            "effect": "Resistance",
+            "range": null,
+            "cooldown": "4"
           },
           {
+            "name": "FRENZY",
             "target": "Iratus",
-            "effect": "Attack increase"
+            "effect": "Attack increase",
+            "range": "self",
+            "cooldown": "3 - 1 per Wound on Iratus"
           }
         ],
         "labels": [
@@ -392,24 +588,37 @@
           "Support",
           "Resistance",
           "Attack increase"
-        ]
+        ],
+        "features": [
+          "Big single-target damage.",
+          "Mass Resistance."
+        ],
+        "sync_note": null
       },
       {
         "id": 16,
         "name": "MORTUM",
         "vitality": 3,
         "core_ability": {
+          "name": "BLOODLUST",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 0+1 per enemy with at least 1 dmg within 2 hexes from Mortum"
+          "effect": "Attack: 0+1 per enemy with at least 1 dmg within 2 hexes from Mortum",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "VAMPIRIC DRAIN",
             "target": "Mortum or any ally in an adjacent hex",
-            "effect": "Vampirism"
+            "effect": "Vampirism",
+            "range": "adjacent_or_self",
+            "cooldown": "5 - 1 per Wound on Mortum"
           },
           {
+            "name": "BAT SWARM",
             "target": "Any adjacent unoccupied hex",
-            "effect": "Move Mortum into the targeted hex"
+            "effect": "Move Mortum into the targeted hex",
+            "range": "adjacent",
+            "cooldown": "4"
           }
         ],
         "labels": [
@@ -418,24 +627,37 @@
           "Vampirism",
           "Support",
           "Mobility"
-        ]
+        ],
+        "features": [
+          "High mobility.",
+          "Vampiric Attack buffs."
+        ],
+        "sync_note": "Needs enemies to be wounded to sync with its core attack."
       },
       {
         "id": 17,
         "name": "IGNIFER",
         "vitality": 2,
         "core_ability": {
+          "name": "FLAMING ARTIFACT",
           "target": "Target any enemy in an adjacent hex to your allied character (if this allied character has at least 1 positive effect)",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": null
         },
         "support_abilities": [
           {
+            "name": "MIGHT OF FIRE",
             "target": "Any melee ally",
-            "effect": "Attack increase"
+            "effect": "Attack increase",
+            "range": "any_hex",
+            "cooldown": "4"
           },
           {
+            "name": "QUICKENING FLARE",
             "target": "Ignifer or any ally in an adjacent hex",
-            "effect": "Swiftness"
+            "effect": "Swiftness",
+            "range": "adjacent_or_self",
+            "cooldown": "3"
           }
         ],
         "labels": [
@@ -444,24 +666,37 @@
           "Support",
           "Attack increase",
           "Swiftness"
-        ]
+        ],
+        "features": [
+          "Attack buffs.",
+          "Swiftness."
+        ],
+        "sync_note": null
       },
       {
         "id": 18,
         "name": "ILLESEBRA",
         "vitality": 2,
         "core_ability": {
+          "name": "HYPNOSIS",
           "target": "Target all stunned enemies",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": "any_hex"
         },
         "support_abilities": [
           {
+            "name": "PORTAL TO THE UNDERWORLD",
             "target": "Any ally",
-            "effect": "Swap the position of Illesebra and the target"
+            "effect": "Swap the position of Illesebra and the target",
+            "range": "any_hex",
+            "cooldown": "5"
           },
           {
+            "name": "TEMPTATION",
             "target": "Any enemy in any hex in a straight line",
-            "effect": "Stun"
+            "effect": "Stun",
+            "range": "any_hex_in_line",
+            "cooldown": "5 - 1 per hex between Illesebra and the target"
           }
         ],
         "labels": [
@@ -470,24 +705,38 @@
           "Support",
           "Stun",
           "Line-Attack"
-        ]
+        ],
+        "features": [
+          "Hits multiple targets.",
+          "Repositions allies.",
+          "Stun."
+        ],
+        "sync_note": "Illesebra needs enemies to be Stunned to sync with her core attack."
       },
       {
         "id": 19,
         "name": "MALLEUS",
         "vitality": 4,
         "core_ability": {
+          "name": "PICK HAMMER",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "FISSURE",
             "target": "All enemies in any hexes in a straight line",
-            "effect": "Stun"
+            "effect": "Stun",
+            "range": "all_hexes_in_line",
+            "cooldown": "3 + 1 per enemy affected by this Ability"
           },
           {
+            "name": "DITCH",
             "target": "Malleus or any ally in an adjacent hex (if the target is in a catapult tower hex)",
-            "effect": "Control increase"
+            "effect": "Control increase",
+            "range": "adjacent_or_self",
+            "cooldown": "4"
           }
         ],
         "labels": [
@@ -496,24 +745,37 @@
           "Stun",
           "Structure-Dependent",
           "Control increase"
-        ]
+        ],
+        "features": [
+          "Mass Stuns.",
+          "Tower Control."
+        ],
+        "sync_note": null
       },
       {
         "id": 20,
         "name": "SAXUM",
         "vitality": 5,
         "core_ability": {
+          "name": "ROCK BLAST",
           "target": "Target all enemies in adjacent hexes",
-          "effect": "Attack: 0+1 per Defense point on Saxum"
+          "effect": "Attack: 0+1 per Defense point on Saxum",
+          "range": null
         },
         "support_abilities": [
           {
+            "name": "STONESKIN",
             "target": "Saxum",
-            "effect": "Defense increase"
+            "effect": "Defense increase",
+            "range": "self",
+            "cooldown": "3 (2 if Saxum is in a Mountain hex)"
           },
           {
+            "name": "SHAKING EARTH",
             "target": "All enemies in adjacent hexes",
-            "effect": "Stun"
+            "effect": "Stun",
+            "range": null,
+            "cooldown": "3"
           }
         ],
         "labels": [
@@ -522,25 +784,39 @@
           "Tank",
           "Stun",
           "Self-Buff",
-					"Defense increase"
-        ]
+          "Defense increase"
+        ],
+        "features": [
+          "Hits multiple targets.",
+          "Mass Stuns.",
+          "Defense buffs."
+        ],
+        "sync_note": "Saxum needs to be buffed with Defense points to sync with its core attack."
       },
       {
         "id": 21,
         "name": "REDUX",
         "vitality": 3,
         "core_ability": {
+          "name": "BONE BOOMERANG",
           "target": "Target all enemies in a circle 1 hex away from Redux",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": null
         },
         "support_abilities": [
           {
+            "name": "LIFE-GIVING BINDINGS",
             "target": "Redux",
-            "effect": "Defense increase"
+            "effect": "Defense increase",
+            "range": "self",
+            "cooldown": "4 - 1 per enemy in adjacent hexes to Redux"
           },
           {
+            "name": "DASH",
             "target": "Any character 1 unoccupied hex away in a straight line",
-            "effect": "Move Redux into an adjacent unoccupied hex towards the target. Then Redux gains Resistance"
+            "effect": "Move Redux into an adjacent unoccupied hex towards the target. Then Redux gains Resistance",
+            "range": "one_hex_gap_line",
+            "cooldown": "3"
           }
         ],
         "labels": [
@@ -549,24 +825,38 @@
           "Defense increase",
           "Mobility",
           "Resistance"
-        ]
+        ],
+        "features": [
+          "Hits multiple targets.",
+          "High mobility.",
+          "Defense and Resistance buffs."
+        ],
+        "sync_note": null
       },
       {
         "id": 22,
         "name": "TEMPUS",
         "vitality": 3,
         "core_ability": {
+          "name": "PENDULUM",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 0+1 for each of the target's support abilities on cooldown"
+          "effect": "Attack: 0+1 for each of the target's support abilities on cooldown",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "TIMEPIECE",
             "target": "Any ally with at least 1 support ability on cooldown",
-            "effect": "Decrease the remaining cooldown for each target's support ability by 1"
+            "effect": "Decrease the remaining cooldown for each target's support ability by 1",
+            "range": "any_hex",
+            "cooldown": "3 + 1 per hex between Tempus and the target"
           },
           {
+            "name": "TIME LOOP",
             "target": "Tempus or any ally in an adjacent hex",
-            "effect": "Swiftness"
+            "effect": "Swiftness",
+            "range": "adjacent_or_self",
+            "cooldown": "4"
           }
         ],
         "labels": [
@@ -575,24 +865,37 @@
           "Support",
           "Cooldown-Reduction",
           "Swiftness"
-        ]
+        ],
+        "features": [
+          "Swiftness.",
+          "Affects enemies Ability Cooldowns."
+        ],
+        "sync_note": null
       },
       {
         "id": 23,
         "name": "LIGNUM",
         "vitality": 2,
         "core_ability": {
+          "name": "PUPPET",
           "target": "Target any enemy",
-          "effect": "Attack: 0+1 per target's ally in adjacent hexes to the target"
+          "effect": "Attack: 0+1 per target's ally in adjacent hexes to the target",
+          "range": "any_hex"
         },
         "support_abilities": [
           {
+            "name": "DARKSTRINGS",
             "target": "Any enemy 1 unoccupied hex away in a straight line from any character",
-            "effect": "Move the enemy into an adjacent hex towards the chosen character"
+            "effect": "Move the enemy into an adjacent hex towards the chosen character",
+            "range": null,
+            "cooldown": "3 (4 if the target was moved to Lignum or his ally)"
           },
           {
+            "name": "LIMP HANDS",
             "target": "Any enemy",
-            "effect": "Attack decrease"
+            "effect": "Attack decrease",
+            "range": "any_hex",
+            "cooldown": "4 - 1 per target's ally in adjacent hexes to target"
           }
         ],
         "labels": [
@@ -600,24 +903,37 @@
           "Displacement",
           "Attack decrease",
           "Positioning"
-        ]
+        ],
+        "features": [
+          "Repositions enemies.",
+          "Attack debuffs"
+        ],
+        "sync_note": "Lignum needs enemies to be adjacent to each other to sync with its core attack."
       },
       {
         "id": 24,
         "name": "MANUS",
         "vitality": 3,
         "core_ability": {
+          "name": "JOINT ASSAULT",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 0+1 per Manus's ally in adjacent hexes to Manus"
+          "effect": "Attack: 0+1 per Manus's ally in adjacent hexes to Manus",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "MECHANICAL HAND",
             "target": "Any character 1 unoccupied hex in a straight line away",
-            "effect": "Move the target into an adjacent hex towards Manus"
+            "effect": "Move the target into an adjacent hex towards Manus",
+            "range": "one_hex_gap_line",
+            "cooldown": "2"
           },
           {
+            "name": "SMOKESCREEN",
             "target": "Manus and all allies in adjacent hexes",
-            "effect": "Defense increase"
+            "effect": "Defense increase",
+            "range": null,
+            "cooldown": "3 (2 if Manus is in a Forest hex)"
           }
         ],
         "labels": [
@@ -626,24 +942,37 @@
           "Displacement",
           "Support",
           "Defense increase"
-        ]
+        ],
+        "features": [
+          "Repositions units.",
+          "Mass Defense buffs."
+        ],
+        "sync_note": "Manus needs to be adjacent to allies to sync with its core attack."
       },
       {
         "id": 25,
         "name": "VINCTUM",
         "vitality": 3,
         "core_ability": {
+          "name": "BURDEN OF VENGEANCE",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 0+1 per 1 dmg on Vinctum"
+          "effect": "Attack: 0+1 per 1 dmg on Vinctum",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "IRON MASK",
             "target": "Any character in an adjacent hex",
-            "effect": "Move the target into an adjacent hex in a straight line away from Vinctum"
+            "effect": "Move the target into an adjacent hex in a straight line away from Vinctum",
+            "range": "adjacent",
+            "cooldown": "4 - 1 per Wound on Vinctum"
           },
           {
+            "name": "PRISONER'S SHACKLES",
             "target": "Any enemy in an adjacent hex",
-            "effect": "Stun"
+            "effect": "Stun",
+            "range": "adjacent",
+            "cooldown": "2 + 1 per Wound on Vinctum"
           }
         ],
         "labels": [
@@ -652,24 +981,37 @@
           "Displacement",
           "Stun",
           "Berserker"
-        ]
+        ],
+        "features": [
+          "Repositions units.",
+          "Frequent Stuns."
+        ],
+        "sync_note": "Vinctum needs to be wounded to sync with its core attack."
       },
       {
         "id": 26,
         "name": "MECHANICUS",
         "vitality": 3,
         "core_ability": {
+          "name": "ANCESTRAL CANNON",
           "target": "Target any enemy in a hex in a straight line (except for adjacent hexes)",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": "any_hex_in_line"
         },
         "support_abilities": [
           {
+            "name": "SEPARATE THRUST FEED",
             "target": "Mechanicus",
-            "effect": "Swiftness"
+            "effect": "Swiftness",
+            "range": "self",
+            "cooldown": "3 + 1 per Wound on Mechanicus"
           },
           {
+            "name": "SIEGE TANK",
             "target": "All enemies in catapult towers control areas under enemy control",
-            "effect": "Control decrease"
+            "effect": "Control decrease",
+            "range": null,
+            "cooldown": "5"
           }
         ],
         "labels": [
@@ -678,24 +1020,37 @@
           "Swiftness",
           "Structure-Counter",
           "Control decrease"
-        ]
+        ],
+        "features": [
+          "High mobility.",
+          "Mass enemy Tower Control debuffs."
+        ],
+        "sync_note": null
       },
       {
         "id": 27,
         "name": "TOXICUM",
         "vitality": 3,
         "core_ability": {
+          "name": "POISONOUS INFLUENCE",
           "target": "Target all poisoned enemies",
-          "effect": "Attack: 0+1 per poison effect on the target"
+          "effect": "Attack: 0+1 per poison effect on the target",
+          "range": "any_hex"
         },
         "support_abilities": [
           {
+            "name": "POISONER'S KIT",
             "target": "All enemies with at least 1 dmg",
-            "effect": "Poison"
+            "effect": "Poison",
+            "range": "adjacent",
+            "cooldown": "1 per enemy affected by this Ability"
           },
           {
+            "name": "VIAL OF VENOM",
             "target": "Any enemy in any hex in a straight line",
-            "effect": "Move the target into an adjacent water hex, then the target gets poison"
+            "effect": "Move the target into an adjacent water hex, then the target gets poison",
+            "range": "any_hex_in_line",
+            "cooldown": "3"
           }
         ],
         "labels": [
@@ -704,24 +1059,38 @@
           "Damage-Dependent",
           "Displacement",
           "Water-Synergy"
-        ]
+        ],
+        "features": [
+          "Hits multiple targets.",
+          "Affects cooldowns.",
+          "Repositions enemies."
+        ],
+        "sync_note": "Toxicum needs enemies to be Poisoned to sync with its core attack."
       },
       {
         "id": 28,
         "name": "ERESIDA",
         "vitality": 3,
         "core_ability": {
+          "name": "SPIDERLINGS",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 1 (2 if the target is stunned)"
+          "effect": "Attack: 1 (2 if the target is stunned)",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "WEBBING",
             "target": "Any unoccupied hex in a straight line (except for castle hexes, or hexes with obstacle)",
-            "effect": "Web"
+            "effect": "Web",
+            "range": "any_hex_in_line",
+            "cooldown": "5 - 1 per hex between Eresida and the target"
           },
           {
+            "name": "COCOON THREAD",
             "target": "Any enemy in any hex in a straight line",
-            "effect": "Move the target into an adjacent unoccupied hex in a straight line towards Eresida"
+            "effect": "Move the target into an adjacent unoccupied hex in a straight line towards Eresida",
+            "range": "any_hex_in_line",
+            "cooldown": "5 - 1 per hex between Eresida and the target (before moving)"
           }
         ],
         "labels": [
@@ -730,24 +1099,37 @@
           "Terrain-Control",
           "Displacement",
           "Web"
-        ]
+        ],
+        "features": [
+          "Web effect (Stun or Swiftness).",
+          "Repositions enemies."
+        ],
+        "sync_note": "Eresida needs enemies to be Stunned to make efficient use of its core attack."
       },
       {
         "id": 29,
         "name": "MESSUM",
         "vitality": 2,
         "core_ability": {
+          "name": "HARVEST",
           "target": "Target any enemy that has none of their allies in adjacent hexes",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": null
         },
         "support_abilities": [
           {
+            "name": "FRAILTY",
             "target": "Any enemy",
-            "effect": "Defense decrease"
+            "effect": "Defense decrease",
+            "range": "any_hex",
+            "cooldown": "4 (3 if the target has no its ally in adjacent hexes)"
           },
           {
+            "name": "FACES OF DEATH",
             "target": "Any enemy",
-            "effect": "Move the target into any unoccupied adjacent hex"
+            "effect": "Move the target into any unoccupied adjacent hex",
+            "range": "any_hex",
+            "cooldown": "4 (3 if the target has no its ally in adjacent hexes)"
           }
         ],
         "labels": [
@@ -755,24 +1137,37 @@
           "Defense decrease",
           "Displacement",
           "Anti-Group"
-        ]
+        ],
+        "features": [
+          "Repositions enemies.",
+          "Defense debuffs."
+        ],
+        "sync_note": "Messum needs enemies spread out and not adjacent to each other to sync with its core attack."
       },
       {
         "id": 30,
         "name": "LIBRORUM",
         "vitality": 2,
         "core_ability": {
+          "name": "KNOWLEDGE IS POWER",
           "target": "Target any enemy in a hex of a terrain type that differs from the type of Librorum's current hex",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": null
         },
         "support_abilities": [
           {
+            "name": "TORCH",
             "target": "Any character in any catapult's tower's control area",
-            "effect": "Move the target into an adjacent hex in the same area"
+            "effect": "Move the target into an adjacent hex in the same area",
+            "range": null,
+            "cooldown": "4 (5 if the target is Librorum or his ally)"
           },
           {
+            "name": "COMPLETE SILENCE",
             "target": "All enemies",
-            "effect": "Silence"
+            "effect": "Silence",
+            "range": null,
+            "cooldown": "4"
           }
         ],
         "labels": [
@@ -781,24 +1176,37 @@
           "Silence",
           "AoE",
           "Utility"
-        ]
+        ],
+        "features": [
+          "Repositions characters.",
+          "Mass silence."
+        ],
+        "sync_note": null
       },
       {
         "id": 31,
         "name": "BREWUS",
         "vitality": 4,
         "core_ability": {
+          "name": "BREWER'S TANKARD",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 1 (2 if the sum of remaining cooldowns of the target's support abilities is 8+)"
+          "effect": "Attack: 1 (2 if the sum of remaining cooldowns of the target's support abilities is 8+)",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "FRAGRANT HOP",
             "target": "All enemies in adjacent hexes (if the target has at least 1 support ability on cooldown)",
-            "effect": "Increase the cooldowns by 1"
+            "effect": "Increase the cooldowns by 1",
+            "range": null,
+            "cooldown": "2 + 1 per enemy affected by this Ability"
           },
           {
+            "name": "BEER CASK",
             "target": "Any enemy in any hex in a straight line",
-            "effect": "Stun"
+            "effect": "Stun",
+            "range": "any_hex_in_line",
+            "cooldown": "5 - 1 per target's Support Ability on Cooldown"
           }
         ],
         "labels": [
@@ -807,24 +1215,37 @@
           "Cooldown-Manipulation",
           "Stun",
           "Counter-Magic"
-        ]
+        ],
+        "features": [
+          "Affects enemies Ability Cooldowns.",
+          "Stuns."
+        ],
+        "sync_note": null
       },
       {
         "id": 32,
         "name": "SATURN",
         "vitality": 5,
         "core_ability": {
+          "name": "COLLISION",
           "target": "Target all enemies in adjacent hexes, if their combined current vitality is equal to or greater than Saturn's",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": null
         },
         "support_abilities": [
           {
+            "name": "ASTEROID BELT",
             "target": "All enemies within a number of hexes equal to Saturn's dmg",
-            "effect": "Stun"
+            "effect": "Stun",
+            "range": null,
+            "cooldown": "3"
           },
           {
+            "name": "GRAVITY LINK",
             "target": "Any ally with at least 1 dmg",
-            "effect": "Saturn suffers 1 dmg, then the target restores 1 dmg"
+            "effect": "Saturn suffers 1 dmg, then the target restores 1 dmg",
+            "range": "any_hex",
+            "cooldown": "2"
           }
         ],
         "labels": [
@@ -834,24 +1255,37 @@
           "Stun",
           "Healing",
           "Self-Sacrifice"
-        ]
+        ],
+        "features": [
+          "Mass Stuns.",
+          "Heals wounds."
+        ],
+        "sync_note": null
       },
       {
         "id": 33,
         "name": "TENEBRIS",
         "vitality": 3,
         "core_ability": {
+          "name": "SHADES",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 0 (1 if there are 2-4 unoccupied hexes adjacent to the target, 2 if there are 5 hexes)"
+          "effect": "Attack: 0 (1 if there are 2-4 unoccupied hexes adjacent to the target, 2 if there are 5 hexes)",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "EVERPRESENCE",
             "target": "Any unoccupied hex adjacent to any enemy with at least 1 dmg",
-            "effect": "Move Tenebris into the targeted hex"
+            "effect": "Move Tenebris into the targeted hex",
+            "range": null,
+            "cooldown": "4"
           },
           {
+            "name": "OMINOUS DARK",
             "target": "Any enemy in an adjacent hex",
-            "effect": "Move him 1 hex vertically in direction of its castle"
+            "effect": "Move him 1 hex vertically in direction of its castle",
+            "range": "adjacent",
+            "cooldown": "4"
           }
         ],
         "labels": [
@@ -860,24 +1294,37 @@
           "Mobility",
           "Displacement",
           "Assassin"
-        ]
+        ],
+        "features": [
+          "High mobility.",
+          "Repositions enemies."
+        ],
+        "sync_note": "Tenebris needs enemies to be non-adjacent to each other to make efficient use of its core attack."
       },
       {
         "id": 34,
         "name": "EQUITA",
         "vitality": 3,
         "core_ability": {
+          "name": "KNIGHTLY SMITE",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 1 (2 if Equita is swiftened, 0 if she is slowed)"
+          "effect": "Attack: 1 (2 if Equita is swiftened, 0 if she is slowed)",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "TWILIGHT MOMENTUM",
             "target": "Equita",
-            "effect": "Swiftness"
+            "effect": "Swiftness",
+            "range": "self",
+            "cooldown": "3"
           },
           {
+            "name": "POISON-TIPPED LANCE",
             "target": "Any enemy in an adjacent hex",
-            "effect": "Poison"
+            "effect": "Poison",
+            "range": "adjacent",
+            "cooldown": "2"
           }
         ],
         "labels": [
@@ -886,24 +1333,37 @@
           "Swiftness",
           "Poison",
           "Mobile-Striker"
-        ]
+        ],
+        "features": [
+          "Swiftness.",
+          "Affects cooldowns."
+        ],
+        "sync_note": "Equita's core attack is enhanced by Swiftness, but weakened by Slowness."
       },
       {
         "id": 35,
         "name": "MAGNUS",
         "vitality": 3,
         "core_ability": {
+          "name": "MAGNETIC HAND",
           "target": "Target any enemy in an adjacent hex",
-          "effect": "Attack: 0+1 per 2 available support abilities of all enemies"
+          "effect": "Attack: 0+1 per 2 available support abilities of all enemies",
+          "range": "adjacent"
         },
         "support_abilities": [
           {
+            "name": "DARKSTONE",
             "target": "Any enemy or ally in a hex adjacent to an unoccupied mountain hex",
-            "effect": "Move the target into an adjacent mountain hex"
+            "effect": "Move the target into an adjacent mountain hex",
+            "range": null,
+            "cooldown": "3"
           },
           {
+            "name": "MAGNETISM",
             "target": "All enemies in adjacent hexes (within 2 hexes if Magnus has 1 dmg, 3 hexes if 2 dmg)",
-            "effect": "Silence"
+            "effect": "Silence",
+            "range": null,
+            "cooldown": "1 + 1 per enemy affected by this Ability"
           }
         ],
         "labels": [
@@ -913,24 +1373,37 @@
           "Displacement",
           "Silence",
           "Scaling-AoE"
-        ]
+        ],
+        "features": [
+          "Repositions characters.",
+          "Mass Silence."
+        ],
+        "sync_note": null
       },
       {
         "id": 36,
         "name": "CLAMORIS",
         "vitality": 2,
         "core_ability": {
+          "name": "LIFE-PIERCING CRY",
           "target": "Target any enemy with at least 1 dmg in any hex in a straight line",
-          "effect": "Attack: 1"
+          "effect": "Attack: 1",
+          "range": "any_hex_in_line"
         },
         "support_abilities": [
           {
+            "name": "BROKEN HEART",
             "target": "Clamoris and all allies in adjacent hexes",
-            "effect": "Swiftness"
+            "effect": "Swiftness",
+            "range": null,
+            "cooldown": "2 + 1 for each of Clamoris's allies affected by this Ability"
           },
           {
+            "name": "SORROW",
             "target": "Any enemy",
-            "effect": "Silence"
+            "effect": "Silence",
+            "range": "any_hex",
+            "cooldown": "3"
           }
         ],
         "labels": [
@@ -939,7 +1412,12 @@
           "Support",
           "Swiftness",
           "Silence"
-        ]
+        ],
+        "features": [
+          "Mass Swiftness.",
+          "Silence."
+        ],
+        "sync_note": null
       }
     ]
   }

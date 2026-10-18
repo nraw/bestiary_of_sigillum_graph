@@ -3,7 +3,7 @@
 // the DOM, D3 rendering and interaction state.
 const {
     buildGraph, buildAdjacency, computeHighlight, linkState, relatedHeroes,
-    findPath, filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml
+    findPath, filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange
 } = window.GraphLogic;
 
 let heroesData = [];
@@ -495,12 +495,19 @@ function renderDetails() {
     if (node.type === 'hero') {
         const type = HERO_TYPES[node.primaryType];
         const related = relatedHeroes(node, heroesData);
-        const ability = (a, title) => `
+        const ability = a => {
+            const range = abilityRange(a.range);
+            return `
             <article class="ability-card">
-                ${title ? `<h4>${title}</h4>` : ''}
+                <header class="ability-head">
+                    ${a.name ? `<h4>${escapeHtml(a.name)}</h4>` : ''}
+                    ${range ? `<img class="ability-range" src="${range.src}" alt="${escapeHtml(range.label)}" title="${escapeHtml(range.label)}">` : ''}
+                </header>
                 <p><span class="ability-key">Target</span> ${escapeHtml(tidyTarget(a.target))}</p>
                 <p><span class="ability-key">Effect</span> ${escapeHtml(a.effect)}</p>
+                ${a.cooldown ? `<p class="ability-cooldown"><span class="ability-key">Cooldown</span> ${escapeHtml(a.cooldown)}</p>` : ''}
             </article>`;
+        };
 
         panel.innerHTML = `
             <header class="hero-header">
@@ -519,6 +526,13 @@ function renderDetails() {
                 </div>
             </header>
 
+            ${node.features.length || node.sync_note ? `
+            <section class="detail-section">
+                <h4 class="section-title">Features</h4>
+                <ul class="feature-list">${node.features.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
+                ${node.sync_note ? `<p class="sync-note">${escapeHtml(node.sync_note)}</p>` : ''}
+            </section>` : ''}
+
             <section class="detail-section">
                 <h4 class="section-title">Core Ability</h4>
                 ${ability(node.core_ability)}
@@ -526,7 +540,7 @@ function renderDetails() {
 
             <section class="detail-section">
                 <h4 class="section-title">Support Abilities <span class="count">${node.support_abilities.length}</span></h4>
-                ${node.support_abilities.map((a, i) => ability(a, `Support ${i + 1}`)).join('')}
+                ${node.support_abilities.map(ability).join('')}
             </section>
 
             <section class="detail-section">
