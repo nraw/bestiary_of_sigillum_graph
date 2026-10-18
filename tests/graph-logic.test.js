@@ -45,10 +45,10 @@ test('label nodes record degree and grow with it', () => {
     assert.strictEqual(stun.category, 'Effect');
 });
 
-test('getPrimaryType prefers AoE > Ranged > Melee > Support', () => {
+test('getPrimaryType prefers AoE > Ranged > Melee', () => {
     assert.strictEqual(G.getPrimaryType(['Melee', 'AoE']), 'AoE');
-    assert.strictEqual(G.getPrimaryType(['Support', 'Ranged', 'Melee']), 'Ranged');
-    assert.strictEqual(G.getPrimaryType(['Support']), 'Support');
+    assert.strictEqual(G.getPrimaryType(['Healing', 'Ranged', 'Melee']), 'Ranged');
+    assert.strictEqual(G.getPrimaryType(['Support']), 'Other');
     assert.strictEqual(G.getPrimaryType(['Tank']), 'Other');
 });
 

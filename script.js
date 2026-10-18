@@ -42,7 +42,7 @@ const SYNERGY_STYLE = {
     counter:  { hue: 'harm',      label: 'Counter',      hint: 'as opponents',    bend: 0.3 }
 };
 
-const CATEGORY_CHIPS = ['All', 'Melee', 'Ranged', 'Support', 'AoE', 'Displacement'];
+const CATEGORY_CHIPS = ['All', 'Melee', 'Ranged', 'AoE', 'Displacement'];
 
 // Hero ring colour = primary type (validated for CVD separation on the dark
 // surface); every type also has its own glyph so colour is never the only cue
@@ -50,7 +50,6 @@ const HERO_TYPES = {
     Melee:   { color: '#E0566B', symbol: 'times',    label: 'Melee' },
     Ranged:  { color: '#BF8530', symbol: 'triangle', label: 'Ranged' },
     AoE:     { color: '#9A7BDB', symbol: 'star',     label: 'Area of effect' },
-    Support: { color: '#3FA68C', symbol: 'plus',     label: 'Support' },
     Other:   { color: '#8C7A66', symbol: 'circle',   label: 'Other' }
 };
 

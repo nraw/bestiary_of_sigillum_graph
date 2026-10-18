@@ -28,7 +28,6 @@
           }
         ],
         "labels": [
-          "Support",
           "Ranged",
           "Tower control",
           "Terrain-Control",
@@ -42,11 +41,6 @@
         ],
         "sync_note": "Architectus needs Catapult Tower control to sync with its core attack.",
         "trait_links": [
-          {
-            "label": "Support",
-            "role": "has",
-            "sources": []
-          },
           {
             "label": "Ranged",
             "role": "has",
@@ -122,7 +116,6 @@
         "labels": [
           "Melee",
           "Displacement",
-          "Support",
           "Defense increase",
           "Stun"
         ],
@@ -145,11 +138,6 @@
             "sources": [
               "CHARGE"
             ]
-          },
-          {
-            "label": "Support",
-            "role": "has",
-            "sources": []
           },
           {
             "label": "Defense increase",
@@ -369,7 +357,6 @@
           "AoE",
           "Forest",
           "Displacement",
-          "Support",
           "Defense increase"
         ],
         "features": [
@@ -410,11 +397,6 @@
             ]
           },
           {
-            "label": "Support",
-            "role": "has",
-            "sources": []
-          },
-          {
             "label": "Defense increase",
             "role": "grants",
             "sources": [
@@ -453,7 +435,6 @@
           "Ranged",
           "High-vitality enemies",
           "Healing",
-          "Support",
           "Flying",
           "Swiftness",
           "Mobility"
@@ -485,11 +466,6 @@
             "sources": [
               "RESURRECTION"
             ]
-          },
-          {
-            "label": "Support",
-            "role": "has",
-            "sources": []
           },
           {
             "label": "Flying",
@@ -977,7 +953,6 @@
         "labels": [
           "Isolated enemies",
           "Healing",
-          "Support",
           "Displacement",
           "Self-Sacrifice",
           "Wound"
@@ -1002,11 +977,6 @@
             "sources": [
               "RITUAL OF VITALITY"
             ]
-          },
-          {
-            "label": "Support",
-            "role": "has",
-            "sources": []
           },
           {
             "label": "Displacement",
@@ -1208,7 +1178,6 @@
         "labels": [
           "Melee",
           "Adjacent enemies",
-          "Support",
           "Resistance",
           "Attack increase",
           "Wound"
@@ -1233,11 +1202,6 @@
               "PICKAXES OF RAGE"
             ],
             "on": "enemy"
-          },
-          {
-            "label": "Support",
-            "role": "has",
-            "sources": []
           },
           {
             "label": "Resistance",
@@ -1293,7 +1257,6 @@
           "Melee",
           "Wound",
           "Vampirism",
-          "Support",
           "Mobility"
         ],
         "features": [
@@ -1323,11 +1286,6 @@
             "sources": [
               "VAMPIRIC DRAIN"
             ]
-          },
-          {
-            "label": "Support",
-            "role": "has",
-            "sources": []
           },
           {
             "label": "Mobility",
@@ -1375,7 +1333,6 @@
         "labels": [
           "Allies near enemies",
           "Positive effect",
-          "Support",
           "Attack increase",
           "Swiftness"
         ],
@@ -1400,11 +1357,6 @@
               "FLAMING ARTIFACT"
             ],
             "on": "ally"
-          },
-          {
-            "label": "Support",
-            "role": "has",
-            "sources": []
           },
           {
             "label": "Attack increase",
@@ -1451,7 +1403,6 @@
         "labels": [
           "Stun",
           "Teleport",
-          "Support",
           "Line-Attack",
           "AoE",
           "Displacement"
@@ -1477,11 +1428,6 @@
             "sources": [
               "PORTAL TO THE UNDERWORLD"
             ]
-          },
-          {
-            "label": "Support",
-            "role": "has",
-            "sources": []
           },
           {
             "label": "Stun",
@@ -1627,7 +1573,6 @@
         "labels": [
           "AoE",
           "Defense increase",
-          "Tank",
           "Stun",
           "Mountain"
         ],
@@ -1653,11 +1598,6 @@
               "ROCK BLAST"
             ],
             "on": "self"
-          },
-          {
-            "label": "Tank",
-            "role": "has",
-            "sources": []
           },
           {
             "label": "Stun",
@@ -1799,7 +1739,6 @@
         "labels": [
           "Melee",
           "Abilities on cooldown",
-          "Support",
           "Cooldown-Manipulation",
           "Swiftness"
         ],
@@ -1823,11 +1762,6 @@
               "PENDULUM"
             ],
             "on": "enemy"
-          },
-          {
-            "label": "Support",
-            "role": "has",
-            "sources": []
           },
           {
             "label": "Cooldown-Manipulation",
@@ -1945,7 +1879,6 @@
           "Melee",
           "Adjacent allies",
           "Displacement",
-          "Support",
           "Defense increase",
           "Forest"
         ],
@@ -1976,11 +1909,6 @@
             "sources": [
               "MECHANICAL HAND"
             ]
-          },
-          {
-            "label": "Support",
-            "role": "has",
-            "sources": []
           },
           {
             "label": "Defense increase",
@@ -2469,8 +2397,7 @@
           "Terrain difference",
           "Displacement",
           "Silence",
-          "AoE",
-          "Utility"
+          "AoE"
         ],
         "features": [
           "Repositions characters.",
@@ -2506,11 +2433,6 @@
             "sources": [
               "COMPLETE SILENCE"
             ]
-          },
-          {
-            "label": "Utility",
-            "role": "has",
-            "sources": []
           }
         ]
       },
@@ -2726,7 +2648,6 @@
           "Isolated enemies",
           "Mobility",
           "Displacement",
-          "Assassin",
           "Wound"
         ],
         "features": [
@@ -2763,11 +2684,6 @@
             "sources": [
               "OMINOUS DARK"
             ]
-          },
-          {
-            "label": "Assassin",
-            "role": "has",
-            "sources": []
           },
           {
             "label": "Wound",
@@ -2810,7 +2726,6 @@
           "Swiftness",
           "Slowness",
           "Poison",
-          "Mobile-Striker",
           "Cooldown-Manipulation"
         ],
         "features": [
@@ -2855,11 +2770,6 @@
             "sources": [
               "POISON-TIPPED LANCE"
             ]
-          },
-          {
-            "label": "Mobile-Striker",
-            "role": "has",
-            "sources": []
           },
           {
             "label": "Cooldown-Manipulation",
@@ -2994,7 +2904,6 @@
         "labels": [
           "Ranged",
           "Wound",
-          "Support",
           "Swiftness",
           "Silence",
           "Scaling-Cooldown"
@@ -3019,11 +2928,6 @@
               "LIFE-PIERCING CRY"
             ],
             "on": "enemy"
-          },
-          {
-            "label": "Support",
-            "role": "has",
-            "sources": []
           },
           {
             "label": "Swiftness",

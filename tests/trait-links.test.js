@@ -142,7 +142,13 @@ test('ability-level placement: chips can be grouped under the ability that cause
     assert.deepStrictEqual(links('ARMUS', 'Stun')[0].sources, ['CHARGE']);
     assert.deepStrictEqual(links('MORTUM', 'Wound').map(l => [l.on, l.sources]),
         [['enemy', ['BLOODLUST']], ['self', ['VAMPIRIC DRAIN']]]);
-    assert.deepStrictEqual(links('ARMUS', 'Support')[0].sources, []); // card-level trait
+});
+
+test('every trait comes from an ability on the card (no invented card-level archetypes)', () => {
+    heroes.forEach(h => h.trait_links.forEach(l =>
+        assert.ok(l.sources.length, `${h.name} / ${l.label}: no source ability`)));
+    ['Support', 'Tank', 'Utility', 'Assassin', 'Mobile-Striker']
+        .forEach(label => assert.ok(!heroes.some(h => h.labels.includes(label)), label));
 });
 
 test('condition traits are named after the condition, not "-Dependent"', () => {

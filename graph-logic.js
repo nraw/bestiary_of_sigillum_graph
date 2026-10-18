@@ -2,7 +2,7 @@
 // highlight states, filtering and view fitting.
 // Loaded in the browser as window.GraphLogic and in Node via require().
 (function (root) {
-    const PRIMARY_TYPES = ['AoE', 'Ranged', 'Melee', 'Support'];
+    const PRIMARY_TYPES = ['AoE', 'Ranged', 'Melee'];
 
     const OFFICIAL_EFFECTS = [
         'Attack increase', 'Attack decrease', 'Defense increase', 'Defense decrease',
@@ -11,7 +11,7 @@
     ];
     const LABEL_GROUPS = {
         Combat: ['Melee', 'Ranged', 'AoE', 'Line-Attack', 'Anti-Group'],
-        Magic: ['Support', 'Healing', 'Effect-Copy', 'Effect-Manipulation', 'Teleport'],
+        Magic: ['Healing', 'Effect-Copy', 'Effect-Manipulation', 'Teleport'],
         Movement: ['Mobility', 'Displacement', 'Speed-Buff', 'Speed-Debuff', 'Conditional-Mobility'],
         Structure: ['Tower control', 'Structure-Counter', 'Terrain-Control', 'Castle-Defender',
             'Mountain', 'Water', 'Forest']
