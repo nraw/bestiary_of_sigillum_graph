@@ -33,7 +33,8 @@
           "Structure-Dependent",
           "Terrain-Control",
           "Castle-Defender",
-          "Place obstacle"
+          "Place obstacle",
+          "Mountain-Synergy"
         ],
         "features": [
           "Blocks movement.",
@@ -108,7 +109,7 @@
         ],
         "labels": [
           "Melee",
-          "Water-Dependent",
+          "Water-Synergy",
           "Effect-Copy",
           "Self-Buff",
           "Mobility",
@@ -152,7 +153,8 @@
           "Self-Buff",
           "Displacement",
           "Line-Attack",
-          "Attack increase"
+          "Attack increase",
+          "Mountain-Synergy"
         ],
         "features": [
           "Big single-target damage.",
@@ -188,7 +190,7 @@
         ],
         "labels": [
           "AoE",
-          "Forest-Dependent",
+          "Forest-Synergy",
           "Displacement",
           "Support",
           "Defense increase"
@@ -232,7 +234,8 @@
           "Healing",
           "Support",
           "Flying",
-          "Swiftness"
+          "Swiftness",
+          "Mobility"
         ],
         "features": [
           "High mobility.",
@@ -271,7 +274,8 @@
           "Status-Dependent",
           "Displacement",
           "Slowness",
-          "Mobility"
+          "Mobility",
+          "Scaling-Cooldown"
         ],
         "features": [
           "Hits multiple targets.",
@@ -351,7 +355,8 @@
           "Melee",
           "Conditional-Mobility",
           "Attack decrease",
-          "Damage-Dependent"
+          "Damage-Dependent",
+          "Mobility"
         ],
         "features": [
           "Hits multiple targets.",
@@ -430,7 +435,8 @@
           "Status-Dependent",
           "Slowness",
           "Attack decrease",
-          "Debuffer"
+          "Debuffer",
+          "Water-Synergy"
         ],
         "features": [
           "Attack debuffs.",
@@ -587,7 +593,8 @@
           "Enemy-Count-Dependent",
           "Support",
           "Resistance",
-          "Attack increase"
+          "Attack increase",
+          "Wound-Synergy"
         ],
         "features": [
           "Big single-target damage.",
@@ -626,7 +633,8 @@
           "Damage-Dependent",
           "Vampirism",
           "Support",
-          "Mobility"
+          "Mobility",
+          "Wound-Synergy"
         ],
         "features": [
           "High mobility.",
@@ -704,7 +712,9 @@
           "Teleport",
           "Support",
           "Stun",
-          "Line-Attack"
+          "Line-Attack",
+          "AoE",
+          "Displacement"
         ],
         "features": [
           "Hits multiple targets.",
@@ -744,7 +754,8 @@
           "AoE",
           "Stun",
           "Structure-Dependent",
-          "Control increase"
+          "Control increase",
+          "Scaling-Cooldown"
         ],
         "features": [
           "Mass Stuns.",
@@ -784,7 +795,8 @@
           "Tank",
           "Stun",
           "Self-Buff",
-          "Defense increase"
+          "Defense increase",
+          "Mountain-Synergy"
         ],
         "features": [
           "Hits multiple targets.",
@@ -863,7 +875,7 @@
           "Melee",
           "Cooldown-Dependent",
           "Support",
-          "Cooldown-Reduction",
+          "Cooldown-Manipulation",
           "Swiftness"
         ],
         "features": [
@@ -941,7 +953,8 @@
           "Ally-Count-Dependent",
           "Displacement",
           "Support",
-          "Defense increase"
+          "Defense increase",
+          "Forest-Synergy"
         ],
         "features": [
           "Repositions units.",
@@ -980,7 +993,7 @@
           "Self-Damage-Dependent",
           "Displacement",
           "Stun",
-          "Berserker"
+          "Wound-Synergy"
         ],
         "features": [
           "Repositions units.",
@@ -1019,7 +1032,8 @@
           "Range-Restricted",
           "Swiftness",
           "Structure-Counter",
-          "Control decrease"
+          "Control decrease",
+          "Mobility"
         ],
         "features": [
           "High mobility.",
@@ -1058,7 +1072,10 @@
           "Poison",
           "Damage-Dependent",
           "Displacement",
-          "Water-Synergy"
+          "Water-Synergy",
+          "Scaling-Cooldown",
+          "Cooldown-Manipulation",
+          "AoE"
         ],
         "features": [
           "Hits multiple targets.",
@@ -1214,7 +1231,8 @@
           "Cooldown-Dependent",
           "Cooldown-Manipulation",
           "Stun",
-          "Counter-Magic"
+          "Counter-Magic",
+          "Scaling-Cooldown"
         ],
         "features": [
           "Affects enemies Ability Cooldowns.",
@@ -1332,7 +1350,8 @@
           "Speed-Dependent",
           "Swiftness",
           "Poison",
-          "Mobile-Striker"
+          "Mobile-Striker",
+          "Cooldown-Manipulation"
         ],
         "features": [
           "Swiftness.",
@@ -1372,7 +1391,8 @@
           "Mountain-Synergy",
           "Displacement",
           "Silence",
-          "Scaling-AoE"
+          "Scaling-AoE",
+          "Scaling-Cooldown"
         ],
         "features": [
           "Repositions characters.",
@@ -1411,7 +1431,8 @@
           "Damage-Dependent",
           "Support",
           "Swiftness",
-          "Silence"
+          "Silence",
+          "Scaling-Cooldown"
         ],
         "features": [
           "Mass Swiftness.",

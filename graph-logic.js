@@ -13,7 +13,8 @@
         Combat: ['Melee', 'Ranged', 'AoE', 'Line-Attack', 'Anti-Large', 'Anti-Group'],
         Magic: ['Support', 'Healing', 'Effect-Copy', 'Effect-Manipulation', 'Teleport'],
         Movement: ['Mobility', 'Displacement', 'Speed-Buff', 'Speed-Debuff', 'Conditional-Mobility'],
-        Structure: ['Structure-Dependent', 'Structure-Counter', 'Terrain-Control', 'Castle-Defender']
+        Structure: ['Structure-Dependent', 'Structure-Counter', 'Terrain-Control', 'Castle-Defender',
+            'Mountain-Synergy', 'Water-Synergy', 'Forest-Synergy']
     };
 
     // Ability range symbols (ability_images/<key>.png), worded as on the rulebook sheet
