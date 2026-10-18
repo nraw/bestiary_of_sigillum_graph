@@ -2,12 +2,14 @@
 // Pure logic lives in graph-logic.js (GraphLogic) and search.js; this file owns
 // the DOM, D3 rendering and interaction state.
 const {
-    buildGraph, buildAdjacency, computeHighlight, linkState, relatedHeroes,
+    buildGraph, buildAdjacency, computeHighlight, linkState, arcPath,
     filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange,
     ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment
 } = window.GraphLogic;
+const { computeSynergies, heroSynergies, synergyArcs, describeRelation, titleCase, abilityList } = window.Synergy;
 
 let heroesData = [];
+let synergyRelations = [];
 let nodesData = [];
 let linksData = [];
 let nodesById = new Map();
@@ -19,6 +21,8 @@ let zoom;
 let nodeElements;
 let linkElements;
 let linkHitElements;
+let synergyLayer;
+let synergyArcData = [];
 
 const state = {
     selectedId: null,
@@ -26,7 +30,16 @@ const state = {
     category: 'All',
     labelCategory: null,
     role: null,
-    showAllNames: false
+    showAllNames: false,
+    showSynergies: false
+};
+
+// Hero-to-hero synergy lines reuse the role hues: help = partner, harm dashed = careful with
+// (teammate), harm solid = counter (opponent). Each category bends its own way so a pair's lines don't overlap.
+const SYNERGY_STYLE = {
+    partner:  { hue: 'help',      label: 'Partners',     hint: 'helps the other', bend: 0.16 },
+    conflict: { hue: 'harm',      label: 'Careful with', hint: 'works against',   bend: -0.16 },
+    counter:  { hue: 'harm',      label: 'Counter',      hint: 'as opponents',    bend: 0.3 }
 };
 
 const CATEGORY_CHIPS = ['All', 'Melee', 'Ranged', 'Support', 'AoE', 'Displacement'];
@@ -51,15 +64,18 @@ const LABEL_SHAPES = {
     Trait:     { symbol: 'circle',   label: 'Other trait' }
 };
 
-// Edge roles: hue = group (harm enemies / help own side / condition), dash = variant
+// Edge roles: hue = group (harm: inflicts on enemies or hinders the hero / help own side /
+// condition the hero benefits from), dash = variant
 // (self only / works against), arrow = direction. Three hues validated for CVD on --bg;
 // colours live in styles.css (--role-*), this table drives legend and markers.
 const ROLE_STYLE = {
     inflicts:      { hue: 'harm',      dashed: false, hint: 'on enemies' },
     grants:        { hue: 'help',      dashed: false, hint: 'to allies' },
     gains:         { hue: 'help',      dashed: true,  hint: 'on itself' },
+    // Reuses the neutral highlight gold (not a 4th category hue); dotted line + arrow set it apart
+    places:        { hue: 'place',     dashed: 'dotted', hint: 'onto terrain' },
     benefits_from: { hue: 'condition', dashed: false, hint: 'condition' },
-    hindered_by:   { hue: 'condition', dashed: true,  hint: 'works against' }
+    hindered_by:   { hue: 'harm',      dashed: true,  hint: 'works against' }
 };
 const SUBJECT_LABEL = { self: 'self', ally: 'allies', enemy: 'enemies' };
 
@@ -90,6 +106,7 @@ async function init() {
         const response = await fetch('bestiary_reference_cards.json');
         const data = await response.json();
         heroesData = data.bestiary_of_sigillum.characters;
+        synergyRelations = computeSynergies(heroesData);
 
         ({ nodes: nodesData, links: linksData } = buildGraph(heroesData));
         nodesById = new Map(nodesData.map(n => [n.id, n]));
@@ -130,7 +147,7 @@ function setupGraph() {
             .append('circle').attr('r', n.radius - 1.5);
     });
 
-    ['harm', 'help', 'condition', 'mixed'].forEach(hue => {
+    ['harm', 'help', 'condition', 'place', 'mixed'].forEach(hue => {
         defs.append('marker').attr('id', `arrow-${hue}`)
             .attr('viewBox', '0 -5 10 10').attr('refX', 9).attr('refY', 0)
             .attr('markerWidth', 4.5).attr('markerHeight', 4.5).attr('markerUnits', 'strokeWidth')
@@ -185,6 +202,8 @@ function setupGraph() {
         .attr('class', 'link-hit')
         .on('mouseenter', (event, d) => showLinkTooltip(d))
         .on('mouseleave', hideTooltip);
+
+    synergyLayer = viewport.append('g').attr('class', 'synergy-links');
 
     nodeElements = viewport.append('g').attr('class', 'nodes')
         .selectAll('g')
@@ -285,6 +304,29 @@ function ticked() {
         .attr('x2', d => d.seg.x2)
         .attr('y2', d => d.seg.y2));
     nodeElements.attr('transform', d => `translate(${d.x},${d.y})`);
+    updateSynergyArcs();
+}
+
+function updateSynergyArcs() {
+    synergyArcData.forEach(d => {
+        d.geo = arcPath(d.source, d.target, d.source.radius + 4, d.target.radius + 4, SYNERGY_STYLE[d.category].bend);
+    });
+    synergyLayer.selectAll('path').attr('d', d => d.geo.d);
+}
+
+function drawSynergyArcs(arcs, focused) {
+    const heroByName = new Map(nodesData.filter(n => n.type === 'hero').map(n => [n.name, n]));
+    synergyArcData = arcs.map(a => ({ ...a, source: heroByName.get(a.a), target: heroByName.get(a.b) }));
+    const key = d => `${d.category}|${d.a}|${d.b}`;
+    synergyLayer.selectAll('path.syn-arc-hit').data(synergyArcData, key).join('path')
+        .attr('class', 'syn-arc-hit')
+        .on('mouseenter', (event, d) => showArcTooltip(d))
+        .on('mouseleave', hideTooltip);
+    synergyLayer.selectAll('path.syn-arc').data(synergyArcData, key).join('path')
+        .attr('class', d => `syn-arc syn-arc--${d.category}${focused ? '' : ' syn-arc--overview'}`)
+        .attr('marker-end', d => (d.aToB ? `url(#arrow-${SYNERGY_STYLE[d.category].hue})` : null))
+        .attr('marker-start', d => (d.bToA ? `url(#arrow-${SYNERGY_STYLE[d.category].hue})` : null));
+    updateSynergyArcs();
 }
 
 function dragstarted(event, d) {
@@ -354,10 +396,21 @@ function setupToolbar() {
         if (button) runAction(button.dataset.action);
     });
     document.getElementById('clearAllBtn').addEventListener('click', clearAll);
+    document.getElementById('synergyToggle').addEventListener('click', toggleSynergies);
     document.getElementById('namesToggle').addEventListener('click', () => {
         state.showAllNames = !state.showAllNames;
         render();
     });
+}
+
+function toggleSynergies() {
+    state.showSynergies = !state.showSynergies;
+    if (state.showSynergies) state.role = null; // its legend control is hidden while synergies show
+    hideTooltip();
+    trackEvent('synergy_toggle', 'View', state.showSynergies ? 'on' : 'off');
+    render();
+    const selected = nodesById.get(state.selectedId);
+    if (state.showSynergies && selected?.type === 'hero') fitToSynergies(selected);
 }
 
 function runAction(action) {
@@ -382,7 +435,15 @@ function selectNode(id, { source = 'graph', center = source !== 'graph' } = {}) 
     state.selectedId = id;
     trackEvent('node_selected', 'Interaction', `${source}: ${node.name}`);
     render();
-    if (center) centerOn(node);
+    if (state.showSynergies && node.type === 'hero') fitToSynergies(node);
+    else if (center) centerOn(node);
+}
+
+// Frame the selected hero together with every hero it has a synergy line to
+function fitToSynergies(node) {
+    const names = new Set([node.name]);
+    synergyArcs(synergyRelations, node.name).forEach(a => { names.add(a.a); names.add(a.b); });
+    fitView(nodesData.filter(n => n.type === 'hero' && names.has(n.name)));
 }
 
 function clearSelection() {
@@ -402,7 +463,26 @@ function clearAll() {
 function render() {
     const { nodeIds: filterSet, links: filterLinks } = currentFilter();
 
-    const highlight = state.selectedId ? computeHighlight(state.selectedId, adjacency, nodesById) : null;
+    // Synergy mode: hero-to-hero lines replace the trait edges (a selected trait keeps the normal view)
+    const selectedNode = nodesById.get(state.selectedId);
+    const synergyMode = state.showSynergies && (!selectedNode || selectedNode.type === 'hero');
+    let highlight = selectedNode ? computeHighlight(state.selectedId, adjacency, nodesById) : null;
+    let arcs = [];
+    if (synergyMode) {
+        const focus = selectedNode ? selectedNode.name : null;
+        arcs = synergyArcs(synergyRelations, focus);
+        const heroId = name => nodesData.find(n => n.type === 'hero' && n.name === name).id;
+        if (focus) {
+            highlight = new Map(nodesData.map(n => [n.id, 'dim']));
+            highlight.set(state.selectedId, 'selected');
+            arcs.forEach(a => highlight.set(heroId(a.a === focus ? a.b : a.a), 'connected'));
+        } else {
+            if (filterSet) arcs = arcs.filter(a => filterSet.has(heroId(a.a)) && filterSet.has(heroId(a.b)));
+            highlight = new Map(nodesData.map(n => [n.id,
+                n.type === 'label' || (filterSet && !filterSet.has(n.id)) ? 'dim' : 'none']));
+        }
+    }
+    drawSynergyArcs(arcs, synergyMode && Boolean(selectedNode));
 
     nodeElements
         .classed('is-selected', d => highlight?.get(d.id) === 'selected')
@@ -415,6 +495,7 @@ function render() {
     // Role colours and arrows show on edges in focus: the selection's own edges or the role filter's
     const roleShown = new Set();
     linkElements.attr('class', d => {
+        if (synergyMode) return 'link link--dim';
         if (highlight) {
             const st = linkState(d, highlight);
             if (st === 'direct') roleShown.add(d);
@@ -446,6 +527,7 @@ function render() {
     linkElements.filter(function () { return /--(direct|role)/.test(this.getAttribute('class')); }).raise();
 
     svg.classed('has-highlight', Boolean(highlight || filterSet));
+    svg.classed('synergy-mode', synergyMode);
     svg.classed('show-all-names', state.showAllNames);
 
     updateHeaderState(filterSet);
@@ -471,8 +553,8 @@ function updateHeaderState(filterSet) {
     document.getElementById('activeFilters').textContent = active.join(' · ') || 'None';
 
     const selected = nodesById.get(state.selectedId);
-    let title = 'Hero Network';
-    if (selected) title = selected.name;
+    let title = state.showSynergies ? 'Synergy Map' : 'Hero Network';
+    if (selected) title = state.showSynergies && selected.type === 'hero' ? `${selected.name} · Synergies` : selected.name;
     else if (active.length) title = `Filtered: ${active.join(' · ')}`;
     document.getElementById('graphTitle').textContent = title;
 
@@ -480,6 +562,10 @@ function updateHeaderState(filterSet) {
         !(state.selectedId || active.length);
     document.querySelector('[data-action="center"]').disabled = !selected;
 
+    document.getElementById('synergyToggle').setAttribute('aria-pressed', String(state.showSynergies));
+    // The legend explains whichever line type the Synergies toggle is drawing
+    document.querySelector('[data-legend="roles"]').hidden = state.showSynergies;
+    document.querySelector('[data-legend="synergy"]').hidden = !state.showSynergies;
     const names = document.getElementById('namesToggle');
     names.setAttribute('aria-pressed', String(state.showAllNames));
 
@@ -524,6 +610,104 @@ function tidyTarget(text) {
     return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 }
 
+// ---------------------------------------------------------------------------
+// Synergies (deduced in synergy.js from the typed trait links)
+// ---------------------------------------------------------------------------
+
+const RULE_NOTE = { cooldowns: 'longer enemy cooldowns', 'tower control': 'via Control increase' };
+
+function heroChip(name, title) {
+    const node = nodesData.find(n => n.type === 'hero' && n.name === name);
+    return `<button type="button" class="hero-chip" data-node="${node.id}" title="${escapeHtml(title)}">
+        <img src="${node.image}" alt="" width="22" height="22"> ${escapeHtml(name)}</button>`;
+}
+
+// Rows of { heading, chips } grouped by a key, keeping first-seen order
+function groupRows(entries, key, heading, chip) {
+    const rows = new Map();
+    entries.forEach(e => {
+        const k = key(e);
+        if (!rows.has(k)) rows.set(k, { heading: heading(e), chips: [] });
+        rows.get(k).chips.push(chip(e));
+    });
+    return [...rows.values()].map(r => `
+        <div class="syn-row"><div class="syn-need">${r.heading}</div><div class="syn-chips">${r.chips.join('')}</div></div>`).join('');
+}
+
+function synergySection(node) {
+    const s = heroSynergies(node.name, synergyRelations);
+    const supplyText = (hero, supply) => linkSummary(hero, supply.label, [supply])[0];
+    const label = (text, rule) => `<strong>${escapeHtml(text)}</strong>${
+        RULE_NOTE[rule] ? ` <span class="syn-rule">${RULE_NOTE[rule]}</span>` : ''}`;
+    const blocks = [];
+
+    if (s.selfCombos.length) {
+        blocks.push(`<h5 class="syn-title">Self-combo</h5>` + s.selfCombos.map(c => `
+            <p class="syn-line">${escapeHtml(abilityList(c.supply.sources))} → ${escapeHtml(abilityList(c.need.sources))}
+                · ${label(c.label, c.rule)}</p>`).join(''));
+    }
+    if (s.helpedBy.length) {
+        blocks.push(`<h5 class="syn-title"><span class="role-dot kind--grants"></span>Helped by</h5>` + groupRows(s.helpedBy,
+            e => `${e.label}|${e.need.sources}`,
+            e => `${label(e.label, e.rule)} for ${escapeHtml(abilityList(e.need.sources))}`,
+            e => heroChip(e.hero, supplyText(e.hero, e.supply))));
+    }
+    if (s.helps.length) {
+        blocks.push(`<h5 class="syn-title"><span class="role-dot kind--grants"></span>Helps</h5>` + groupRows(s.helps,
+            e => `${e.label}|${e.supply.sources}`,
+            e => `${label(e.label, e.rule)} from ${escapeHtml(abilityList(e.supply.sources))}`,
+            e => heroChip(e.hero, `${e.hero} needs ${e.label} for ${abilityList(e.need.sources)}`)));
+    }
+    if (s.broad.length) {
+        blocks.push(s.broad.map(b => `<p class="syn-line syn-broad">Works with any ${
+            b.label === 'Negative effect' ? 'debuffer' : 'buffer'}: ${b.count} heroes supply a ${b.label.toLowerCase()}
+            for ${escapeHtml(abilityList(b.need.sources))}.</p>`).join(''));
+    }
+    if (s.conflicts.length) {
+        blocks.push(`<h5 class="syn-title"><span class="role-dot kind--hindered_by"></span>Careful with</h5>` + groupRows(s.conflicts,
+            e => `${e.direction}|${e.label}`,
+            e => e.direction === 'hurt-by'
+                ? `${label(e.label, e.rule)} hinders your ${escapeHtml(abilityList(e.need.sources))}`
+                : `Your ${escapeHtml(abilityList(e.supply.sources))} (${label(e.supply.label)}) hinders`,
+            e => heroChip(e.hero, e.direction === 'hurt-by'
+                ? supplyText(e.hero, e.supply) : `${e.hero}'s ${abilityList(e.need.sources)} is hindered by ${e.label}`)));
+    }
+    // One sentence per supplying ability; its effects on the victim joined ("undoes X and hinders Y")
+    const counterText = (attacker, reasons) => {
+        const bySupply = new Map();
+        reasons.forEach(r => {
+            const key = `${r.supply.label}|${r.supply.sources}`;
+            if (!bySupply.has(key)) bySupply.set(key, { supply: r.supply, effects: [] });
+            bySupply.get(key).effects.push(r.rule === 'hindrance'
+                ? `hinders ${abilityList(r.need.sources)}`
+                : `undoes ${r.need.label} for ${abilityList(r.need.sources)}`);
+        });
+        return [...bySupply.values()].map(({ supply, effects }) =>
+            `${escapeHtml(titleCase(attacker))} ${ROLE_INFO[supply.role].verb} <strong>${escapeHtml(supply.label)}</strong>
+             (${escapeHtml(abilityList(supply.sources))}): ${escapeHtml(effects.join(' and '))}`).join('<br>');
+    };
+    const counterRows = (list, attacker) => list.map(c => `
+        <div class="syn-row"><div class="syn-chips">${heroChip(c.hero, '')}</div>
+            <div class="syn-need">${counterText(attacker(c), c.reasons)}</div></div>`).join('');
+    if (s.counteredBy.length) {
+        blocks.push(`<h5 class="syn-title"><span class="role-dot kind--inflicts"></span>Countered by</h5>`
+            + counterRows(s.counteredBy, c => c.hero));
+    }
+    if (s.counters.length) {
+        blocks.push(`<h5 class="syn-title"><span class="role-dot kind--inflicts"></span>Counters</h5>`
+            + counterRows(s.counters, () => node.name));
+    }
+    if (s.flags.dontFeed) blocks.push(`<p class="syn-flag">Don't feed: grows stronger from its own Wounds.</p>`);
+    if (s.flags.punishWithDamage) blocks.push(`<p class="syn-flag">Punish with damage: Wounds slow some of its abilities.</p>`);
+
+    if (!blocks.length) return '';
+    return `
+        <section class="detail-section synergies">
+            <h4 class="section-title">Synergies</h4>
+            ${blocks.join('')}
+        </section>`;
+}
+
 function renderDetails() {
     const panel = document.getElementById('heroInfo');
     const node = nodesById.get(state.selectedId);
@@ -538,6 +722,7 @@ function renderDetails() {
                     <dt><kbd>Tab</kbd> <kbd>←↑→↓</kbd></dt><dd>Move between nodes</dd>
                     <dt><kbd>Enter</kbd></dt><dd>Select node</dd>
                     <dt><kbd>+</kbd> <kbd>−</kbd> <kbd>F</kbd> <kbd>0</kbd></dt><dd>Zoom, fit, reset</dd>
+                    <dt><kbd>S</kbd></dt><dd>Synergy lines</dd>
                     <dt><kbd>Esc</kbd></dt><dd>Clear selection</dd>
                 </dl>
             </div>`;
@@ -546,14 +731,13 @@ function renderDetails() {
 
     if (node.type === 'hero') {
         const type = HERO_TYPES[node.primaryType];
-        const related = relatedHeroes(node, heroesData);
         const groups = abilityTraits(node);
         const roleChip = l => {
             const n = nodesById.get(`label_${l.label}`);
             return `<button type="button" class="trait-chip role-chip kind--${l.role}" data-node="${n.id}"
                         title="${escapeHtml(linkSummary(node.name, l.label, [l])[0])}">
                 ${l.role === 'has' ? '' : `<span class="role-tag">${ROLE_INFO[l.role].label}</span>`}
-                ${labelGlyph(n.category, 14, n.name)} ${escapeHtml(l.label)}${
+                <span class="chip-label">${labelGlyph(n.category, 14, n.name)} ${escapeHtml(l.label)}</span>${
                 SUBJECT_LABEL[l.on] ? ` <span class="role-on">· ${SUBJECT_LABEL[l.on]}</span>` : ''}</button>`;
         };
         const chips = links => links.length
@@ -613,13 +797,7 @@ function renderDetails() {
                 ${chips(groups.at(-1).links)}
             </section>` : ''}
 
-            <section class="detail-section">
-                <h4 class="section-title">Related Heroes <span class="count">${related.length}</span></h4>
-                <div class="hero-list">
-                    ${related.map(r => heroButton(r.hero,
-                        `<span class="shared" title="${escapeHtml(r.shared.join(', '))}">${r.shared.length} shared</span>`)).join('')}
-                </div>
-            </section>`;
+            ${synergySection(node)}`;
     } else {
         const heroes = heroesData.filter(h => h.labels.includes(node.name));
         panel.innerHTML = `
@@ -655,7 +833,6 @@ document.addEventListener('click', event => {
 function showTooltip(d) {
     const tooltip = document.getElementById('tooltip');
     if (d.type === 'hero') {
-        const [closest] = relatedHeroes(d, heroesData);
         tooltip.innerHTML = `
             <div class="tt-head">
                 <img src="${d.image}" alt="" width="40" height="40">
@@ -663,8 +840,7 @@ function showTooltip(d) {
                 <div class="tt-sub">${heroGlyph(d.primaryType, 12)} ${HERO_TYPES[d.primaryType].label} · Vitality ${d.vitality}</div></div>
             </div>
             <p class="tt-core"><span class="ability-key">Core</span> ${escapeHtml(d.core_ability.effect)}</p>
-            <div class="tt-meta">${d.support_abilities.length} support abilities · ${d.labels.length} traits${closest
-                ? `<br>Most alike: <strong>${escapeHtml(closest.hero.name)}</strong> (${closest.shared.length} shared)` : ''}</div>`;
+            <div class="tt-meta">${d.support_abilities.length} support abilities · ${d.labels.length} traits${synergyCounts(d.name)}</div>`;
     } else {
         tooltip.innerHTML = `
             <div class="tt-head">${labelGlyph(d.category, 24, d.name)}
@@ -686,6 +862,15 @@ function showLinkTooltip(d) {
     placeTooltip((d.seg.x1 + d.seg.x2) / 2, (d.seg.y1 + d.seg.y2) / 2, 2);
 }
 
+function showArcTooltip(d) {
+    const tooltip = document.getElementById('tooltip');
+    tooltip.innerHTML = `
+        <div class="tt-head"><div><strong>${escapeHtml(titleCase(d.a))} · ${escapeHtml(titleCase(d.b))}</strong>
+            <div class="tt-sub">${SYNERGY_STYLE[d.category].label}</div></div></div>
+        <ul class="tt-roles">${d.relations.map(r => `<li>${escapeHtml(describeRelation(r))}</li>`).join('')}</ul>`;
+    placeTooltip(d.geo.mx, d.geo.my, 2);
+}
+
 // Position the tooltip beside a point given in graph coordinates
 function placeTooltip(gx, gy, radius) {
     const tooltip = document.getElementById('tooltip');
@@ -701,6 +886,15 @@ function placeTooltip(gx, gy, radius) {
     const left = x + offset + tw > container.width ? x - offset - tw : x + offset;
     tooltip.style.left = `${Math.max(8, left)}px`;
     tooltip.style.top = `${Math.min(Math.max(8, y - th / 2), container.height - th - 8)}px`;
+}
+
+function synergyCounts(name) {
+    const s = heroSynergies(name, synergyRelations);
+    const partners = new Set([...s.helpedBy, ...s.helps].map(e => e.hero)).size;
+    const parts = [partners && `${partners} partner${partners === 1 ? '' : 's'}`,
+        s.conflicts.length && `${new Set(s.conflicts.map(c => c.hero)).size} to be careful with`,
+        s.counteredBy.length && `countered by ${s.counteredBy.length}`].filter(Boolean);
+    return parts.length ? `<br>${parts.join(' · ')}` : '';
 }
 
 function hideTooltip() {
@@ -848,8 +1042,18 @@ function roleSwatch(kind) {
     const arrowLeft = '<path d="M13 2 L7 6 L13 10 Z"/>';
     return `<svg class="role-swatch hue--${hue}" width="50" height="12" viewBox="0 0 50 12" aria-hidden="true">
         <circle cx="4" cy="6" r="3.5" class="sw-hero"/><rect x="42" y="2.5" width="7" height="7" class="sw-trait"/>
-        <line x1="8" y1="6" x2="38" y2="6" class="sw-line${kind !== 'mixed' && ROLE_STYLE[kind].dashed ? ' sw-dashed' : ''}"/>
+        <line x1="8" y1="6" x2="38" y2="6" class="sw-line${kind === 'mixed' ? '' : ROLE_STYLE[kind].dashed === 'dotted'
+            ? ' sw-dotted' : ROLE_STYLE[kind].dashed ? ' sw-dashed' : ''}"/>
         <g class="sw-arrow">${dir === 'out' || dir === 'both' ? arrowRight : ''}${dir === 'in' || dir === 'both' ? arrowLeft : ''}</g></svg>`;
+}
+
+// Two heroes joined by a bowed synergy line, as drawn on the graph
+function synergySwatch(category) {
+    const st = SYNERGY_STYLE[category];
+    return `<svg class="role-swatch hue--${st.hue}" width="50" height="14" viewBox="0 0 50 14" aria-hidden="true">
+        <circle cx="4" cy="9" r="3.5" class="sw-hero"/><circle cx="46" cy="9" r="3.5" class="sw-hero"/>
+        <path d="M9 9 Q25 1 38 8" fill="none" class="sw-line${category === 'conflict' ? ' sw-dashed' : ''}"/>
+        <path class="sw-arrow" d="M36 4.5 L42 9 L35 11 Z"/></svg>`;
 }
 
 function renderLegend() {
@@ -885,6 +1089,7 @@ function renderLegend() {
             <li>${edgeSwatch('link--dim')} Unrelated</li>
         </ul>
 
+        <div class="legend-section" data-legend="roles">
         <h3 class="legend-title">Edge roles <small>colour · dash · arrow · click to filter</small></h3>
         <ul class="legend-list">
             ${ROLES.filter(r => r !== 'has').map(r => `
@@ -892,6 +1097,15 @@ function renderLegend() {
                     ${roleSwatch(r)} ${ROLE_INFO[r].label} <small class="legend-hint">${ROLE_STYLE[r].hint}</small></button></li>`).join('')}
             <li>${roleSwatch('mixed')} Several roles <small class="legend-hint">hover the edge</small></li>
         </ul>
+        </div>
+
+        <div class="legend-section" data-legend="synergy" hidden>
+        <h3 class="legend-title">Synergy lines <small>arrow: who helps or hurts whom</small></h3>
+        <ul class="legend-list">
+            ${Object.entries(SYNERGY_STYLE).map(([key, st]) => `
+                <li>${synergySwatch(key)} ${st.label} <small class="legend-hint">${st.hint}</small></li>`).join('')}
+        </ul>
+        </div>
 
         <h3 class="legend-title">Size</h3>
         <ul class="legend-list legend-sizes">
@@ -1029,6 +1243,8 @@ function setupKeyboard() {
             runAction('fit');
         } else if (event.key.toLowerCase() === 'c') {
             runAction('center');
+        } else if (event.key.toLowerCase() === 's') {
+            toggleSynergies();
         }
     });
 }

@@ -34,13 +34,14 @@
         return { src: `ability_images/${key}.png`, label: ABILITY_RANGES[key] };
     }
 
-    // Edge roles: what a hero does with a trait. Giving roles point hero -> trait,
+    // Edge roles: what a hero does with a trait. Giving roles (incl. places: moves units onto terrain) point hero -> trait,
     // conditions point trait -> hero; "has" is an undirected trait
-    const ROLES = ['inflicts', 'grants', 'gains', 'benefits_from', 'hindered_by', 'has'];
+    const ROLES = ['inflicts', 'grants', 'gains', 'places', 'benefits_from', 'hindered_by', 'has'];
     const ROLE_INFO = {
         inflicts:      { label: 'Inflicts',      verb: 'inflicts',      direction: 'out' },
         grants:        { label: 'Grants',        verb: 'grants',        direction: 'out' },
         gains:         { label: 'Gains',         verb: 'gains',         direction: 'out' },
+        places:        { label: 'Places',        verb: 'places',        direction: 'out' },
         benefits_from: { label: 'Benefits from', verb: 'benefits from', direction: 'in' },
         hindered_by:   { label: 'Hindered by',   verb: 'is hindered by', direction: 'in' },
         has:           { label: 'Has',           verb: 'has',           direction: 'none' }
@@ -110,6 +111,30 @@
         const ux = dx / len;
         const uy = dy / len;
         return { x1: a.x + ux * ra, y1: a.y + uy * ra, x2: b.x - ux * rb, y2: b.y - uy * rb };
+    }
+
+    // Quadratic curve from a to b bowed sideways by `bend` x length (sign picks the side),
+    // ends pulled back to the node rims; (mx, my) is the curve's midpoint
+    function arcPath(a, b, ra, rb, bend) {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const cx = (a.x + b.x) / 2 - (dy / len) * bend * len;
+        const cy = (a.y + b.y) / 2 + (dx / len) * bend * len;
+        const toward = (p, r) => {
+            const vx = cx - p.x;
+            const vy = cy - p.y;
+            const vl = Math.hypot(vx, vy) || 1;
+            return { x: p.x + (vx / vl) * r, y: p.y + (vy / vl) * r };
+        };
+        const s = toward(a, ra);
+        const e = toward(b, rb);
+        return {
+            x1: s.x, y1: s.y, cx, cy, x2: e.x, y2: e.y,
+            mx: 0.25 * a.x + 0.5 * cx + 0.25 * b.x,
+            my: 0.25 * a.y + 0.5 * cy + 0.25 * b.y,
+            d: `M${s.x},${s.y}Q${cx},${cy} ${e.x},${e.y}`
+        };
     }
 
     function getPrimaryType(labels) {
@@ -218,18 +243,6 @@
         return 'dim';
     }
 
-    // hero may be a raw card or its graph node (whose id is "hero_<n>", card id in originalId)
-    function relatedHeroes(hero, heroes) {
-        const selfId = hero.originalId ?? hero.id;
-        return heroes
-            .filter(other => other.id !== selfId)
-            .map(other => ({
-                hero: other,
-                shared: hero.labels.filter(label => other.labels.includes(label))
-            }))
-            .filter(entry => entry.shared.length > 0)
-            .sort((a, b) => b.shared.length - a.shared.length || a.hero.name.localeCompare(b.hero.name));
-    }
 
     // Returns a Set of matching node ids, or null when no filter is active
     function filterNodes(nodes, { term = '', category = null, labelCategory = null } = {}) {
@@ -311,7 +324,7 @@
 
     const api = {
         PRIMARY_TYPES, getPrimaryType, getLabelCategory, vitalityRadius, labelRadius,
-        buildGraph, buildAdjacency, computeHighlight, linkState, relatedHeroes,
+        buildGraph, buildAdjacency, computeHighlight, linkState, arcPath,
         filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange,
         ROLES, ROLE_INFO, linkKind, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment
     };

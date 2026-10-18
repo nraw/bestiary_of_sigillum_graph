@@ -390,10 +390,17 @@
             "label": "Forest",
             "role": "benefits_from",
             "sources": [
-              "ROOTS",
-              "CALL OF THE WOODS"
+              "ROOTS"
             ],
             "on": "enemy"
+          },
+          {
+            "label": "Forest",
+            "role": "places",
+            "sources": [
+              "CALL OF THE WOODS"
+            ],
+            "on": null
           },
           {
             "label": "Displacement",
@@ -972,7 +979,8 @@
           "Healing",
           "Support",
           "Displacement",
-          "Self-Sacrifice"
+          "Self-Sacrifice",
+          "Wound"
         ],
         "features": [
           "Repositions allies.",
@@ -1013,6 +1021,14 @@
             "sources": [
               "RITUAL OF VITALITY"
             ]
+          },
+          {
+            "label": "Wound",
+            "role": "inflicts",
+            "sources": [
+              "RITUAL OF VITALITY"
+            ],
+            "on": "ally"
           }
         ]
       },
@@ -2229,7 +2245,7 @@
           },
           {
             "label": "Water",
-            "role": "benefits_from",
+            "role": "places",
             "sources": [
               "VIAL OF VENOM"
             ],
@@ -2668,6 +2684,14 @@
             "sources": [
               "GRAVITY LINK"
             ]
+          },
+          {
+            "label": "Wound",
+            "role": "inflicts",
+            "sources": [
+              "GRAVITY LINK"
+            ],
+            "on": "self"
           }
         ]
       },
@@ -2904,7 +2928,7 @@
           },
           {
             "label": "Mountain",
-            "role": "benefits_from",
+            "role": "places",
             "sources": [
               "DARKSTONE"
             ],

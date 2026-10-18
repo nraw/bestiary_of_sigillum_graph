@@ -105,3 +105,27 @@ test('real data: every link gets roles and Saxum/Defense is mixed', () => {
     const saxumDefense = real.find(l => l.source === 'hero_20' && l.target === 'label_Defense increase');
     assert.strictEqual(saxumDefense.kind, 'mixed');
 });
+
+test('places is a giving role pointing hero -> terrain', () => {
+    assert.ok(G.ROLES.includes('places'));
+    assert.deepStrictEqual(G.linkDirection([{ role: 'places', on: null }]), { toTrait: true, toHero: false });
+    assert.deepStrictEqual(G.linkSummary('MAGNUS', 'Mountain', [{ role: 'places', sources: ['DARKSTONE'], on: null }]),
+        ['MAGNUS places Mountain, via DARKSTONE']);
+});
+
+test('linkSummary names an unusual subject on giving roles', () => {
+    assert.deepStrictEqual(G.linkSummary('GOETIUM', 'Wound', [{ role: 'inflicts', sources: ['RITUAL OF VITALITY'], on: 'ally' }]),
+        ['GOETIUM inflicts Wound on allies, via RITUAL OF VITALITY']);
+});
+
+test('arcPath bends a curve to one side and trims both ends to the node rims', () => {
+    const near = (a, b) => Math.abs(a - b) < 1e-6;
+    const flat = G.arcPath({ x: 0, y: 0 }, { x: 100, y: 0 }, 0, 0, 0.2);
+    assert.deepStrictEqual([flat.x1, flat.y1, flat.cx, flat.cy, flat.x2, flat.y2], [0, 0, 50, 20, 100, 0]);
+    assert.strictEqual(flat.d, 'M0,0Q50,20 100,0');
+    const trimmed = G.arcPath({ x: 0, y: 0 }, { x: 100, y: 0 }, 10, 10, 0.2);
+    const len = Math.hypot(50, 20);
+    assert.ok(near(trimmed.x1, 500 / len) && near(trimmed.y1, 200 / len));
+    assert.ok(near(trimmed.x2, 100 - 500 / len) && near(trimmed.y2, 200 / len));
+    assert.deepStrictEqual([trimmed.mx, trimmed.my], [50, 10]); // curve midpoint for tooltips
+});

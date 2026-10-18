@@ -86,7 +86,6 @@
             <h1 class="title">Bestiary of Sigillum</h1>
             <p class="subtitle">Interactive Hero Network Visualization</p>
         </div>
-        <button class="btn btn-crimson" id="clearAllBtn" type="button" disabled>Clear Filters</button>
     </header>
 
     <main class="layout">
@@ -116,6 +115,7 @@
 
         <section class="graph-panel" aria-label="Network visualization">
             <div class="graph-toolbar" role="toolbar" aria-label="Graph controls">
+                <div class="toolbar-main">
                 <div class="graph-title" id="graphTitle" aria-live="polite">Hero Network</div>
                 <div class="btn-group">
                     <button class="icon-btn" type="button" data-action="zoom-in" aria-label="Zoom in" title="Zoom in (+)">
@@ -138,9 +138,15 @@
                 <button class="btn btn-ghost" type="button" id="namesToggle" aria-pressed="false" title="Show every trait name">
                     All names
                 </button>
+                <button class="btn btn-ghost" type="button" id="synergyToggle" aria-pressed="false"
+                        title="Show synergy lines between heroes (S)">
+                    Synergies
+                </button>
                 <button class="btn btn-ghost legend-toggle" type="button" id="legendToggle" aria-controls="sidePanel" aria-expanded="false">
                     Legend
                 </button>
+                </div>
+                <button class="btn btn-crimson toolbar-clear" id="clearAllBtn" type="button" disabled>Clear Filters</button>
             </div>
             <svg id="graph" tabindex="-1" role="application"
                  aria-label="Hero network. Use Tab to reach the nodes, arrow keys to move between them, Enter to select, plus and minus to zoom."
@@ -167,6 +173,7 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="search.js"></script>
     <script src="graph-logic.js"></script>
+    <script src="synergy.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

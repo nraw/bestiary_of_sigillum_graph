@@ -10,7 +10,8 @@ const byName = Object.fromEntries(heroes.map(h => [h.name, h]));
 
 const GIVING = ['inflicts', 'grants', 'gains'];
 const CONDITIONS = ['benefits_from', 'hindered_by'];
-const ROLES = ['has', ...GIVING, ...CONDITIONS];
+const ROLES = ['has', ...GIVING, 'places', ...CONDITIONS];
+const TERRAIN = ['Mountain', 'Water', 'Forest'];
 const SUBJECTS = ['self', 'ally', 'enemy', null];
 
 const abilities = h => [h.core_ability, ...h.support_abilities];
@@ -35,8 +36,9 @@ test('links use known roles, real ability sources and a subject only for conditi
             assert.ok(ROLES.includes(l.role), `${where}: role ${l.role}`);
             assert.ok(Array.isArray(l.sources), where);
             l.sources.forEach(s => assert.ok(names.includes(s), `${where}: unknown source ${s}`));
-            if (CONDITIONS.includes(l.role)) assert.ok(SUBJECTS.includes(l.on), `${where}: on ${l.on}`);
-            else assert.ok(!('on' in l), `${where}: only conditions take "on"`);
+            if (CONDITIONS.includes(l.role) || l.role === 'places') assert.ok(SUBJECTS.includes(l.on), `${where}: on ${l.on}`);
+            else if (l.role === 'inflicts' && 'on' in l) assert.ok(['self', 'ally'].includes(l.on), `${where}: inflicts defaults to enemies`);
+            else assert.ok(!('on' in l), `${where}: "on" only for conditions, places and self-inflicted harm`);
         });
     });
 });
@@ -48,10 +50,25 @@ test('no duplicate (label, role, on) link per hero', () => {
     });
 });
 
-test('giving roles only point at official effects or cooldown manipulation', () => {
+test('giving roles only point at official effects, cooldown manipulation or deliberate wounding', () => {
     heroes.forEach(h => h.trait_links.filter(l => GIVING.includes(l.role)).forEach(l =>
-        assert.ok(G.getLabelCategory(l.label) === 'Effect' || l.label === 'Cooldown-Manipulation',
-            `${h.name} ${l.role} ${l.label}`)));
+        assert.ok(G.getLabelCategory(l.label) === 'Effect' || l.label === 'Cooldown-Manipulation'
+            || (l.label === 'Wound' && l.role === 'inflicts' && l.on), `${h.name} ${l.role} ${l.label}`)));
+});
+
+test('places links move characters onto terrain', () => {
+    heroes.forEach(h => h.trait_links.filter(l => l.role === 'places').forEach(l =>
+        assert.ok(TERRAIN.includes(l.label), `${h.name} places ${l.label}`)));
+    assert.deepStrictEqual(links('MAGNUS', 'Mountain'), [{ label: 'Mountain', role: 'places', sources: ['DARKSTONE'], on: null }]);
+    assert.deepStrictEqual(links('TOXICUM', 'Water'), [{ label: 'Water', role: 'places', sources: ['VIAL OF VENOM'], on: 'enemy' }]);
+    assert.deepStrictEqual(links('ARBORUS', 'Forest').map(l => [l.role, l.sources, l.on]),
+        [['benefits_from', ['ROOTS'], 'enemy'], ['places', ['CALL OF THE WOODS'], null]]);
+});
+
+test('only card-stated self-harm counts as inflicting Wound (every attack wounds enemies)', () => {
+    assert.deepStrictEqual(heroesWith('Wound', 'inflicts'), ['GOETIUM', 'SATURN']);
+    assert.strictEqual(links('GOETIUM', 'Wound', 'inflicts')[0].on, 'ally');   // Ritual of Vitality
+    assert.strictEqual(links('SATURN', 'Wound', 'inflicts')[0].on, 'self');    // Gravity Link
 });
 
 test('every official effect a support ability applies is linked to that ability', () => {
@@ -94,8 +111,8 @@ test('Wound conditions distinguish whose wounds matter', () => {
 });
 
 test('terrain nodes carry both benefits and hindrances', () => {
-    assert.deepStrictEqual(heroesWith('Mountain', 'benefits_from'), ['ARCHITECTUS', 'BALLISTARIUS', 'MAGNUS', 'SAXUM']);
-    assert.deepStrictEqual(heroesWith('Water', 'benefits_from'), ['AQUS', 'FRIGUS', 'TOXICUM']);
+    assert.deepStrictEqual(heroesWith('Mountain', 'benefits_from'), ['ARCHITECTUS', 'BALLISTARIUS', 'SAXUM']);
+    assert.deepStrictEqual(heroesWith('Water', 'benefits_from'), ['AQUS', 'FRIGUS']);
     assert.deepStrictEqual(heroesWith('Forest', 'benefits_from'), ['ARBORUS', 'MANUS']);
     ['Mountain', 'Forest', 'Water'].forEach(t =>
         assert.deepStrictEqual(heroesWith(t, 'hindered_by', 'self'), ['CERBERUS'], t));

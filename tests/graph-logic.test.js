@@ -90,12 +90,6 @@ test('linkState classifies edges relative to a highlight map', () => {
     assert.strictEqual(G.linkState({ source: 'hero_2', target: 'label_Ranged' }, h), 'dim');
 });
 
-test('relatedHeroes lists heroes sharing labels, most shared first', () => {
-    const extra = [...heroes, { id: 5, name: 'EPSILON', vitality: 3, labels: ['Melee', 'Stun'] }];
-    const related = G.relatedHeroes(extra[0], extra);
-    assert.deepStrictEqual(related.map(r => r.hero.name), ['EPSILON', 'BETA']);
-    assert.deepStrictEqual(related[0].shared, ['Melee', 'Stun']);
-});
 
 test('filterNodes by term matches heroes and labels', () => {
     const ids = G.filterNodes(nodes, { term: 'ra' });
@@ -195,9 +189,3 @@ test('every range key in the data has a description', () => {
     ranges.forEach(r => assert.ok(G.abilityRange(r), `no description for ${r}`));
 });
 
-test('relatedHeroes never lists the hero itself when given its graph node', () => {
-    const alphaNode = byId.get('hero_1');
-    const related = G.relatedHeroes(alphaNode, heroes);
-    assert.ok(!related.some(r => r.hero.id === 1), 'ALPHA must not be related to itself');
-    assert.deepStrictEqual(related.map(r => r.hero.name), ['BETA']);
-});
