@@ -1,0 +1,722 @@
+{
+  "architectus": [
+    {
+      "name": "TOWER BARRAGE",
+      "type": "Attack",
+      "file": "architectus/1_tower_barrage.png",
+      "source": "https://www.bestiary.online/en/file/237_1-2.png"
+    },
+    {
+      "name": "FORTIFICATION",
+      "type": "Support",
+      "file": "architectus/2_fortification.png",
+      "source": "https://www.bestiary.online/en/file/236_1-3.png"
+    },
+    {
+      "name": "RECONSTRUCTION",
+      "type": "Support",
+      "file": "architectus/3_reconstruction.png",
+      "source": "https://www.bestiary.online/en/file/238_1-4.png"
+    }
+  ],
+  "armus": [
+    {
+      "name": "SHIELD SLAM",
+      "type": "Attack",
+      "file": "armus/1_shield_slam.png",
+      "source": "https://www.bestiary.online/file/73_2-1.png"
+    },
+    {
+      "name": "CHARGE",
+      "type": "Support",
+      "file": "armus/2_charge.png",
+      "source": "https://www.bestiary.online/file/74_2-2.png"
+    },
+    {
+      "name": "ANCESTRAL PROTECTION",
+      "type": "Support",
+      "file": "armus/3_ancestral_protection.png",
+      "source": "https://www.bestiary.online/file/75_2-3.png"
+    }
+  ],
+  "caballus": [
+    {
+      "name": "WHIP",
+      "type": "Attack",
+      "file": "caballus/1_whip.png",
+      "source": "https://www.bestiary.online/file/76_3-1.png"
+    },
+    {
+      "name": "LASSO",
+      "type": "Support",
+      "file": "caballus/2_lasso.png",
+      "source": "https://www.bestiary.online/file/77_3-2.png"
+    },
+    {
+      "name": "HEAVY HOOVES",
+      "type": "Support",
+      "file": "caballus/3_heavy_hooves.png",
+      "source": "https://www.bestiary.online/file/78_3-3.png"
+    }
+  ],
+  "aqus": [
+    {
+      "name": "POURING RAIN",
+      "type": "Attack",
+      "file": "aqus/1_pouring_rain.png",
+      "source": "https://www.bestiary.online/file/97_10-1.png"
+    },
+    {
+      "name": "FLUIDITY",
+      "type": "Support",
+      "file": "aqus/2_fluidity.png",
+      "source": "https://www.bestiary.online/file/98_10-2.png"
+    },
+    {
+      "name": "MIGHT OF WATER",
+      "type": "Support",
+      "file": "aqus/3_might_of_water.png",
+      "source": "https://www.bestiary.online/file/99_10-3.png"
+    }
+  ],
+  "ballistarius": [
+    {
+      "name": "BALLISTA",
+      "type": "Attack",
+      "file": "ballistarius/1_ballista.png",
+      "source": "https://www.bestiary.online/file/100_11-1.png"
+    },
+    {
+      "name": "OPTICAL SIGHT",
+      "type": "Support",
+      "file": "ballistarius/2_optical_sight.png",
+      "source": "https://www.bestiary.online/file/101_11-2.png"
+    },
+    {
+      "name": "WINCH",
+      "type": "Support",
+      "file": "ballistarius/3_winch.png",
+      "source": "https://www.bestiary.online/file/102_11-3.png"
+    }
+  ],
+  "cerberus": [
+    {
+      "name": "THREE-HEADED BITE",
+      "type": "Attack",
+      "file": "cerberus/1_three_headed_bite.png",
+      "source": "https://www.bestiary.online/file/103_12-1.png"
+    },
+    {
+      "name": "VEHEMENCE",
+      "type": "Support",
+      "file": "cerberus/2_vehemence.png",
+      "source": "https://www.bestiary.online/file/104_12-2.png"
+    },
+    {
+      "name": "HOWL",
+      "type": "Support",
+      "file": "cerberus/3_howl.png",
+      "source": "https://www.bestiary.online/file/105_12-3.png"
+    }
+  ],
+  "arborus": [
+    {
+      "name": "ROOTS",
+      "type": "Attack",
+      "file": "arborus/1_roots.png",
+      "source": "https://www.bestiary.online/file/124_19-1.png"
+    },
+    {
+      "name": "CALL OF THE WOODS",
+      "type": "Support",
+      "file": "arborus/2_call_of_the_woods.png",
+      "source": "https://www.bestiary.online/file/125_19-2.png"
+    },
+    {
+      "name": "SHIELD OF THE FOREST",
+      "type": "Support",
+      "file": "arborus/3_shield_of_the_forest.png",
+      "source": "https://www.bestiary.online/file/126_19-3.png"
+    }
+  ],
+  "fidea": [
+    {
+      "name": "RETRIBUTION",
+      "type": "Attack",
+      "file": "fidea/1_retribution.png",
+      "source": "https://www.bestiary.online/file/127_20-1.png"
+    },
+    {
+      "name": "RESURRECTION",
+      "type": "Support",
+      "file": "fidea/2_resurrection.png",
+      "source": "https://www.bestiary.online/file/128_20-2.png"
+    },
+    {
+      "name": "TAKE WING",
+      "type": "Support",
+      "file": "fidea/3_take_wing.png",
+      "source": "https://www.bestiary.online/file/129_20-3.png"
+    }
+  ],
+  "frigus": [
+    {
+      "name": "RAIN OF ICE",
+      "type": "Attack",
+      "file": "frigus/1_rain_of_ice.png",
+      "source": "https://www.bestiary.online/file/130_21-1.png"
+    },
+    {
+      "name": "SHACKLING COLD",
+      "type": "Support",
+      "file": "frigus/2_shackling_cold.png",
+      "source": "https://www.bestiary.online/file/131_21-2.png"
+    },
+    {
+      "name": "SPELL OF FROST",
+      "type": "Support",
+      "file": "frigus/3_spell_of_frost.png",
+      "source": "https://www.bestiary.online/file/132_21-3.png"
+    }
+  ],
+  "carnifex": [
+    {
+      "name": "AXE",
+      "type": "Attack",
+      "file": "carnifex/1_axe.png",
+      "source": "https://www.bestiary.online/file/79_4-1.png"
+    },
+    {
+      "name": "STOCKADES",
+      "type": "Support",
+      "file": "carnifex/2_stockades.png",
+      "source": "https://www.bestiary.online/file/80_4-2.png"
+    },
+    {
+      "name": "Convict the Guilty",
+      "type": "Support",
+      "file": "carnifex/3_convict_the_guilty.png",
+      "source": "https://www.bestiary.online/file/81_4-3.png"
+    }
+  ],
+  "catapultus": [
+    {
+      "name": "CATAPULT",
+      "type": "Attack",
+      "file": "catapultus/1_catapult.png",
+      "source": "https://www.bestiary.online/file/82_5-1.png"
+    },
+    {
+      "name": "BOULDER",
+      "type": "Support",
+      "file": "catapultus/2_boulder.png",
+      "source": "https://www.bestiary.online/file/83_5-2.png"
+    },
+    {
+      "name": "SIEGE STANCE",
+      "type": "Support",
+      "file": "catapultus/3_siege_stance.png",
+      "source": "https://www.bestiary.online/file/84_5-3.png"
+    }
+  ],
+  "ferrarius": [
+    {
+      "name": "BELLOWS OF HELL",
+      "type": "Attack",
+      "file": "ferrarius/1_bellows_of_hell.png",
+      "source": "https://www.bestiary.online/file/85_6-1.png"
+    },
+    {
+      "name": "HAMMER",
+      "type": "Support",
+      "file": "ferrarius/2_hammer.png",
+      "source": "https://www.bestiary.online/file/86_6-2.png"
+    },
+    {
+      "name": "ANVIL",
+      "type": "Support",
+      "file": "ferrarius/3_anvil.png",
+      "source": "https://www.bestiary.online/file/87_6-3.png"
+    }
+  ],
+  "cornibus": [
+    {
+      "name": "NOSEDIVE",
+      "type": "Attack",
+      "file": "cornibus/1_nosedive.png",
+      "source": "https://www.bestiary.online/file/106_13-1.png"
+    },
+    {
+      "name": "GARGOYLE",
+      "type": "Support",
+      "file": "cornibus/2_gargoyle.png",
+      "source": "https://www.bestiary.online/file/107_13-2.png"
+    },
+    {
+      "name": "FLIGHT",
+      "type": "Support",
+      "file": "cornibus/3_flight.png",
+      "source": "https://www.bestiary.online/file/108_13-3.png"
+    }
+  ],
+  "iratus": [
+    {
+      "name": "PICKAXES OF RAGE",
+      "type": "Attack",
+      "file": "iratus/1_pickaxes_of_rage.png",
+      "source": "https://www.bestiary.online/file/109_14-1.png"
+    },
+    {
+      "name": "BLOODSTONE",
+      "type": "Support",
+      "file": "iratus/2_bloodstone.png",
+      "source": "https://www.bestiary.online/file/110_14-2.png"
+    },
+    {
+      "name": "FRENZY",
+      "type": "Support",
+      "file": "iratus/3_frenzy.png",
+      "source": "https://www.bestiary.online/file/111_14-3.png"
+    }
+  ],
+  "mortum": [
+    {
+      "name": "BLOODLUST",
+      "type": "Attack",
+      "file": "mortum/1_bloodlust.png",
+      "source": "https://www.bestiary.online/file/112_15-1.png"
+    },
+    {
+      "name": "VAMPIRIC DRAIN",
+      "type": "Support",
+      "file": "mortum/2_vampiric_drain.png",
+      "source": "https://www.bestiary.online/file/113_15-2.png"
+    },
+    {
+      "name": "BAT SWARM",
+      "type": "Support",
+      "file": "mortum/3_bat_swarm.png",
+      "source": "https://www.bestiary.online/file/114_15-3.png"
+    }
+  ],
+  "goetium": [
+    {
+      "name": "LIGHTNING",
+      "type": "Attack",
+      "file": "goetium/1_lightning.png",
+      "source": "https://www.bestiary.online/file/133_22-1.png"
+    },
+    {
+      "name": "RITUAL OF VITALITY",
+      "type": "Support",
+      "file": "goetium/2_ritual_of_vitality.png",
+      "source": "https://www.bestiary.online/file/134_22-2.png"
+    },
+    {
+      "name": "SUMMONING RITUAL",
+      "type": "Support",
+      "file": "goetium/3_summoning_ritual.png",
+      "source": "https://www.bestiary.online/file/135_22-3.png"
+    }
+  ],
+  "ignifer": [
+    {
+      "name": "FLAMING ARTIFACT",
+      "type": "Attack",
+      "file": "ignifer/1_flaming_artifact.png",
+      "source": "https://www.bestiary.online/file/136_23-1.png"
+    },
+    {
+      "name": "MIGHT OF FIRE",
+      "type": "Support",
+      "file": "ignifer/2_might_of_fire.png",
+      "source": "https://www.bestiary.online/file/137_23-2.png"
+    },
+    {
+      "name": "QUICKENING FLAME",
+      "type": "Support",
+      "file": "ignifer/3_quickening_flame.png",
+      "source": "https://www.bestiary.online/file/138_23-3.png"
+    }
+  ],
+  "illesebra": [
+    {
+      "name": "HYPNOSIS",
+      "type": "Attack",
+      "file": "illesebra/1_hypnosis.png",
+      "source": "https://www.bestiary.online/file/139_24-1.png"
+    },
+    {
+      "name": "HELL PORTAL",
+      "type": "Support",
+      "file": "illesebra/2_hell_portal.png",
+      "source": "https://www.bestiary.online/file/140_24-2.png"
+    },
+    {
+      "name": "TEMPTATION",
+      "type": "Support",
+      "file": "illesebra/3_temptation.png",
+      "source": "https://www.bestiary.online/file/141_24-3.png"
+    }
+  ],
+  "malleus": [
+    {
+      "name": "PICK HAMMER",
+      "type": "Attack",
+      "file": "malleus/1_pick_hammer.png",
+      "source": "https://www.bestiary.online/file/88_7-1.png"
+    },
+    {
+      "name": "FISSURE",
+      "type": "Support",
+      "file": "malleus/2_fissure.png",
+      "source": "https://www.bestiary.online/file/89_7-2.png"
+    },
+    {
+      "name": "DITCH",
+      "type": "Support",
+      "file": "malleus/3_ditch.png",
+      "source": "https://www.bestiary.online/file/90_7-3.png"
+    }
+  ],
+  "saxum": [
+    {
+      "name": "ROCK BLAST",
+      "type": "Attack",
+      "file": "saxum/1_rock_blast.png",
+      "source": "https://www.bestiary.online/file/91_8-1.png"
+    },
+    {
+      "name": "STONESKIN",
+      "type": "Support",
+      "file": "saxum/2_stoneskin.png",
+      "source": "https://www.bestiary.online/file/92_8-2.png"
+    },
+    {
+      "name": "SHAKING EARTH",
+      "type": "Support",
+      "file": "saxum/3_shaking_earth.png",
+      "source": "https://www.bestiary.online/file/93_8-3.png"
+    }
+  ],
+  "vinctum": [
+    {
+      "name": "BURDEN OF VENGEANCE",
+      "type": "Attack",
+      "file": "vinctum/1_burden_of_vengeance.png",
+      "source": "https://www.bestiary.online/file/94_9-1.png"
+    },
+    {
+      "name": "IRON MASK",
+      "type": "Support",
+      "file": "vinctum/2_iron_mask.png",
+      "source": "https://www.bestiary.online/file/95_9-2.png"
+    },
+    {
+      "name": "PRISONER’S SHACKLES",
+      "type": "Support",
+      "file": "vinctum/3_prisoners_shackles.png",
+      "source": "https://www.bestiary.online/file/96_9-3.png"
+    }
+  ],
+  "redux": [
+    {
+      "name": "BONE BOOMERANG",
+      "type": "Attack",
+      "file": "redux/1_bone_boomerang.png",
+      "source": "https://www.bestiary.online/file/115_16-1.png"
+    },
+    {
+      "name": "LIFE-GIVING BINDINGS",
+      "type": "Support",
+      "file": "redux/2_life_giving_bindings.png",
+      "source": "https://www.bestiary.online/file/116_16-2.png"
+    },
+    {
+      "name": "DASH",
+      "type": "Support",
+      "file": "redux/3_dash.png",
+      "source": "https://www.bestiary.online/file/117_16-3.png"
+    }
+  ],
+  "tempus": [
+    {
+      "name": "PENDULUM",
+      "type": "Attack",
+      "file": "tempus/1_pendulum.png",
+      "source": "https://www.bestiary.online/file/118_17-1.png"
+    },
+    {
+      "name": "TIMEPIECE",
+      "type": "Support",
+      "file": "tempus/2_timepiece.png",
+      "source": "https://www.bestiary.online/file/119_17-2.png"
+    },
+    {
+      "name": "TIME LOOP",
+      "type": "Support",
+      "file": "tempus/3_time_loop.png",
+      "source": "https://www.bestiary.online/file/120_17-3.png"
+    }
+  ],
+  "toxicum": [
+    {
+      "name": "POISON",
+      "type": "Attack",
+      "file": "toxicum/1_poison.png",
+      "source": "https://www.bestiary.online/file/121_18-1.png"
+    },
+    {
+      "name": "POISONER’S KIT",
+      "type": "Support",
+      "file": "toxicum/2_poisoners_kit.png",
+      "source": "https://www.bestiary.online/file/122_18-2.png"
+    },
+    {
+      "name": "VIAL OF VENOM",
+      "type": "Support",
+      "file": "toxicum/3_vial_of_venom.png",
+      "source": "https://www.bestiary.online/file/123_18-3.png"
+    }
+  ],
+  "lignum": [
+    {
+      "name": "PUPPET",
+      "type": "Attack",
+      "file": "lignum/1_puppet.png",
+      "source": "https://www.bestiary.online/file/142_25-1.png"
+    },
+    {
+      "name": "DARKSTRINGS",
+      "type": "Support",
+      "file": "lignum/2_darkstrings.png",
+      "source": "https://www.bestiary.online/file/143_25-2.png"
+    },
+    {
+      "name": "LOWERED HANDS",
+      "type": "Support",
+      "file": "lignum/3_lowered_hands.png",
+      "source": "https://www.bestiary.online/file/144_25-3.png"
+    }
+  ],
+  "manus": [
+    {
+      "name": "JOINT ASSAULT",
+      "type": "Attack",
+      "file": "manus/1_joint_assault.png",
+      "source": "https://www.bestiary.online/en/file/145_26-1.png"
+    },
+    {
+      "name": "MECHANICAL ARM",
+      "type": "Support",
+      "file": "manus/2_mechanical_arm.png",
+      "source": "https://www.bestiary.online/en/file/146_26-2.png"
+    },
+    {
+      "name": "SMOKESCREEN",
+      "type": "Support",
+      "file": "manus/3_smokescreen.png",
+      "source": "https://www.bestiary.online/en/file/147_26-3.png"
+    }
+  ],
+  "messum": [
+    {
+      "name": "HARVEST",
+      "type": "Attack",
+      "file": "messum/1_harvest.png",
+      "source": "https://www.bestiary.online/en/file/242_27-1.png"
+    },
+    {
+      "name": "FRAILTY",
+      "type": "Support",
+      "file": "messum/2_frailty.png",
+      "source": "https://www.bestiary.online/en/file/243_27-2.png"
+    },
+    {
+      "name": "FACES OF DEATH",
+      "type": "Support",
+      "file": "messum/3_faces_of_death.png",
+      "source": "https://www.bestiary.online/en/file/241_27-3.png"
+    }
+  ],
+  "brewus": [
+    {
+      "name": "BREWER'S TANKARD",
+      "type": "Attack",
+      "file": "brewus/1_brewers_tankard.png",
+      "source": "https://www.bestiary.online/en/file/209_brewusattack.png"
+    },
+    {
+      "name": "COMMAND THE HOPS",
+      "type": "Support",
+      "file": "brewus/2_command_the_hops.png",
+      "source": "https://www.bestiary.online/en/file/218_brewusleft.png"
+    },
+    {
+      "name": "BEER CASK",
+      "type": "Support",
+      "file": "brewus/3_beer_cask.png",
+      "source": "https://www.bestiary.online/en/file/219_brewusright.png"
+    }
+  ],
+  "mechanicus": [
+    {
+      "name": "ANCESTRAL CANNON",
+      "type": "Attack",
+      "file": "mechanicus/1_ancestral_cannon.png",
+      "source": "https://www.bestiary.online/en/file/215_mechanicusattack.png"
+    },
+    {
+      "name": "SEPARATE THRUST FEED",
+      "type": "Support",
+      "file": "mechanicus/2_separate_thrust_feed.png",
+      "source": "https://www.bestiary.online/en/file/230_mechanicusleft.png"
+    },
+    {
+      "name": "SIEGE TANK",
+      "type": "Support",
+      "file": "mechanicus/3_siege_tank.png",
+      "source": "https://www.bestiary.online/en/file/231_mechanicusright.png"
+    }
+  ],
+  "saturn": [
+    {
+      "name": "COLLISION",
+      "type": "Attack",
+      "file": "saturn/1_collision.png",
+      "source": "https://www.bestiary.online/en/file/216_saturnattack.png"
+    },
+    {
+      "name": "ASTEROID BELT",
+      "type": "Support",
+      "file": "saturn/2_asteroid_belt.png",
+      "source": "https://www.bestiary.online/en/file/232_saturnleft.png"
+    },
+    {
+      "name": "GRAVITY LINK",
+      "type": "Support",
+      "file": "saturn/3_gravity_link.png",
+      "source": "https://www.bestiary.online/en/file/233_saturnright.png"
+    }
+  ],
+  "equita": [
+    {
+      "name": "KNIGHTLY SMITE",
+      "type": "Attack",
+      "file": "equita/1_knightly_smite.png",
+      "source": "https://www.bestiary.online/en/file/211_equitaattack.png"
+    },
+    {
+      "name": "TWILIGHT MOMENTUM",
+      "type": "Support",
+      "file": "equita/2_twilight_momentum.png",
+      "source": "https://www.bestiary.online/en/file/222_equitaleft.png"
+    },
+    {
+      "name": "POISON-TIPPED LANCE",
+      "type": "Support",
+      "file": "equita/3_poison_tipped_lance.png",
+      "source": "https://www.bestiary.online/en/file/223_equitaright.png"
+    }
+  ],
+  "eresida": [
+    {
+      "name": "SPIDERLINGS",
+      "type": "Attack",
+      "file": "eresida/1_spiderlings.png",
+      "source": "https://www.bestiary.online/en/file/212_eresidaattack.png"
+    },
+    {
+      "name": "WEBBING",
+      "type": "Support",
+      "file": "eresida/2_webbing.png",
+      "source": "https://www.bestiary.online/en/file/224_eresidaleft.png"
+    },
+    {
+      "name": "COCOON",
+      "type": "Support",
+      "file": "eresida/3_cocoon.png",
+      "source": "https://www.bestiary.online/en/file/225_eresidaright.png"
+    }
+  ],
+  "tenebris": [
+    {
+      "name": "SHADES",
+      "type": "Attack",
+      "file": "tenebris/1_shades.png",
+      "source": "https://www.bestiary.online/en/file/217_tenebrisattack.png"
+    },
+    {
+      "name": "EVERPRESENCE",
+      "type": "Support",
+      "file": "tenebris/2_everpresence.png",
+      "source": "https://www.bestiary.online/en/file/234_tenebrisleft.png"
+    },
+    {
+      "name": "OMINOUS DARK",
+      "type": "Support",
+      "file": "tenebris/3_ominous_dark.png",
+      "source": "https://www.bestiary.online/en/file/235_tenebrisright.png"
+    }
+  ],
+  "clamoris": [
+    {
+      "name": "LIFE-PIERCING CRY",
+      "type": "Attack",
+      "file": "clamoris/1_life_piercing_cry.png",
+      "source": "https://www.bestiary.online/en/file/210_clamorisattack.png"
+    },
+    {
+      "name": "BROKEN HEART",
+      "type": "Support",
+      "file": "clamoris/2_broken_heart.png",
+      "source": "https://www.bestiary.online/en/file/220_clamorisleft.png"
+    },
+    {
+      "name": "MOURNING",
+      "type": "Support",
+      "file": "clamoris/3_mourning.png",
+      "source": "https://www.bestiary.online/en/file/221_clamorisright.png"
+    }
+  ],
+  "librorum": [
+    {
+      "name": "KNOWLEDGE IS POWER",
+      "type": "Attack",
+      "file": "librorum/1_knowledge_is_power.png",
+      "source": "https://www.bestiary.online/en/file/213_librorumattack.png"
+    },
+    {
+      "name": "TORCH",
+      "type": "Support",
+      "file": "librorum/2_torch.png",
+      "source": "https://www.bestiary.online/en/file/226_librorumleft.png"
+    },
+    {
+      "name": "GLOBAL SILENCE",
+      "type": "Support",
+      "file": "librorum/3_global_silence.png",
+      "source": "https://www.bestiary.online/en/file/227_librorumright.png"
+    }
+  ],
+  "magnus": [
+    {
+      "name": "MAGNETIC ARM",
+      "type": "Attack",
+      "file": "magnus/1_magnetic_arm.png",
+      "source": "https://www.bestiary.online/en/file/214_magnusattack.png"
+    },
+    {
+      "name": "DARKSTONE",
+      "type": "Support",
+      "file": "magnus/2_darkstone.png",
+      "source": "https://www.bestiary.online/en/file/228_magnusleft.png"
+    },
+    {
+      "name": "FIELD OF MAGNETISM",
+      "type": "Support",
+      "file": "magnus/3_field_of_magnetism.png",
+      "source": "https://www.bestiary.online/en/file/229_magnusright.png"
+    }
+  ]
+}
