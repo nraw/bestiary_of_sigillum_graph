@@ -1,5 +1,5 @@
 // Pure graph logic (no DOM / D3): building the bipartite hero-label graph,
-// highlight states, pathfinding, filtering and view fitting.
+// highlight states, filtering and view fitting.
 // Loaded in the browser as window.GraphLogic and in Node via require().
 (function (root) {
     const PRIMARY_TYPES = ['AoE', 'Ranged', 'Melee', 'Support'];
@@ -231,29 +231,6 @@
             .sort((a, b) => b.shared.length - a.shared.length || a.hero.name.localeCompare(b.hero.name));
     }
 
-    // Breadth-first search; neighbours are visited in sorted order so the
-    // result is deterministic
-    function findPath(adjacency, startId, targetId) {
-        if (!adjacency.has(startId) || !adjacency.has(targetId)) return null;
-        const previous = new Map([[startId, null]]);
-        const queue = [startId];
-        while (queue.length) {
-            const current = queue.shift();
-            if (current === targetId) {
-                const path = [];
-                for (let id = targetId; id !== null; id = previous.get(id)) path.unshift(id);
-                return path;
-            }
-            [...adjacency.get(current)].sort().forEach(next => {
-                if (!previous.has(next)) {
-                    previous.set(next, current);
-                    queue.push(next);
-                }
-            });
-        }
-        return null;
-    }
-
     // Returns a Set of matching node ids, or null when no filter is active
     function filterNodes(nodes, { term = '', category = null, labelCategory = null } = {}) {
         if (labelCategory) {
@@ -335,7 +312,7 @@
     const api = {
         PRIMARY_TYPES, getPrimaryType, getLabelCategory, vitalityRadius, labelRadius,
         buildGraph, buildAdjacency, computeHighlight, linkState, relatedHeroes,
-        findPath, filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange,
+        filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange,
         ROLES, ROLE_INFO, linkKind, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment
     };
 

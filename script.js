@@ -3,7 +3,7 @@
 // the DOM, D3 rendering and interaction state.
 const {
     buildGraph, buildAdjacency, computeHighlight, linkState, relatedHeroes,
-    findPath, filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange,
+    filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange,
     ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment
 } = window.GraphLogic;
 
@@ -26,7 +26,6 @@ const state = {
     category: 'All',
     labelCategory: null,
     role: null,
-    path: null,
     showAllNames: false
 };
 
@@ -101,7 +100,6 @@ async function init() {
         setupSearch();
         setupChips();
         renderLegend();
-        setupPathfinder();
         setupPanels();
         setupKeyboard();
         render();
@@ -367,7 +365,7 @@ function runAction(action) {
     switch (action) {
         case 'zoom-in': svg.transition().duration(250).call(zoom.scaleBy, 1.35); break;
         case 'zoom-out': svg.transition().duration(250).call(zoom.scaleBy, 1 / 1.35); break;
-        case 'fit': fitView(state.path ? state.path.map(id => nodesById.get(id)) : nodesData); break;
+        case 'fit': fitView(nodesData); break;
         case 'center': if (selected) centerOn(selected); break;
         case 'reset': fitView(nodesData); break;
     }
@@ -382,7 +380,6 @@ function selectNode(id, { source = 'graph', center = source !== 'graph' } = {}) 
     const node = nodesById.get(id);
     if (!node) return;
     state.selectedId = id;
-    state.path = null;
     trackEvent('node_selected', 'Interaction', `${source}: ${node.name}`);
     render();
     if (center) centerOn(node);
@@ -390,12 +387,11 @@ function selectNode(id, { source = 'graph', center = source !== 'graph' } = {}) 
 
 function clearSelection() {
     state.selectedId = null;
-    state.path = null;
     render();
 }
 
 function clearAll() {
-    Object.assign(state, { selectedId: null, term: '', category: 'All', labelCategory: null, role: null, path: null });
+    Object.assign(state, { selectedId: null, term: '', category: 'All', labelCategory: null, role: null });
     document.getElementById('searchInput').value = '';
     closeSuggestions();
     trackEvent('filter_cleared', 'Filter', 'Clear All');
@@ -406,15 +402,7 @@ function clearAll() {
 function render() {
     const { nodeIds: filterSet, links: filterLinks } = currentFilter();
 
-    let highlight = null;
-    let pathLinks = null;
-    if (state.path) {
-        highlight = new Map(nodesData.map(n => [n.id, 'dim']));
-        state.path.forEach((id, i) => highlight.set(id, i === 0 || i === state.path.length - 1 ? 'selected' : 'connected'));
-        pathLinks = new Set(state.path.slice(1).map((id, i) => [state.path[i], id].sort().join('|')));
-    } else if (state.selectedId) {
-        highlight = computeHighlight(state.selectedId, adjacency, nodesById);
-    }
+    const highlight = state.selectedId ? computeHighlight(state.selectedId, adjacency, nodesById) : null;
 
     nodeElements
         .classed('is-selected', d => highlight?.get(d.id) === 'selected')
@@ -427,9 +415,6 @@ function render() {
     // Role colours and arrows show on edges in focus: the selection's own edges or the role filter's
     const roleShown = new Set();
     linkElements.attr('class', d => {
-        if (pathLinks) {
-            return pathLinks.has([d.source.id, d.target.id].sort().join('|')) ? 'link link--path' : 'link link--dim';
-        }
         if (highlight) {
             const st = linkState(d, highlight);
             if (st === 'direct') roleShown.add(d);
@@ -445,8 +430,8 @@ function render() {
     });
     linkElements.each(function (d) {
         // Under a role filter a mixed edge is drawn as the filtered role
-        const roles = filterLinks && !highlight && !pathLinks ? d.roles.filter(r => r.role === state.role) : d.roles;
-        const kind = filterLinks && !highlight && !pathLinks ? state.role : d.kind;
+        const roles = filterLinks && !highlight ? d.roles.filter(r => r.role === state.role) : d.roles;
+        const kind = filterLinks && !highlight ? state.role : d.kind;
         const shown = roleShown.has(d) && kind !== 'has';
         const line = d3.select(this).classed(`kind--${kind}`, shown);
         const dir = linkDirection(roles);
@@ -458,14 +443,13 @@ function render() {
     // Raise highlighted nodes so they draw above the dimmed crowd
     nodeElements.filter(d => highlight && highlight.get(d.id) !== 'dim' && d.type === 'hero').raise();
     nodeElements.filter(d => highlight && highlight.get(d.id) !== 'dim' && d.type === 'label').raise();
-    linkElements.filter(function () { return /--(direct|path|role)/.test(this.getAttribute('class')); }).raise();
+    linkElements.filter(function () { return /--(direct|role)/.test(this.getAttribute('class')); }).raise();
 
     svg.classed('has-highlight', Boolean(highlight || filterSet));
     svg.classed('show-all-names', state.showAllNames);
 
     updateHeaderState(filterSet);
     renderDetails();
-    renderPathResult();
 }
 
 function updateHeaderState(filterSet) {
@@ -488,13 +472,12 @@ function updateHeaderState(filterSet) {
 
     const selected = nodesById.get(state.selectedId);
     let title = 'Hero Network';
-    if (state.path) title = `Path: ${nodesById.get(state.path[0]).name} → ${nodesById.get(state.path.at(-1)).name}`;
-    else if (selected) title = selected.name;
+    if (selected) title = selected.name;
     else if (active.length) title = `Filtered: ${active.join(' · ')}`;
     document.getElementById('graphTitle').textContent = title;
 
     document.getElementById('clearAllBtn').disabled =
-        !(state.selectedId || state.path || active.length);
+        !(state.selectedId || active.length);
     document.querySelector('[data-action="center"]').disabled = !selected;
 
     const names = document.getElementById('namesToggle');
@@ -636,9 +619,6 @@ function renderDetails() {
                     ${related.map(r => heroButton(r.hero,
                         `<span class="shared" title="${escapeHtml(r.shared.join(', '))}">${r.shared.length} shared</span>`)).join('')}
                 </div>
-                <div class="detail-actions">
-                    <button type="button" class="btn btn-ghost" data-path-from="${node.id}">Find path from ${escapeHtml(node.name)}</button>
-                </div>
             </section>`;
     } else {
         const heroes = heroesData.filter(h => h.labels.includes(node.name));
@@ -664,18 +644,8 @@ function renderDetails() {
 
 // Delegated clicks for everything rendered inside the details panel
 document.addEventListener('click', event => {
-    const nodeButton = event.target.closest('.details-body [data-node], .path-result [data-node]');
-    if (nodeButton) {
-        selectNode(nodeButton.dataset.node, { source: 'panel' });
-        return;
-    }
-    const pathFrom = event.target.closest('[data-path-from]');
-    if (pathFrom) {
-        const start = document.getElementById('pathStart');
-        start.value = pathFrom.dataset.pathFrom;
-        expandPanel(document.getElementById('pathBody'));
-        document.getElementById('pathEnd').focus();
-    }
+    const nodeButton = event.target.closest('.details-body [data-node]');
+    if (nodeButton) selectNode(nodeButton.dataset.node, { source: 'panel' });
 });
 
 // ---------------------------------------------------------------------------
@@ -752,7 +722,6 @@ function setupSearch() {
         state.term = input.value;
         state.role = null;
         state.selectedId = null;
-        state.path = null;
         updateSuggestions();
         render();
         if (input.value.trim().length >= 3) trackEvent('search_used', 'Search', input.value.trim());
@@ -861,7 +830,6 @@ function setupChips() {
         state.labelCategory = null;
         state.role = null;
         state.selectedId = null;
-        state.path = null;
         trackEvent('category_filter', 'Filter', state.category);
         render();
         fitToFilter();
@@ -914,7 +882,6 @@ function renderLegend() {
         <ul class="legend-list legend-cols">
             <li>${edgeSwatch('link--direct')} Direct</li>
             <li>${edgeSwatch('link--secondary')} Secondary</li>
-            <li>${edgeSwatch('link--path')} Path</li>
             <li>${edgeSwatch('link--dim')} Unrelated</li>
         </ul>
 
@@ -953,71 +920,10 @@ function renderLegend() {
         state.labelCategory = state.labelCategory === category ? null : category;
         state.category = 'All';
         state.selectedId = null;
-        state.path = null;
         trackEvent('legend_filter', 'Filter', category);
         render();
         fitToFilter();
     });
-}
-
-// ---------------------------------------------------------------------------
-// Pathfinding
-// ---------------------------------------------------------------------------
-
-function setupPathfinder() {
-    const start = document.getElementById('pathStart');
-    const end = document.getElementById('pathEnd');
-    const options = nodesData
-        .filter(n => n.type === 'hero')
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map(n => `<option value="${n.id}">${escapeHtml(n.name)}</option>`).join('');
-    start.insertAdjacentHTML('beforeend', options);
-    end.insertAdjacentHTML('beforeend', options);
-
-    document.getElementById('pathBody').addEventListener('submit', event => {
-        event.preventDefault();
-        const path = findPath(adjacency, start.value, end.value);
-        state.path = path && path.length > 1 ? path : null;
-        state.selectedId = null;
-        state.pathMiss = !path || path.length <= 1 ? [start.value, end.value] : null;
-        trackEvent('path_found', 'Interaction', `${start.value} -> ${end.value}`);
-        render();
-        if (state.path) fitView(state.path.map(id => nodesById.get(id)));
-    });
-
-    document.getElementById('pathSwap').addEventListener('click', () => {
-        [start.value, end.value] = [end.value, start.value];
-    });
-    document.getElementById('pathClear').addEventListener('click', () => {
-        state.path = null;
-        state.pathMiss = null;
-        render();
-    });
-}
-
-function renderPathResult() {
-    const result = document.getElementById('pathResult');
-    document.getElementById('pathClear').hidden = !state.path;
-    if (state.pathMiss) {
-        const [a, b] = state.pathMiss;
-        result.innerHTML = a === b
-            ? '<li class="path-note">Pick two different heroes.</li>'
-            : '<li class="path-note">These heroes share no chain of traits.</li>';
-        state.pathMiss = null;
-        return;
-    }
-    if (!state.path) {
-        result.innerHTML = '';
-        return;
-    }
-    const hops = (state.path.length - 1) / 2;
-    result.innerHTML = `<li class="path-note">${hops} hop${hops === 1 ? '' : 's'} through shared traits</li>` +
-        state.path.map(id => {
-            const n = nodesById.get(id);
-            return n.type === 'hero'
-                ? `<li class="path-step">${heroButton(heroesData.find(h => h.id === n.originalId))}</li>`
-                : `<li class="path-via"><button type="button" class="trait-chip" data-node="${n.id}">${labelGlyph(n.category, 14, n.name)} via ${escapeHtml(n.name)}</button></li>`;
-        }).join('');
 }
 
 // ---------------------------------------------------------------------------
@@ -1058,7 +964,7 @@ function handleResize() {
     resizeTimer = setTimeout(() => {
         const selected = nodesById.get(state.selectedId);
         if (selected) centerOn(selected, 0);
-        else fitView(state.path ? state.path.map(id => nodesById.get(id)) : nodesData, 0);
+        else fitView(nodesData, 0);
     }, 150);
 }
 
@@ -1104,7 +1010,7 @@ function setupKeyboard() {
         const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName);
         if (event.key === 'Escape') {
             hideTooltip();
-            if (state.selectedId || state.path) clearSelection();
+            if (state.selectedId) clearSelection();
             else clearAll();
             return;
         }

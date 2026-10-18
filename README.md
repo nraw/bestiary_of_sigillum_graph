@@ -14,7 +14,6 @@ This project visualizes the complete character database from the Bestiary of Sig
 - **Smart Search**: Autocomplete with live filtering of the graph; search heroes by name or `#id`
 - **Category Filtering**: Trait chips (Melee, Ranged, …) and clickable trait groups in the legend
 - **Graph Controls**: Zoom, fit-to-screen, center on selection and reset view
-- **Pathfinding**: Find the shortest chain of shared traits between two heroes
 - **Accessible**: Keyboard navigation (Tab, arrows, Enter, `/`, `+`/`-`, `F`, `0`, Esc), visible focus, shape/glyph encoding alongside colour
 - **Character Details**: View hero abilities, vitality, and connected labels
 - **Mobile Responsive**: Optimized for both desktop and mobile devices

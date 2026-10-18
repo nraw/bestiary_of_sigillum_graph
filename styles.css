@@ -257,7 +257,7 @@ kbd {
     min-height: 0;
 }
 
-.legend-panel, .path-panel { padding: 12px 14px; }
+.legend-panel { padding: 12px 14px; }
 
 .panel {
     background: var(--surface);
@@ -646,7 +646,6 @@ kbd {
 .hero-link:hover { background: var(--surface-2); border-color: var(--border); }
 .shared { font-family: 'Crimson Text', serif; font-size: 0.86rem; color: var(--text-muted); }
 
-.detail-actions { margin-top: 10px; }
 
 /* ------------------------------------------------------------------ */
 /* Graph                                                              */
@@ -806,14 +805,6 @@ kbd {
     stroke-width: 1.5;
     stroke-dasharray: 5 4;
 }
-.link--path {
-    stroke: var(--ember);
-    stroke-opacity: 1;
-    stroke-width: 4;
-    stroke-dasharray: 10 6;
-    animation: path-flow 1s linear infinite;
-    filter: drop-shadow(0 0 5px rgba(255, 154, 74, 0.7));
-}
 .link--dim { stroke-opacity: 0.05; }
 
 /* Role edges (selection's own edges, or the role filter) */
@@ -830,8 +821,6 @@ kbd {
 .arrow--mixed { fill: var(--role-mixed); }
 
 .link-hit { stroke: transparent; stroke-width: 10; pointer-events: stroke; cursor: help; }
-
-@keyframes path-flow { to { stroke-dashoffset: -16; } }
 
 /* Tooltip */
 .tooltip {
@@ -918,7 +907,6 @@ kbd {
 .legend-state.st-dim { opacity: 0.25; }
 .legend-list .link { stroke-opacity: 0.6; }
 .legend-list .link--dim { stroke-opacity: 0.18; }
-.legend-list .link--path { animation: none; }
 
 .legend-hint { color: var(--text-faint); font-size: 0.82rem; }
 .role-swatch { flex-shrink: 0; }
@@ -937,40 +925,6 @@ kbd {
 .legend-sizes .trait-sizes path { fill: #4A3A2D; stroke: var(--bronze); stroke-width: 1.2; }
 
 /* ------------------------------------------------------------------ */
-/* Pathfinding                                                        */
-/* ------------------------------------------------------------------ */
-
-.path-form {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px;
-}
-.path-form select {
-    grid-column: 1;
-    width: 100%;
-    padding: 7px 10px;
-    border-radius: 8px;
-    border: 1px solid var(--border-strong);
-    background: var(--bg);
-    font-size: 0.98rem;
-}
-.path-form select:focus-visible { border-color: var(--gold); }
-.swap-btn {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    align-self: center;
-    border: 1px solid var(--border-strong);
-    border-radius: 8px;
-    height: 100%;
-}
-.path-actions { grid-column: 1 / -1; display: flex; gap: 8px; }
-
-.path-result { grid-column: 1 / -1; list-style: none; display: grid; gap: 2px; }
-.path-note { color: var(--text-muted); font-size: 0.92rem; padding: 2px 0 4px; }
-.path-via { padding-left: 18px; border-left: 2px dashed var(--ember); margin-left: 21px; }
-.path-via .trait-chip { font-size: 0.86rem; color: var(--text-muted); border-style: dashed; }
-
-/* ------------------------------------------------------------------ */
 /* Footer                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -987,7 +941,7 @@ kbd {
 /* Responsive                                                         */
 /* ------------------------------------------------------------------ */
 
-/* Medium screens: legend & pathfinding become a slide-over drawer */
+/* Medium screens: legend becomes a slide-over drawer */
 @media (max-width: 1200px) {
     .layout { grid-template-columns: 320px minmax(0, 1fr); }
 
@@ -1055,7 +1009,7 @@ kbd {
 }
 
 @media (forced-colors: active) {
-    .link--direct, .link--path { stroke: Highlight; }
+    .link--direct { stroke: Highlight; }
     .node.is-selected .halo { stroke: Highlight; }
 }
 
