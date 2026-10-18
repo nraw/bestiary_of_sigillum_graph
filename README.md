@@ -11,8 +11,11 @@ This project visualizes the complete character database from the Bestiary of Sig
 ## Features
 
 - **Interactive Network Graph**: Pan, zoom, and explore character connections
-- **Smart Search**: Find heroes and labels instantly by typing
-- **Category Filtering**: Click legend items to filter by node types
+- **Smart Search**: Autocomplete with live filtering of the graph; search heroes by name or `#id`
+- **Category Filtering**: Trait chips (Melee, Ranged, …) and clickable trait groups in the legend
+- **Graph Controls**: Zoom, fit-to-screen, center on selection and reset view
+- **Pathfinding**: Find the shortest chain of shared traits between two heroes
+- **Accessible**: Keyboard navigation (Tab, arrows, Enter, `/`, `+`/`-`, `F`, `0`, Esc), visible focus, shape/glyph encoding alongside colour
 - **Character Details**: View hero abilities, vitality, and connected labels
 - **Mobile Responsive**: Optimized for both desktop and mobile devices
 - **Medieval Theme**: Authentic fantasy game aesthetic with magical animations
@@ -48,7 +51,10 @@ php -S localhost:8000
 bestiary_of_sigillum/
 ├── index.html                           # Main application
 ├── styles.css                          # Styling and theme
-├── script.js                           # Application logic
+├── script.js                           # Rendering & interaction
+├── graph-logic.js                      # Pure graph logic (tested)
+├── search.js                           # Search & autocomplete (tested)
+├── tests/                              # node --test tests/*.test.js
 ├── bestiary_reference_cards.json       # Character data source
 ├── hero_images/                        # Character portraits
 ├── download_heroes.sh                  # Image download script

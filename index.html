@@ -75,82 +75,118 @@
     </script>
 </head>
 <body>
-    <div class="container">
-        <header class="header">
+    <a class="skip-link" href="#graph">Skip to network graph</a>
+
+    <header class="header">
+        <svg class="header-sigil" viewBox="0 0 40 40" aria-hidden="true">
+            <circle cx="20" cy="20" r="17" />
+            <path d="M20 3 L24 20 L20 37 L16 20 Z M3 20 L20 16 L37 20 L20 24 Z" />
+        </svg>
+        <div class="header-titles">
             <h1 class="title">Bestiary of Sigillum</h1>
             <p class="subtitle">Interactive Hero Network Visualization</p>
-        </header>
-        
-        <main class="main-content">
-            <aside class="left-panel" role="complementary" aria-label="Controls and Information">
-                <section class="controls" aria-label="Search and Filter Controls">
-                    <div class="search-controls">
-                        <label for="searchInput">Search Heroes and Labels:</label>
-                        <input type="text" id="searchInput" placeholder="Type hero name, id or label..." aria-describedby="search-help">
-                        <small id="search-help" class="sr-only">Search through all heroes and labels in the network by name, or heroes by id number</small>
-                        <button id="clearSearch" aria-label="Clear search">Clear</button>
-                    </div>
-                </section>
-                
-                <section class="info-panel" id="infoPanel" aria-label="Selected Node Information">
-                    <h2>Node Information</h2>
-                    <div id="heroInfo">
-                        <p>Click on any node to see details and apply filter</p>
-                    </div>
-                </section>
-                
-                <section class="legend" aria-label="Network Legend">
-                    <h2>Node Types</h2>
-                    <div class="legend-item" role="button" tabindex="0" aria-label="Filter by Heroes">
-                        <div class="legend-color hero" aria-hidden="true"></div>
-                        <span>Heroes</span>
-                    </div>
-                    <div class="legend-item" role="button" tabindex="0" aria-label="Filter by Combat Labels">
-                        <div class="legend-color combat" aria-hidden="true"></div>
-                        <span>Combat Labels</span>
-                    </div>
-                    <div class="legend-item" role="button" tabindex="0" aria-label="Filter by Magic Labels">
-                        <div class="legend-color magic" aria-hidden="true"></div>
-                        <span>Magic Labels</span>
-                    </div>
-                    <div class="legend-item" role="button" tabindex="0" aria-label="Filter by Movement Labels">
-                        <div class="legend-color movement" aria-hidden="true"></div>
-                        <span>Movement Labels</span>
-                    </div>
-                    <div class="legend-item" role="button" tabindex="0" aria-label="Filter by Official Effects">
-                        <div class="legend-color effect" aria-hidden="true"></div>
-                        <span title="Effects defined in effects.md: Attack/Defense/Control increase/decrease, Swiftness, Slowness, Flying, Place obstacle, Resistance, Vampirism, Stun, Silence, Poison, Web">Official Effects</span>
-                    </div>
-                    <div class="legend-item" role="button" tabindex="0" aria-label="Filter by Structure Labels">
-                        <div class="legend-color structure" aria-hidden="true"></div>
-                        <span>Structure Labels</span>
-                    </div>
-                </section>
-            </aside>
-            
-            <section class="right-panel" role="main" aria-label="Network Visualization">
-                <div class="graph-container" title="Interactive network graph: Click and drag to pan • Scroll to zoom • Click empty space to clear filter">
-                    <div class="graph-title" id="graphTitle" aria-live="polite">All Nodes</div>
-                    <button class="clear-filter-btn" id="clearFilterBtn" style="display: none;" aria-label="Clear current filter">Clear Filter</button>
-                    <svg id="graph" role="img" aria-label="Interactive network visualization of Bestiary of Sigillum heroes and their connections"></svg>
+        </div>
+        <button class="btn btn-crimson" id="clearAllBtn" type="button" disabled>Clear Filters</button>
+    </header>
+
+    <main class="layout">
+        <aside class="panel-column left-column" aria-label="Search and hero details">
+            <section class="panel search-panel" aria-label="Search and filters">
+                <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg>
+                    <input type="search" id="searchInput" placeholder="Search heroes, traits or #id…"
+                           role="combobox" aria-autocomplete="list" aria-expanded="false"
+                           aria-controls="searchSuggestions" aria-describedby="search-help" autocomplete="off">
+                    <kbd class="search-kbd" aria-hidden="true">/</kbd>
+                    <ul class="suggestions" id="searchSuggestions" role="listbox" aria-label="Search suggestions" hidden></ul>
+                </div>
+                <small id="search-help" class="sr-only">Type to filter the graph live. Use arrow keys to browse suggestions and Enter to select.</small>
+                <div class="chips" id="categoryChips" role="group" aria-label="Filter heroes by trait"></div>
+                <div class="filter-summary">
+                    <span id="matchCount" aria-live="polite">36 heroes</span>
+                    <span>Active filters: <strong id="activeFilters">None</strong></span>
                 </div>
             </section>
-        </main>
-    </div>
-    
+
+            <section class="panel details-panel" aria-labelledby="detailsHeading">
+                <h2 class="sr-only" id="detailsHeading">Selection details</h2>
+                <div id="heroInfo" class="details-body" aria-live="polite"></div>
+            </section>
+        </aside>
+
+        <section class="graph-panel" aria-label="Network visualization">
+            <div class="graph-toolbar" role="toolbar" aria-label="Graph controls">
+                <div class="graph-title" id="graphTitle" aria-live="polite">Hero Network</div>
+                <div class="btn-group">
+                    <button class="icon-btn" type="button" data-action="zoom-in" aria-label="Zoom in" title="Zoom in (+)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                    </button>
+                    <button class="icon-btn" type="button" data-action="zoom-out" aria-label="Zoom out" title="Zoom out (−)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>
+                    </button>
+                    <button class="icon-btn" type="button" data-action="fit" aria-label="Fit to screen" title="Fit to screen (F)">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
+                    </button>
+                    <button class="icon-btn" type="button" data-action="center" aria-label="Center on selection" title="Center on selection (C)" disabled>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+                    </button>
+                </div>
+                <button class="btn btn-ghost" type="button" data-action="reset" title="Reset view (0)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v5h5"/></svg>
+                    Reset View
+                </button>
+                <button class="btn btn-ghost" type="button" id="namesToggle" aria-pressed="false" title="Show every trait name">
+                    All names
+                </button>
+                <button class="btn btn-ghost legend-toggle" type="button" id="legendToggle" aria-controls="sidePanel" aria-expanded="false">
+                    Legend
+                </button>
+            </div>
+            <svg id="graph" tabindex="-1" role="application"
+                 aria-label="Hero network. Use Tab to reach the nodes, arrow keys to move between them, Enter to select, plus and minus to zoom."
+                 aria-describedby="graphHelp"></svg>
+            <p id="graphHelp" class="graph-hint">Drag to pan · scroll to zoom · click a node to explore · Esc to clear</p>
+            <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+        </section>
+
+        <aside class="panel-column right-column" id="sidePanel" aria-label="Legend and pathfinding">
+            <section class="panel legend-panel">
+                <button class="panel-heading collapse-toggle" type="button" aria-expanded="true" aria-controls="legendBody">
+                    <span>Legend</span><span class="chevron" aria-hidden="true"></span>
+                </button>
+                <div class="collapse-body" id="legendBody"></div>
+            </section>
+
+            <section class="panel path-panel">
+                <button class="panel-heading collapse-toggle" type="button" aria-expanded="true" aria-controls="pathBody">
+                    <span>Find path between heroes</span><span class="chevron" aria-hidden="true"></span>
+                </button>
+                <form class="collapse-body path-form" id="pathBody">
+                    <label class="sr-only" for="pathStart">Start hero</label>
+                    <select id="pathStart" required><option value="">Select start hero</option></select>
+                    <button class="icon-btn swap-btn" type="button" id="pathSwap" aria-label="Swap start and end heroes" title="Swap">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M7 4 3 8M7 4l4 4M17 20V4M17 20l-4-4M17 20l4-4"/></svg>
+                    </button>
+                    <label class="sr-only" for="pathEnd">End hero</label>
+                    <select id="pathEnd" required><option value="">Select end hero</option></select>
+                    <div class="path-actions">
+                        <button class="btn btn-gold" type="submit">Find path</button>
+                        <button class="btn btn-ghost" type="button" id="pathClear" hidden>Clear path</button>
+                    </div>
+                    <ol class="path-result" id="pathResult" aria-live="polite"></ol>
+                </form>
+            </section>
+        </aside>
+    </main>
+
     <footer class="footer">
-        <div class="footer-content">
-            <p class="copyright">© 2025 nraw</p>
-            <p class="disclaimer">
-                This is unofficial work based on the Bestiary of Sigillum. 
-                All rights to the original game belong to 
-                <a href="https://www.intaglyph.ru" target="_blank" rel="noopener noreferrer">Intaglyph</a>.
-            </p>
-        </div>
+        <p>© 2025 nraw · Unofficial work based on the Bestiary of Sigillum. All rights to the original game belong to
+            <a href="https://www.intaglyph.ru" target="_blank" rel="noopener noreferrer">Intaglyph</a>.</p>
     </footer>
-    
+
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="search.js"></script>
+    <script src="graph-logic.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
