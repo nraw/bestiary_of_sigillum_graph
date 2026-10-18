@@ -6,7 +6,7 @@ const {
     filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange,
     ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment
 } = window.GraphLogic;
-const { computeSynergies, heroSynergies, synergyArcs, describeRelation, titleCase, abilityList } = window.Synergy;
+const { computeSynergies, heroSynergies, synergySummary, synergyArcs, describeRelation, titleCase, abilityList } = window.Synergy;
 
 let heroesData = [];
 let synergyRelations = [];
@@ -839,8 +839,8 @@ function showTooltip(d) {
                 <div><strong>${escapeHtml(d.name)}</strong>
                 <div class="tt-sub">${heroGlyph(d.primaryType, 12)} ${HERO_TYPES[d.primaryType].label} · Vitality ${d.vitality}</div></div>
             </div>
-            <p class="tt-core"><span class="ability-key">Core</span> ${escapeHtml(d.core_ability.effect)}</p>
-            <div class="tt-meta">${d.support_abilities.length} support abilities · ${d.labels.length} traits${synergyCounts(d.name)}</div>`;
+            ${d.features.length ? `<ul class="tt-features">${d.features.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>` : ''}
+            ${tooltipSynergies(d.name)}`;
     } else {
         tooltip.innerHTML = `
             <div class="tt-head">${labelGlyph(d.category, 24, d.name)}
@@ -888,13 +888,18 @@ function placeTooltip(gx, gy, radius) {
     tooltip.style.top = `${Math.min(Math.max(8, y - th / 2), container.height - th - 8)}px`;
 }
 
-function synergyCounts(name) {
-    const s = heroSynergies(name, synergyRelations);
-    const partners = new Set([...s.helpedBy, ...s.helps].map(e => e.hero)).size;
-    const parts = [partners && `${partners} partner${partners === 1 ? '' : 's'}`,
-        s.conflicts.length && `${new Set(s.conflicts.map(c => c.hero)).size} to be careful with`,
-        s.counteredBy.length && `countered by ${s.counteredBy.length}`].filter(Boolean);
-    return parts.length ? `<br>${parts.join(' · ')}` : '';
+// Role hue per synergy group, matching the details panel
+const TT_SYNERGY_KIND = { helpedBy: 'grants', helps: 'grants', conflicts: 'hindered_by', counteredBy: 'inflicts', counters: 'inflicts' };
+
+function tooltipSynergies(name) {
+    const { groups, notes } = synergySummary(name, synergyRelations);
+    if (!groups.length && !notes.length) return '';
+    return `
+        <dl class="tt-synergies">${groups.map(g => `
+            <dt><span class="role-dot kind--${TT_SYNERGY_KIND[g.key]}"></span>${g.label}</dt>
+            <dd>${g.heroes.map(h => escapeHtml(titleCase(h))).join(', ')}${g.more ? ` <span class="tt-more">+${g.more} more</span>` : ''}</dd>`).join('')}
+        </dl>
+        ${notes.length ? `<div class="tt-notes">${notes.map(escapeHtml).join(' · ')}</div>` : ''}`;
 }
 
 function hideTooltip() {

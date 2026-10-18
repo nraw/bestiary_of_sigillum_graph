@@ -150,3 +150,22 @@ test('describeRelation words each relation for arc tooltips', () => {
     assert.strictEqual(S.describeRelation(find('partner', 'TEMPUS', 'BREWUS')),
         'Brewus inflicts Cooldown-Manipulation (Fragrant Hop) for Tempus\'s Pendulum');
 });
+
+test('synergySummary lists unique heroes per non-empty group, in display order', () => {
+    const tempus = S.synergySummary('TEMPUS', relations);
+    assert.deepStrictEqual(tempus.groups.map(g => g.key), ['helpedBy', 'helps', 'conflicts']);
+    assert.deepStrictEqual(tempus.groups[0], { key: 'helpedBy', label: 'Helped by', heroes: ['TOXICUM', 'BREWUS', 'EQUITA'], more: 0 });
+    assert.deepStrictEqual(tempus.groups[2], { key: 'conflicts', label: 'Careful with', heroes: ['FIDEA'], more: 0 });
+    assert.deepStrictEqual(tempus.notes, []);
+});
+
+test('synergySummary caps long hero lists and notes self-combos, broad needs and flags', () => {
+    const ill = S.synergySummary('ILLESEBRA', relations, 4);
+    assert.deepStrictEqual(ill.groups[0].heroes, ['ARMUS', 'CATAPULTUS', 'FERRARIUS', 'MALLEUS']);
+    assert.strictEqual(ill.groups[0].more, 5);
+    assert.ok(ill.notes.includes('Self-combo'));
+    const flagged = heroes.find(h => S.heroSynergies(h.name, relations).flags.dontFeed);
+    assert.ok(S.synergySummary(flagged.name, relations).notes.includes("Don't feed"));
+    const broad = heroes.find(h => S.heroSynergies(h.name, relations).broad.length);
+    assert.ok(S.synergySummary(broad.name, relations).notes.some(n => n.startsWith('Works with any ')));
+});

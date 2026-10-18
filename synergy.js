@@ -135,6 +135,28 @@
         };
     }
 
+    const SUMMARY_GROUPS = [
+        ['helpedBy', 'Helped by'], ['helps', 'Helps'], ['conflicts', 'Careful with'],
+        ['counteredBy', 'Countered by'], ['counters', 'Counters']
+    ];
+
+    // Compact view for hover tooltips: unique hero names per non-empty group (first `limit`
+    // shown, the rest counted in `more`) plus one-word notes for self-combos, broad needs and flags
+    function synergySummary(name, relations, limit = 5) {
+        const s = heroSynergies(name, relations);
+        const groups = SUMMARY_GROUPS.map(([key, label]) => {
+            const heroes = [...new Set(s[key].map(e => e.hero))];
+            return { key, label, heroes: heroes.slice(0, limit), more: Math.max(0, heroes.length - limit) };
+        }).filter(g => g.heroes.length);
+        const notes = [
+            s.selfCombos.length && 'Self-combo',
+            ...s.broad.map(b => `Works with any ${b.label === 'Negative effect' ? 'debuffer' : 'buffer'}`),
+            s.flags.dontFeed && "Don't feed",
+            s.flags.punishWithDamage && 'Punish with damage'
+        ].filter(Boolean);
+        return { groups, notes };
+    }
+
     const SMALL_WORDS = ['of', 'the', 'to', 'a', 'an', 'in', 'and'];
     const titleCase = text => text.toLowerCase().split(' ')
         .map((w, i) => (i && SMALL_WORDS.includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(' ');
@@ -169,7 +191,7 @@
         return [...arcs.values()];
     }
 
-    const api = { computeSynergies, heroSynergies, synergyArcs, describeRelation, titleCase, abilityList, POSITIVE, NEGATIVE };
+    const api = { computeSynergies, heroSynergies, synergySummary, synergyArcs, describeRelation, titleCase, abilityList, POSITIVE, NEGATIVE };
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;

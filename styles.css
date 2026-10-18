@@ -869,7 +869,27 @@ kbd {
     color: var(--gold-bright);
 }
 .tt-sub { display: flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: 0.88rem; }
-.tt-core { margin-top: 8px; }
+.tt-features { list-style: none; padding: 0; margin: 8px 0 0; }
+.tt-features li::before {
+    content: '\25C6';
+    margin-right: 7px;
+    font-size: 0.55rem;
+    vertical-align: middle;
+    color: var(--gold);
+}
+.tt-synergies {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 3px 10px;
+    margin: 8px 0 0;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+    font-size: 0.86rem;
+}
+.tt-synergies dt { display: flex; align-items: center; gap: 5px; color: var(--text-muted); white-space: nowrap; }
+.tt-synergies dd { margin: 0; color: var(--text); }
+.tt-more, .tt-notes { color: var(--text-muted); }
+.tt-notes { margin-top: 6px; font-size: 0.84rem; font-style: italic; }
 .tt-meta {
     margin-top: 8px;
     padding-top: 6px;
