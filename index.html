@@ -149,32 +149,12 @@
             <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
         </section>
 
-        <aside class="panel-column right-column" id="sidePanel" aria-label="Legend and pathfinding">
+        <aside class="panel-column right-column" id="sidePanel" aria-label="Legend">
             <section class="panel legend-panel">
                 <button class="panel-heading collapse-toggle" type="button" aria-expanded="true" aria-controls="legendBody">
                     <span>Legend</span><span class="chevron" aria-hidden="true"></span>
                 </button>
                 <div class="collapse-body" id="legendBody"></div>
-            </section>
-
-            <section class="panel path-panel">
-                <button class="panel-heading collapse-toggle" type="button" aria-expanded="true" aria-controls="pathBody">
-                    <span>Find path between heroes</span><span class="chevron" aria-hidden="true"></span>
-                </button>
-                <form class="collapse-body path-form" id="pathBody">
-                    <label class="sr-only" for="pathStart">Start hero</label>
-                    <select id="pathStart" required><option value="">Select start hero</option></select>
-                    <button class="icon-btn swap-btn" type="button" id="pathSwap" aria-label="Swap start and end heroes" title="Swap">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M7 4 3 8M7 4l4 4M17 20V4M17 20l-4-4M17 20l4-4"/></svg>
-                    </button>
-                    <label class="sr-only" for="pathEnd">End hero</label>
-                    <select id="pathEnd" required><option value="">Select end hero</option></select>
-                    <div class="path-actions">
-                        <button class="btn btn-gold" type="submit">Find path</button>
-                        <button class="btn btn-ghost" type="button" id="pathClear" hidden>Clear path</button>
-                    </div>
-                    <ol class="path-result" id="pathResult" aria-live="polite"></ol>
-                </form>
             </section>
         </aside>
     </main>

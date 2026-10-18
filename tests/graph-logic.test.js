@@ -97,19 +97,6 @@ test('relatedHeroes lists heroes sharing labels, most shared first', () => {
     assert.deepStrictEqual(related[0].shared, ['Melee', 'Stun']);
 });
 
-test('findPath returns the shortest hero-label-hero chain', () => {
-    assert.deepStrictEqual(
-        G.findPath(adjacency, 'hero_1', 'hero_3'),
-        ['hero_1', 'label_Stun', 'hero_2', 'label_Ranged', 'hero_3']
-    );
-    assert.deepStrictEqual(G.findPath(adjacency, 'hero_1', 'hero_1'), ['hero_1']);
-});
-
-test('findPath returns null when unreachable or unknown', () => {
-    assert.strictEqual(G.findPath(adjacency, 'hero_1', 'hero_4'), null);
-    assert.strictEqual(G.findPath(adjacency, 'hero_1', 'nope'), null);
-});
-
 test('filterNodes by term matches heroes and labels', () => {
     const ids = G.filterNodes(nodes, { term: 'ra' });
     assert.deepStrictEqual([...ids].sort(), ['label_Ranged']);
