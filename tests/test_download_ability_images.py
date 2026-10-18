@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from download_ability_images import hero_slugs, parse_abilities, slugify  # noqa: E402
+from download_ability_images import ability_file, hero_slugs, parse_abilities  # noqa: E402
 
 INDEX_HTML = """
 <a href="/en/beast/aqus.html">Aqus</a><a href="/en/beast/armus.html">x</a>
@@ -32,6 +32,5 @@ def test_parse_abilities_skips_portrait_and_keeps_order():
     ]
 
 
-def test_slugify():
-    assert slugify("TOWER BARRAGE") == "tower_barrage"
-    assert slugify("  Hell's Fire! ") == "hells_fire"
+def test_ability_file_is_positional():
+    assert ability_file("armus", 1, "/en/file/237_1-2.png") == Path("armus/1.png")

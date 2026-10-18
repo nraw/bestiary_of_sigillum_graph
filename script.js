@@ -3,7 +3,7 @@
 // the DOM, D3 rendering and interaction state.
 const {
     buildGraph, buildAdjacency, computeHighlight, linkState, arcPath,
-    filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange,
+    filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
     ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment
 } = window.GraphLogic;
 const { computeSynergies, heroSynergies, synergyArcs, describeRelation, titleCase, abilityList } = window.Synergy;
@@ -590,6 +590,28 @@ function heroGlyph(type, size = 16) {
         <circle r="7.5" fill="${t.color}"/><path d="${symbolPath(t.symbol, 40)}"/></svg>`;
 }
 
+// Reference-card row markers: target crosshair, effect burst, cooldown arrow
+const BURST_POINTS = Array.from({ length: 16 }, (_, i) => {
+    const r = i % 2 ? 4 : 11, a = i * Math.PI / 8;
+    return `${(12 + r * Math.sin(a)).toFixed(1)},${(12 - r * Math.cos(a)).toFixed(1)}`;
+}).join(' ');
+const CARD_ICONS = {
+    target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.2"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/>',
+    effect: `<polygon class="fill" points="${BURST_POINTS}"/>`,
+    cooldown: '<path d="M19.5 13.5A7.6 7.6 0 1 1 16.4 5.6"/><path class="fill" d="M14 2.2l6.4 2.3-3.2 5.6z"/>'
+};
+
+function cardIcon(kind, title) {
+    return `<svg class="card-icon" viewBox="0 0 24 24" role="img" aria-label="${title}"><title>${title}</title>${CARD_ICONS[kind]}</svg>`;
+}
+
+// White shield with the hero-type symbol, for the red card banner
+function bannerGlyph(type) {
+    return `<svg class="card-banner-glyph" viewBox="-12 -12 24 24" aria-hidden="true">
+        <path d="M-9 -10H9V0C9 5.5 4.5 9 0 11C-4.5 9-9 5.5-9 0Z"/>
+        <path class="sym" d="${symbolPath(HERO_TYPES[type].symbol, 46)}"/></svg>`;
+}
+
 function labelGlyph(category, size = 16, name = null) {
     const icon = name && effectIcon(name);
     if (icon) return `<img class="glyph glyph-img" src="${icon}" width="${size}" height="${size}" alt="">`;
@@ -742,54 +764,55 @@ function renderDetails() {
         };
         const chips = links => links.length
             ? `<div class="trait-chips ability-traits">${links.map(roleChip).join('')}</div>` : '';
+        // Laid out like the printed reference card: core ability boxed, support abilities ruled off below it
         const ability = (a, i) => {
             const range = abilityRange(a.range);
+            const name = a.name || (i === 0 ? 'Core ability' : `Support ability ${i}`);
             return `
-            <article class="ability-card">
-                <header class="ability-head">
-                    ${a.name ? `<h4>${escapeHtml(a.name)}</h4>` : ''}
-                    ${range ? `<img class="ability-range" src="${range.src}" alt="${escapeHtml(range.label)}" title="${escapeHtml(range.label)}">` : ''}
+            <article class="card-ability${i === 0 ? ' card-ability--core' : ''}">
+                <header class="card-ability-head">
+                    <h4>${escapeHtml(name)}:</h4>
+                    ${range ? `<img class="card-range" src="${range.src}" alt="${escapeHtml(range.label)}" title="${escapeHtml(range.label)}">` : ''}
                 </header>
-                <p><span class="ability-key">Target</span> ${escapeHtml(tidyTarget(a.target))}</p>
-                <p><span class="ability-key">Effect</span> ${escapeHtml(a.effect)}</p>
-                ${a.cooldown ? `<p class="ability-cooldown"><span class="ability-key">Cooldown</span> ${escapeHtml(a.cooldown)}</p>` : ''}
+                <div class="card-ability-body">
+                    <div class="card-rows">
+                        <p class="card-row">${cardIcon('target', 'Target')}<span>${escapeHtml(tidyTarget(a.target))}</span></p>
+                        <p class="card-row">${cardIcon('effect', 'Effect')}<span>${escapeHtml(a.effect)}</span></p>
+                        ${a.cooldown ? `<p class="card-row">${cardIcon('cooldown', 'Cooldown')}<span>${escapeHtml(a.cooldown)}</span></p>` : ''}
+                    </div>
+                    <img class="card-art" src="${abilityImage(node.name, i)}" alt="" loading="lazy" onerror="this.remove()">
+                </div>
                 ${chips(groups[i].links)}
             </article>`;
         };
 
         panel.innerHTML = `
-            <header class="hero-header">
-                <img class="hero-portrait" src="${node.image}" alt="Portrait of ${escapeHtml(node.name)}"
-                     style="--ring:${type.color}">
-                <div>
-                    <h3 class="hero-name">${escapeHtml(node.name)}</h3>
-                    <div class="hero-id">Hero #${node.originalId}</div>
-                    <div class="badges">
-                        <span class="badge badge-vitality" title="Vitality">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.6-9.3-9A5.3 5.3 0 0 1 12 6.3 5.3 5.3 0 0 1 21.3 12C19 16.4 12 21 12 21z"/></svg>
-                            Vitality ${node.vitality}
-                        </span>
-                        <span class="badge">${heroGlyph(node.primaryType, 14)} ${type.label}</span>
+            <div class="hero-card">
+                <header class="card-top">
+                    <div class="card-banner" title="${escapeHtml(type.label)}">
+                        <span class="card-number">${node.originalId}</span>
+                        ${bannerGlyph(node.primaryType)}
                     </div>
-                </div>
-            </header>
+                    <h3 class="card-name">${escapeHtml(node.name)}</h3>
+                    <div class="card-title">
+                        <div class="card-vitality" title="Vitality">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.6-9.3-9A5.3 5.3 0 0 1 12 6.3 5.3 5.3 0 0 1 21.3 12C19 16.4 12 21 12 21z"/></svg>
+                            <span class="sr-only">Vitality</span> ${node.vitality}
+                        </div>
+                        <div class="card-type">${escapeHtml(type.label)}</div>
+                    </div>
+                    <img class="card-portrait" src="${node.image}" alt="Portrait of ${escapeHtml(node.name)}">
+                    ${node.features.length || node.sync_note ? `
+                    <section class="card-features">
+                        <h4>Features:</h4>
+                        ${node.features.map(f => `<p>${escapeHtml(f)}</p>`).join('')}
+                        ${node.sync_note ? `<p class="card-sync">${escapeHtml(node.sync_note)}</p>` : ''}
+                    </section>` : ''}
+                </header>
 
-            ${node.features.length || node.sync_note ? `
-            <section class="detail-section">
-                <h4 class="section-title">Features</h4>
-                <ul class="feature-list">${node.features.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>
-                ${node.sync_note ? `<p class="sync-note">${escapeHtml(node.sync_note)}</p>` : ''}
-            </section>` : ''}
-
-            <section class="detail-section">
-                <h4 class="section-title">Core Ability</h4>
                 ${ability(node.core_ability, 0)}
-            </section>
-
-            <section class="detail-section">
-                <h4 class="section-title">Support Abilities <span class="count">${node.support_abilities.length}</span></h4>
                 ${node.support_abilities.map((a, i) => ability(a, i + 1)).join('')}
-            </section>
+            </div>
 
             ${groups.at(-1).links.length ? `
             <section class="detail-section">

@@ -34,6 +34,11 @@
         return { src: `ability_images/${key}.png`, label: ABILITY_RANGES[key] };
     }
 
+    // Ability artwork from bestiary.online, by card position (0 = core, 1-2 = support)
+    function abilityImage(heroName, index) {
+        return `hero_ability_images/${heroName.toLowerCase()}/${index + 1}.png`;
+    }
+
     // Edge roles: what a hero does with a trait. Giving roles (incl. places: moves units onto terrain) point hero -> trait,
     // conditions point trait -> hero; "has" is an undirected trait
     const ROLES = ['inflicts', 'grants', 'gains', 'places', 'benefits_from', 'hindered_by', 'has'];
@@ -325,7 +330,7 @@
     const api = {
         PRIMARY_TYPES, getPrimaryType, getLabelCategory, vitalityRadius, labelRadius,
         buildGraph, buildAdjacency, computeHighlight, linkState, arcPath,
-        filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange,
+        filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
         ROLES, ROLE_INFO, linkKind, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment
     };
 

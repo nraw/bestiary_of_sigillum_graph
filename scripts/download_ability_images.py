@@ -4,7 +4,7 @@ Usage:
     python3 scripts/download_ability_images.py
 
 Reads  https://www.bestiary.online/en/2_heroes.html and each /en/beast/<hero>.html linked from it
-Writes hero_ability_images/<hero>/<n>_<ability>.png (n = order on the hero page, from 1)
+Writes hero_ability_images/<hero>/<n>.png (n = order on the hero page: 1 core, 2-3 support)
        hero_ability_images/manifest.json  {hero: [{name, type, file, source}]}
 """
 import json
@@ -25,8 +25,9 @@ def hero_slugs(index_html):
     return list(dict.fromkeys(re.findall(r'href="/en/beast/([\w-]+)\.html"', index_html)))
 
 
-def slugify(name):
-    return re.sub(r"[^a-z0-9]+", "_", re.sub(r"['’]", "", name.lower())).strip("_")
+def ability_file(hero, n, src):
+    """Positional, so the site can find an icon without matching the website's ability names to the JSON's."""
+    return Path(hero) / f"{n}{Path(src).suffix or '.png'}"
 
 
 class _AbilityParser(HTMLParser):
@@ -85,8 +86,7 @@ def main():
         (OUT / hero).mkdir(parents=True, exist_ok=True)
         manifest[hero] = []
         for n, ability in enumerate(abilities, 1):
-            suffix = Path(ability["src"]).suffix or ".png"
-            file = Path(hero) / f"{n}_{slugify(ability['name'])}{suffix}"
+            file = ability_file(hero, n, ability["src"])
             time.sleep(DELAY)
             (OUT / file).write_bytes(fetch(BASE_URL + ability["src"]))
             manifest[hero].append({"name": ability["name"], "type": ability["type"],
