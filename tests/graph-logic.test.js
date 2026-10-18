@@ -189,3 +189,18 @@ test('every range key in the data has a description', () => {
     ranges.forEach(r => assert.ok(G.abilityRange(r), `no description for ${r}`));
 });
 
+test('abilityImage maps a hero and ability position (0 = core) to its icon', () => {
+    assert.strictEqual(G.abilityImage('ARCHITECTUS', 0), 'hero_ability_images/architectus/1.png');
+    assert.strictEqual(G.abilityImage('Tenebris', 2), 'hero_ability_images/tenebris/3.png');
+});
+
+test('every ability in the data has an icon on disk', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const data = require('../bestiary_reference_cards.json').bestiary_of_sigillum.characters;
+    data.forEach(c => [c.core_ability, ...c.support_abilities].forEach((_, i) => {
+        const file = G.abilityImage(c.name, i);
+        assert.ok(fs.existsSync(path.join(__dirname, '..', file)), `missing ${file}`);
+    }));
+});
+
