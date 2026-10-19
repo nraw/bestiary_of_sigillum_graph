@@ -1,12 +1,13 @@
-"""Extract features, sync notes, ability names, ranges and cooldowns from the V2 reference PDF.
+"""Extract attributes, features, sync notes, ability names, ranges and cooldowns from the V2 reference PDF.
 
 Usage:
     python3 scripts/extract_v2_reference.py
 
 Reads  Bestiary_Of_Sigillum_Character_Reference_V2.pdf
-Adds   features / sync_note to each character, name / range to every ability and cooldown
+Adds   attribute / features / sync_note to each character, name / range to every ability and cooldown
        to each support ability in bestiary_reference_cards.json (matched by id, name-checked).
        range values are the ability_images/<range>.png names (null when the card shows no symbol).
+       attribute (Strength / Agility / Intelligence) comes from the colour of the card's number banner.
 """
 import json
 import re
@@ -23,6 +24,7 @@ PARAGRAPH_GAP = 10   # line pitch is ~8pt; a bigger step starts a new paragraph
 ICON_LEAD = 4        # cooldown text starts level with the top of its icon; the line above sits >=7pt higher
 TWO_LINE_LEAD = 12   # a two-line cooldown may start up to one line above its icon
 WOUND_FILL = (0.35, 0.22, 0.55)  # purple Wound marker, drawn inline with no text
+BANNER_MAX_WIDTH, BANNER_HEIGHT = 40, (40, 90)  # the coloured number banner at each card's top-left
 
 # Each range symbol is one embedded image, reused across the PDF (image xref -> ability_images name).
 # "Any hex in a straight line" is the one-hex-gap image with a rotated "..." image laid over it.
@@ -48,6 +50,30 @@ def classify_range(xrefs):
     if len(xrefs) != 1 or not xrefs <= set(RANGE_BY_XREF):
         raise ValueError(f"unrecognised range symbol images: {sorted(xrefs)}")
     return RANGE_BY_XREF[next(iter(xrefs))]
+
+
+def classify_attribute(fill):
+    """Attribute for a banner fill colour: red Strength, green Agility, blue Intelligence."""
+    r, g, b = fill
+    if r > 0.8 and g < 0.3 and b < 0.3:
+        return "Strength"
+    if b > 0.5 and r < 0.2:
+        return "Intelligence"
+    if g > 0.4 and r < 0.2 and b < 0.4:
+        return "Agility"
+    raise ValueError(f"unrecognised banner colour: {fill}")
+
+
+def banner_attribute(drawings):
+    """Attribute of a card from the filled banner shapes behind its number (the last one drawn is visible)."""
+    if not drawings:
+        raise ValueError("no banner found")
+    return classify_attribute(max(drawings, key=lambda d: d["seqno"])["fill"])
+
+
+def is_banner(drawing):
+    r = drawing["rect"]
+    return bool(drawing.get("fill")) and r.width < BANNER_MAX_WIDTH and BANNER_HEIGHT[0] < r.height < BANNER_HEIGHT[1]
 
 
 def clean_text(text):
@@ -187,6 +213,10 @@ def extract_cards(pdf_path):
                 # Red target/effect/cooldown icons; skips the target icon's inner dot and red text
                 if fill and fill[0] > 0.6 and fill[1] < 0.3 and 8 <= r.width <= 16 and 8 <= r.height <= 16:
                     icons.setdefault((r.x0 >= mid_x, r.y0 >= mid_y), []).append(r)
+            banners = {}
+            for d in page.get_drawings():
+                if is_banner(d):
+                    banners.setdefault((d["rect"].x0 >= mid_x, d["rect"].y0 >= mid_y), []).append(d)
             for key, spans in quadrants.items():
                 features = next((s for s in spans if s["text"].strip() == "Features:"), None)
                 if features is None:
@@ -200,6 +230,7 @@ def extract_cards(pdf_path):
                     ability["range"] = classify_range({
                         x for x, r in range_images if abs(r.y0 - header["y"]) < 14 and 0 < r.x0 - header["x"] < 230
                     })
+                card["attribute"] = banner_attribute(banners.get(key, []))
                 cards.append(card)
     return sorted(cards, key=lambda c: c["id"])
 
@@ -213,6 +244,13 @@ def merge_into_json(data, cards):
         support = card["abilities"][1:]
         if len(support) != len(ch["support_abilities"]):
             raise ValueError(f"{ch['name']}: support ability count mismatch")
+        if "attribute" in card:
+            # attribute sits right after vitality
+            items = [(k, v) for k, v in ch.items() if k != "attribute"]
+            at = next((i + 1 for i, (k, _) in enumerate(items) if k == "vitality"), len(items))
+            items.insert(at, ("attribute", card["attribute"]))
+            ch.clear()
+            ch.update(items)
         ch["features"] = card["features"]
         ch["sync_note"] = card["sync_note"]
 

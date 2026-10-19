@@ -5,6 +5,7 @@
         "id": 1,
         "name": "ARCHITECTUS",
         "vitality": 5,
+        "attribute": "Strength",
         "core_ability": {
           "name": "TOWER BARRAGE",
           "target": "Target any enemy in any hex in a straight line",
@@ -91,6 +92,7 @@
         "id": 2,
         "name": "ARMUS",
         "vitality": 3,
+        "attribute": "Strength",
         "core_ability": {
           "name": "SHIELD SLAM",
           "target": "Target any enemy in an adjacent hex",
@@ -159,6 +161,7 @@
         "id": 3,
         "name": "AQUS",
         "vitality": 3,
+        "attribute": "Agility",
         "core_ability": {
           "name": "POURING RAIN",
           "target": "Target any enemy in an adjacent hex",
@@ -245,6 +248,7 @@
         "id": 4,
         "name": "BALLISTARIUS",
         "vitality": 2,
+        "attribute": "Agility",
         "core_ability": {
           "name": "BALLISTA",
           "target": "Target any enemy in any hex in a straight line from Ballistarius",
@@ -331,6 +335,7 @@
         "id": 5,
         "name": "ARBORUS",
         "vitality": 2,
+        "attribute": "Intelligence",
         "core_ability": {
           "name": "ROOTS",
           "target": "Target all enemies in forest hexes",
@@ -409,6 +414,7 @@
         "id": 6,
         "name": "FIDEA",
         "vitality": 2,
+        "attribute": "Intelligence",
         "core_ability": {
           "name": "RETRIBUTION",
           "target": "Target any enemy in any hex in a straight line (if the target's current vitality is greater than Fidea's)",
@@ -502,6 +508,7 @@
         "id": 7,
         "name": "CABALLUS",
         "vitality": 4,
+        "attribute": "Strength",
         "core_ability": {
           "name": "WHIP",
           "target": "Target all slowed enemies",
@@ -588,6 +595,7 @@
         "id": 8,
         "name": "CARNIFEX",
         "vitality": 4,
+        "attribute": "Strength",
         "core_ability": {
           "name": "AX",
           "target": "Target any enemy in an adjacent hex",
@@ -666,6 +674,7 @@
         "id": 9,
         "name": "CERBERUS",
         "vitality": 3,
+        "attribute": "Agility",
         "core_ability": {
           "name": "THREE-HEADED BITE",
           "target": "Target all enemies in adjacent hexes",
@@ -779,6 +788,7 @@
         "id": 10,
         "name": "CORNIBUS",
         "vitality": 2,
+        "attribute": "Agility",
         "core_ability": {
           "name": "NOSEDIVE",
           "target": "Target all enemies in any hexes in a straight line",
@@ -857,6 +867,7 @@
         "id": 11,
         "name": "FRIGUS",
         "vitality": 2,
+        "attribute": "Intelligence",
         "core_ability": {
           "name": "RAIN OF ICE",
           "target": "Target any enemy with at least 1 negative effect",
@@ -928,6 +939,7 @@
         "id": 12,
         "name": "GOETIUM",
         "vitality": 2,
+        "attribute": "Intelligence",
         "core_ability": {
           "name": "LIGHTNING",
           "target": "Target any enemy that does not have Goetium or one of his allies in adjacent hexes",
@@ -1006,6 +1018,7 @@
         "id": 13,
         "name": "CATAPULTUS",
         "vitality": 3,
+        "attribute": "Strength",
         "core_ability": {
           "name": "CATAPULT",
           "target": "Target any medium or big enemy in a straight line",
@@ -1076,6 +1089,7 @@
         "id": 14,
         "name": "FERRARIUS",
         "vitality": 4,
+        "attribute": "Strength",
         "core_ability": {
           "name": "HEARTH OF HELL",
           "target": "Target any enemy in an adjacent hex (except water)",
@@ -1153,6 +1167,7 @@
         "id": 15,
         "name": "IRATUS",
         "vitality": 3,
+        "attribute": "Agility",
         "core_ability": {
           "name": "PICKAXES OF RAGE",
           "target": "Target any enemy in an adjacent hex",
@@ -1231,6 +1246,7 @@
         "id": 16,
         "name": "MORTUM",
         "vitality": 3,
+        "attribute": "Agility",
         "core_ability": {
           "name": "BLOODLUST",
           "target": "Target any enemy in an adjacent hex",
@@ -1308,6 +1324,7 @@
         "id": 17,
         "name": "IGNIFER",
         "vitality": 2,
+        "attribute": "Intelligence",
         "core_ability": {
           "name": "FLAMING ARTIFACT",
           "target": "Target any enemy in an adjacent hex to your allied character (if this allied character has at least 1 positive effect)",
@@ -1378,6 +1395,7 @@
         "id": 18,
         "name": "ILLESEBRA",
         "vitality": 2,
+        "attribute": "Intelligence",
         "core_ability": {
           "name": "HYPNOSIS",
           "target": "Target all stunned enemies",
@@ -1463,6 +1481,7 @@
         "id": 19,
         "name": "MALLEUS",
         "vitality": 4,
+        "attribute": "Strength",
         "core_ability": {
           "name": "PICK HAMMER",
           "target": "Target any enemy in an adjacent hex",
@@ -1548,6 +1567,7 @@
         "id": 20,
         "name": "SAXUM",
         "vitality": 5,
+        "attribute": "Strength",
         "core_ability": {
           "name": "ROCK BLAST",
           "target": "Target all enemies in adjacent hexes",
@@ -1627,6 +1647,7 @@
         "id": 21,
         "name": "REDUX",
         "vitality": 3,
+        "attribute": "Agility",
         "core_ability": {
           "name": "BONE BOOMERANG",
           "target": "Target all enemies in a circle 1 hex away from Redux",
@@ -1708,12 +1729,18 @@
             ],
             "on": "enemy"
           }
-        ]
+        ],
+        "battle_roles": [
+          "Attacker",
+          "Supporter"
+        ],
+        "battle_roles_note": "The strategy guide lists Redux as a Supporter; his buffs land on himself, so the derived rules only see an Attacker."
       },
       {
         "id": 22,
         "name": "TEMPUS",
         "vitality": 3,
+        "attribute": "Agility",
         "core_ability": {
           "name": "PENDULUM",
           "target": "Target any enemy in an adjacent hex",
@@ -1783,6 +1810,7 @@
         "id": 23,
         "name": "LIGNUM",
         "vitality": 2,
+        "attribute": "Intelligence",
         "core_ability": {
           "name": "PUPPET",
           "target": "Target any enemy",
@@ -1853,6 +1881,7 @@
         "id": 24,
         "name": "MANUS",
         "vitality": 3,
+        "attribute": "Intelligence",
         "core_ability": {
           "name": "JOINT ASSAULT",
           "target": "Target any enemy in an adjacent hex",
@@ -1931,6 +1960,7 @@
         "id": 25,
         "name": "VINCTUM",
         "vitality": 3,
+        "attribute": "Strength",
         "core_ability": {
           "name": "BURDEN OF VENGEANCE",
           "target": "Target any enemy in an adjacent hex",
@@ -2009,6 +2039,7 @@
         "id": 26,
         "name": "MECHANICUS",
         "vitality": 3,
+        "attribute": "Strength",
         "core_ability": {
           "name": "ANCESTRAL CANNON",
           "target": "Target any enemy in a hex in a straight line (except for adjacent hexes)",
@@ -2102,6 +2133,7 @@
         "id": 27,
         "name": "TOXICUM",
         "vitality": 3,
+        "attribute": "Agility",
         "core_ability": {
           "name": "POISONOUS INFLUENCE",
           "target": "Target all poisoned enemies",
@@ -2208,6 +2240,7 @@
         "id": 28,
         "name": "ERESIDA",
         "vitality": 3,
+        "attribute": "Agility",
         "core_ability": {
           "name": "SPIDERLINGS",
           "target": "Target any enemy in an adjacent hex",
@@ -2300,6 +2333,7 @@
         "id": 29,
         "name": "MESSUM",
         "vitality": 2,
+        "attribute": "Intelligence",
         "core_ability": {
           "name": "HARVEST",
           "target": "Target any enemy that has none of their allies in adjacent hexes",
@@ -2371,6 +2405,7 @@
         "id": 30,
         "name": "LIBRORUM",
         "vitality": 2,
+        "attribute": "Intelligence",
         "core_ability": {
           "name": "KNOWLEDGE IS POWER",
           "target": "Target any enemy in a hex of a terrain type that differs from the type of Librorum's current hex",
@@ -2440,6 +2475,7 @@
         "id": 31,
         "name": "BREWUS",
         "vitality": 4,
+        "attribute": "Strength",
         "core_ability": {
           "name": "BREWER'S TANKARD",
           "target": "Target any enemy in an adjacent hex",
@@ -2526,6 +2562,7 @@
         "id": 32,
         "name": "SATURN",
         "vitality": 5,
+        "attribute": "Strength",
         "core_ability": {
           "name": "COLLISION",
           "target": "Target all enemies in adjacent hexes, if their combined current vitality is equal to or greater than Saturn's",
@@ -2621,6 +2658,7 @@
         "id": 33,
         "name": "TENEBRIS",
         "vitality": 3,
+        "attribute": "Agility",
         "core_ability": {
           "name": "SHADES",
           "target": "Target any enemy in an adjacent hex",
@@ -2699,6 +2737,7 @@
         "id": 34,
         "name": "EQUITA",
         "vitality": 3,
+        "attribute": "Agility",
         "core_ability": {
           "name": "KNIGHTLY SMITE",
           "target": "Target any enemy in an adjacent hex",
@@ -2784,6 +2823,7 @@
         "id": 35,
         "name": "MAGNUS",
         "vitality": 3,
+        "attribute": "Intelligence",
         "core_ability": {
           "name": "MAGNETIC HAND",
           "target": "Target any enemy in an adjacent hex",
@@ -2879,6 +2919,7 @@
         "id": 36,
         "name": "CLAMORIS",
         "vitality": 2,
+        "attribute": "Intelligence",
         "core_ability": {
           "name": "LIFE-PIERCING CRY",
           "target": "Target any enemy with at least 1 dmg in any hex in a straight line",
@@ -2951,6 +2992,130 @@
             ]
           }
         ]
+      }
+    ],
+    "recommended_bands": [
+      {
+        "heroes": [
+          "AQUS",
+          "BALLISTARIUS",
+          "TEMPUS"
+        ],
+        "fourth": "IRATUS",
+        "source": "rulebook",
+        "note": "These Agility characters are able to increase their attack, which, combined with Swiftness, makes them truly impressive. (Also on the community combinations sheet.)"
+      },
+      {
+        "heroes": [
+          "SAXUM",
+          "ILLESEBRA",
+          "ARMUS"
+        ],
+        "fourth": "ARBORUS",
+        "source": "rulebook",
+        "note": "These characters are able to increase allies' Defense and Stun enemies. Saxum deals an incredible amount of Injuries with each Defense Increase, while Illesebra can strike all Stunned enemies at once."
+      },
+      {
+        "heroes": [
+          "ARCHITECTUS",
+          "MALLEUS",
+          "CATAPULTUS"
+        ],
+        "fourth": "VINCTUM",
+        "source": "rulebook",
+        "note": "Control Increase makes it easier to control Towers, win Control ties and allows Architectus to deal more Injuries."
+      },
+      {
+        "heroes": [
+          "TOXICUM",
+          "FRIGUS",
+          "MESSUM"
+        ],
+        "fourth": "CABALLUS",
+        "source": "rulebook",
+        "note": "This is a band of Ranged characters. Mass negative effects is their major advantage, allowing Toxicum and Frigus to deal Injuries more often."
+      },
+      {
+        "heroes": [
+          "CORNIBUS",
+          "MORTUM",
+          "CERBERUS"
+        ],
+        "fourth": "FIDEA",
+        "source": "rulebook",
+        "note": "This band has great maneuverability, enough to control Towers on their first turn."
+      },
+      {
+        "heroes": [
+          "EQUITA",
+          "TEMPUS",
+          "BREWUS"
+        ],
+        "source": "community",
+        "note": "Frequent Swiftness. Attacks are powered by Swiftness and enemies' ability cooldown. Enemies wait longer to use their abilities."
+      },
+      {
+        "heroes": [
+          "CABALLUS",
+          "CARNIFEX",
+          "FRIGUS"
+        ],
+        "source": "community",
+        "note": "This team has a wide range of debuffs (Slowness, Attack decrease, Control decrease) which empower their attacks."
+      },
+      {
+        "heroes": [
+          "LIGNUM",
+          "MAGNUS",
+          "LIBRORUM"
+        ],
+        "source": "community",
+        "note": "Frequent use of Silence affects the use of enemies' support abilities. Character repositioning abilities."
+      },
+      {
+        "heroes": [
+          "SAXUM",
+          "ARBORUS",
+          "MANUS"
+        ],
+        "source": "community",
+        "note": "Mass Stuns and mass Defense abilities will keep the weaker units alive while powering Saxum's attack."
+      },
+      {
+        "heroes": [
+          "VINCTUM",
+          "ERESIDA",
+          "ILLESEBRA"
+        ],
+        "source": "community",
+        "note": "Frequent use of Stuns empowers Eresida's and Illesebra's attack. Character repositioning abilities."
+      },
+      {
+        "heroes": [
+          "REDUX",
+          "IGNIFER",
+          "IRATUS"
+        ],
+        "source": "community",
+        "note": "This team has a wide range of positive buffs (Attack increase, Defense increase, Resistance)."
+      },
+      {
+        "heroes": [
+          "MECHANICUS",
+          "CATAPULTUS",
+          "BALLISTARIUS"
+        ],
+        "source": "community",
+        "note": "Ranged attack, Tower control abilities (Swiftness, Control decrease)."
+      },
+      {
+        "heroes": [
+          "BALLISTARIUS",
+          "FERRARIUS",
+          "TEMPUS"
+        ],
+        "source": "guide",
+        "note": "Ferrarius repositions and stuns enemies to set up Ballistarius's attacks; Tempus reduces ally cooldowns so Ballistarius can attack big every turn."
       }
     ]
   }

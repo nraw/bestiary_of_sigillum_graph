@@ -32,7 +32,8 @@ const state = {
     heroType: null,
     role: null,
     showAllNames: false,
-    showSynergies: false
+    showSynergies: false,
+    bandFocus: null // { mine, theirs } hero names sent from the Draft tab
 };
 
 // Hero-to-hero synergy lines reuse the role hues: help = partner, harm dashed = careful with
@@ -433,6 +434,7 @@ function selectNode(id, { source = 'graph', center = true } = {}) {
     const node = nodesById.get(id);
     if (!node) return;
     state.selectedId = id;
+    state.bandFocus = null;
     trackEvent('node_selected', 'Interaction', `${source}: ${node.name}`);
     render();
     if (state.showSynergies && node.type === 'hero') fitToSynergies(node);
@@ -458,7 +460,7 @@ function clearSelection() {
 }
 
 function clearAll() {
-    Object.assign(state, { selectedId: null, term: '', category: 'All', labelCategory: null, heroType: null, role: null });
+    Object.assign(state, { selectedId: null, term: '', category: 'All', labelCategory: null, heroType: null, role: null, bandFocus: null });
     document.getElementById('searchInput').value = '';
     closeSuggestions();
     trackEvent('filter_cleared', 'Filter', 'Clear All');
@@ -471,10 +473,17 @@ function render() {
 
     // Synergy mode: hero-to-hero lines replace the trait edges (a selected trait keeps the normal view)
     const selectedNode = nodesById.get(state.selectedId);
-    const synergyMode = state.showSynergies && (!selectedNode || selectedNode.type === 'hero');
+    const band = state.bandFocus;
+    const synergyMode = Boolean(band) || (state.showSynergies && (!selectedNode || selectedNode.type === 'hero'));
     let highlight = selectedNode ? computeHighlight(state.selectedId, adjacency, nodesById) : null;
     let arcs = [];
-    if (synergyMode) {
+    if (band) {
+        // A drafted band: its heroes, the heroes it faces and the synergy lines among them
+        const members = new Set([...band.mine, ...band.theirs]);
+        arcs = synergyArcs(synergyRelations).filter(a => members.has(a.a) && members.has(a.b));
+        highlight = new Map(nodesData.map(n => [n.id,
+            n.type !== 'hero' ? 'dim' : band.mine.includes(n.name) ? 'selected' : band.theirs.includes(n.name) ? 'connected' : 'dim']));
+    } else if (synergyMode) {
         const focus = selectedNode ? selectedNode.name : null;
         arcs = synergyArcs(synergyRelations, focus);
         const heroId = name => nodesData.find(n => n.type === 'hero' && n.name === name).id;
@@ -488,7 +497,7 @@ function render() {
                 n.type === 'label' || (filterSet && !filterSet.has(n.id)) ? 'dim' : 'none']));
         }
     }
-    drawSynergyArcs(arcs, synergyMode && Boolean(selectedNode));
+    drawSynergyArcs(arcs, synergyMode && (Boolean(selectedNode) || Boolean(band)));
 
     nodeElements
         .classed('is-selected', d => highlight?.get(d.id) === 'selected')
@@ -561,12 +570,14 @@ function updateHeaderState(filterSet) {
 
     const selected = nodesById.get(state.selectedId);
     let title = state.showSynergies ? 'Synergy Map' : 'Hero Network';
-    if (selected) title = state.showSynergies && selected.type === 'hero' ? `${selected.name} · Synergies` : selected.name;
+    if (state.bandFocus) title = `Your band: ${state.bandFocus.mine.map(titleCase).join(', ')}`;
+    else if (selected) title = state.showSynergies && selected.type === 'hero' ? `${selected.name} · Synergies` : selected.name;
     else if (active.length) title = `Filtered: ${active.join(' · ')}`;
     document.getElementById('graphTitle').textContent = title;
+    document.getElementById('backToDraft').hidden = !state.bandFocus;
 
     document.getElementById('clearAllBtn').disabled =
-        !(state.selectedId || active.length);
+        !(state.selectedId || active.length || state.bandFocus);
     document.querySelector('[data-action="center"]').disabled = !selected;
 
     document.getElementById('synergyToggle').setAttribute('aria-pressed', String(state.showSynergies));
@@ -1271,6 +1282,7 @@ function handleNodeKeydown(event, d) {
 
 function setupKeyboard() {
     document.addEventListener('keydown', event => {
+        if (document.body.dataset.tab === 'draft') return; // the Draft tab has its own keys (draft-ui.js)
         const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName);
         if (event.key === 'Escape') {
             hideTooltip();
@@ -1312,5 +1324,28 @@ function waitForD3AndInit() {
 
 document.addEventListener('DOMContentLoaded', waitForD3AndInit);
 
-// Export for debugging
-window.BestiaryGraph = { state, get nodesData() { return nodesData; }, get linksData() { return linksData; } };
+// Show a drafted band (and the heroes it faces) with the synergy lines between them
+function showBand(mine, theirs = []) {
+    state.selectedId = null;
+    state.bandFocus = { mine: [...mine], theirs: [...theirs] };
+    render();
+    const members = new Set([...mine, ...theirs]);
+    fitView(nodesData.filter(n => n.type === 'hero' && members.has(n.name)));
+}
+
+// The graph was hidden (Draft tab): re-measure and frame it again
+function refit() {
+    if (!svg) return;
+    handleResize();
+}
+
+// Used by the Draft tab (draft-ui.js); the getters also help debugging
+window.BestiaryGraph = {
+    state, showBand, refit,
+    clearBand() { state.bandFocus = null; render(); },
+    selectHero(name) {
+        const node = nodesData.find(n => n.type === 'hero' && n.name === name);
+        if (node) selectNode(node.id, { source: 'draft' });
+    },
+    get nodesData() { return nodesData; }, get linksData() { return linksData; }
+};

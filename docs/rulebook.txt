@@ -1,0 +1,477 @@
+Game Overview
+In Bestiary of Sigillum, you take on the role of summoners in the Kingdom of Two Castles. Controlling a band of 3 immortal legendary characters, you will try to develop the best strategy to destroy your opponent's Castle. To succeed, you must wisely use your characters' Abilities and take control of the Catapult Towers. You should think through every move carefully, keeping an eye on your opponent's actions and pick characters by paying attention to their strengths and weaknesses.
+
+Sigil is a symbol or a group of symbols imbued with magical power. You are able to use the sigils to summon mighty characters and bind them to your will.
+
+Game Components
+Kingdom of Two Castles Field
+Both sides of the game board represent a page of the Bestiary of Sigillum with the Sigil of Space.
+
+This Sigil of Space is a simplified depiction of the Kingdom of Two Castles. It is suitable for two-player games. You will move your Character tokens around the field to do battle against each other. The territory of the Kingdom is divided into 19 hexagonal areas called hexes and includes 2 Castles and 2 Catapult Towers.
+
+The field shows a Castle, Plain, Forest, Mountain, Water, and 2 Catapult Tower hexes arranged around a central Water area.
+
+All hexes have a terrain type (Plain, Forest, Mountain, or Water) that affects some characters' Abilities (Castle hexes have a Plain terrain type). Each Castle hex is a starting area and a safe summon zone for one player: enemies can neither enter that hex nor affect a character in it. A Castle suffers Damage whenever a Catapult Tower fires at it and each time a character is exiled to this Castle.
+
+Each hex is identified by a unique coordinate pair—a letter and a number. The columns of hexes are labeled "A" through "E" at the bottom of the field. The hexes are numbered vertically 1 to 5 counting up from the South Castle's side. For example, the South Castle hex is designated as "C1" because it is the bottommost hex on the "C" column, while the East Catapult Tower hex is designated as "E2" because it is the second hex on the "E" column counting from the bottom.
+
+Sigil of Time Board with Time Dial
+The Sigil of Time is a special tool that tracks the passage of time in the world of Sigillum. This game board consists of the Time Dial that rotates at the beginning of each round, and 2 Cooldown areas with 6 sectors each—a character's Ability tokens are placed in these sectors. It monitors when your characters' Abilities can be used again. (Before playing the first game, attach the Time Dial to the Sigil of Time board with the plastic connectors.)
+
+The numbers (1–6) on the Time Dial correspond to the number of rounds required to cooldown a used Ability. At any time, each sector will be marked by one number (each round, the number changes).
+
+The Sigil of Time tracks the passage of time for both players (or teams in a four-player game), so there are 2 pointers on the Time Dial and 2 Cooldown areas. Also, this board has 2 Castle tracks. When you need to mark your Castle Damage, move your marker on your track in the direction of the arrows.
+
+Four-Way Crossing Field
+The reverse side of the game board represents the expanded Sigil of Space called the Four-Way Crossing field. It is suitable for both two-player and four-player games (see "Four-Player Game" on p. 13). The Four-Way Crossing field is divided into 23 hexes and includes 4 Castles (count as Plain hexes) and 4 Catapult Towers.
+
+The hexes of the "A" and "E" columns are numbered vertically 0 to 4, while all other hexes are numbered like the Kingdom of Two Castles field.
+
+27 Character Sheets
+Character sheets are complete pages of the Bestiary of Sigillum manuscript. The front of the sheets depicts the characters and shows their Abilities, while the back of the sheets details the characters' story. Each character has 3 unique Abilities: 1 Core Ability and 2 Support Abilities.
+
+Each character sheet shows the character's attribute, name, max Vitality, and number in its header, the character's image, and the Core Ability and Support Abilities with their images, names, and ability descriptions.
+
+27 Character Tokens
+These tokens mark the positions of the characters on the field.
+
+4 Orange and 4 Violet Character Bases
+These bases help to differentiate each player's characters on the field.
+
+81 Ability Tokens
+These tokens represent character Abilities that you may use on your turn under specific conditions. Some of used tokens are placed immediately on the Sigil of Time in your Cooldown area.
+
+133 Effect Markers
+These markers show positive and negative effects applied to characters, as well as neutral effects applied to hexes.
+
+35 Two-Sided Vitality Markers
+These markers show each character's current number of Vitality points. Before starting the game, place a number of these markers equal to the Character's max Vitality, Vitality side up, on the Character sheet. Whenever a character suffers any number of Injuries, flip that many of their Vitality markers to the Injury side. A character is considered Injured if they have 1 or more Injuries.
+
+2 Castle Markers
+These markers show the amount of each player's Castle Damage. Keep them on the Castle tracks on the Sigil of Time board. Whenever a Castle suffers Damage, move that Castle's marker the same number of spaces on the corresponding track to show its progress towards destruction.
+
+Goal of the Game
+The goal is to destroy the opponent's Castle, i.e., to deal enough Damage so that the opponent's Castle marker will reach the last space of the Castle track. If you do that first, you will be immediately declared the winner.
+
+There are 2 ways to damage your opponent's Castle:
+
+Catapult Tower control. Each Catapult Tower under your control deals 1 Damage to your opponent's Castle at the end of your turn. You control a Catapult Tower whenever the Control points sum of all your characters in that Tower's control area exceeds the Control points sum of all your opponent's characters there (see pictures on p. 10 and 15). By default, each character has 1 Control point, but it can be increased or decreased by the effects of some Abilities.
+Opponent's character exile. As characters are summoned from the world beyond, they cannot be killed. However, if a character suffers enough Injuries, they are temporarily exiled from the world of Sigillum. When your character's Vitality points drop to 0, they're exiled and re-summoned in your Castle hex. Whenever your character is exiled, it deals 1 Damage to your Castle, as it depletes the Castle resources.
+Character Classification
+The Bestiary of Sigillum offers you a great collection of characters to summon from the world beyond, each with unique stats. All characters can be classified by their Attribute, Attack range, Size, and Difficulty level. To win, you need to consider all stats while picking a band of characters at the beginning of the game and pay close attention to your opponent's choices.
+
+Attribute Classes
+Each character has 1 of 3 Attributes: Strength, Agility, or Intelligence. Players should consider each Attribute to strategically position their characters on the field.
+
+Strength. The frontline of your offensive, these characters have great Vitality. They draw enemy fire and shield vulnerable allies from lethal strikes. Most of them can apply a Stun effect, immobilizing enemies for a short time (see "Effect Markers" on p. 11).
+
+Agility. The cutting edge of your band, these characters are weaker but inflict massive amounts of Injuries to enemies. They highly depend on their allies' support, but if you protect and position them well, they can change the outcome of the entire battle.
+
+Intelligence. The rearguard of your band, these characters are focused on strengthening allies and weakening enemies. Using Support Abilities, they can compensate for your characters' shortcomings and mitigate Injuries from enemies.
+
+Attack Ranges
+All Character sheets have schematic representations of the Ability ranges (see "Ability Ranges" on p. 16).
+
+The Ability range diagrams show field hexes, hexes with a target, and the hex with the Ability bearer.
+
+According to the Core Ability range (attack action), there are Melee and Ranged characters. Melee characters can only attack enemies in adjacent hexes, while Ranged characters can target enemies from larger distances.
+
+Ignifer can use his Support Ability 'Might of Fire' to specifically target Melee characters.
+
+Size Classes
+Depending on their max Vitality, all characters can be divided into 3 classes: Big (max Vitality 5), Medium (max Vitality 4 or 3), and Small (max Vitality 2).
+
+Catapultus can use his Core Ability to specifically target Big or Medium characters.
+
+Difficulty Levels
+A character's difficulty level determines the number of things you need to take into account while controlling the character. The higher the level, the deeper the strategy you have to develop. All characters can be split into 3 categories of difficulty: Easy, Moderate, and Hard. The effectiveness of a character can vary greatly depending on allies and enemies on the field.
+
+Easy. These characters are versatile; they can use their Abilities effectively, regardless of their allies and enemies.
+
+Armus, Ballistarius, Goetium, Ferrarius, Cornibus, Messum, Malleus, Iratus, Vinctum, Arborus.
+
+Moderate. These characters must fulfill certain conditions to attack enemies effectively. Their number of Attack points can be increased due to allies' Abilities or specific enemies' actions.
+
+Carnifex, Aqus, Toxicum, Catapultus, Cerberus, Ignifer, Saxum, Redux, Lignum.
+
+Example: Saxum's number of Attack points is equal to his Defense points. Although he can increase his Defense points himself, it would be more effective if Saxum has an ally who can also increase his Defense points.
+
+Hard. These characters have highly situational Abilities. They rely heavily on allies' and enemies' actions and positions.
+
+Architectus, Tempus, Illesebra, Caballus, Fidea, Manus, Mortum, Frigus.
+
+Example: Architectus's number of Attack points is equal to the number of Catapult Towers under allied control. If his allies are Malleus or Catapultus, Architectus can become very powerful. But if no ally controls the Towers, Architectus becomes useless.
+
+Two-Player Game
+Two-Player Setup
+For the four-player setup on the Four-Way Crossing field, see p. 13.
+
+General Setup
+
+Position the game board with the Kingdom of Two Castles field side up in the middle of the table and place the Sigil of Time board next to it. Set the Time Dial pointers to any of the sectors (it doesn't matter which ones).
+Place all effect markers next to the game board, forming the shared supply.
+Determine the First player at random (this will be the First player throughout the game).
+The First player takes 3 character bases and a Castle marker of the same color and chooses a Castle: the North or the South. Then, the First player positions the game boards with the chosen sides towards themselves. The Second player occupies the opposite Castle and takes the same components of the remaining color.
+The Second player places their Castle marker on the first space (with the castle symbol) of their Castle track on the Sigil of Time board. The First player does the same but then advances their marker 2 spaces to set initial Damage (the First player cannot decrease these 2 Damage points for the rest of the game).
+Player Setup
+
+After finishing the general setup, players pick characters in alternating order: the First player picks 1 of the available characters, then the Second player does the same. This process repeats until both players pick a band of 3 characters each.
+
+Novice summoner mode. For the best learning experience and to get a full grasp of the rules, we recommend that novice summoners pick the following 2 bands: Saxum, Illesebra, Armus for the First player and Architectus, Malleus, Catapultus for the Second player (see other pre-made character combinations for novice summoners on p. 15).
+
+After picking a character, do the following:
+
+Place the picked character's sheet face up in front of you. The order of picking is important, so place taken sheets in a row from left to right as shown in the picture on p. 6.
+Take the Character token with the corresponding character and attach it to one of your bases, then place it on the respective Character sheet.
+Take the 3 Ability tokens depicted on the Character sheet and place each token in the respective slot.
+Place Vitality markers with the Vitality side up on the character's sheet, equal to their max Vitality—the number above the character's image. During the game, you may not add or remove Vitality markers from a Character sheet.
+After picking 2 bands of 3 characters, return all unused components to the box. Take the first picked character's token (from the leftmost sheet) with its base and place it on your Castle hex—you will start the game with this character. Your opponent does the same. Leave the remaining Character tokens on their respective sheets for now. To allow the next picked character to enter the field, you will need to empty your Castle hex by moving the first picked character's token to another hex (by performing a maneuver or using an Ability that allows the character to move). Whenever your Castle hex becomes unoccupied, you immediately place your next character there and may use that character's Abilities during the current phase.
+
+Experienced summoner mode. Once you are fully acquainted with all the characters and discover their strengths and weaknesses, we recommend you limit the number of the available characters during the setup. Starting with the First player, ban characters in alternating order until you and your opponent have banned 3 characters each. Return the banned characters' sheets to the box. Then, pick characters as usual. For more variety, you may ban 1 character each, then pick 1 character each until you and your opponent have banned and picked 3 characters each. Also, you may consider the characters banned in the previous game unavailable. This rule makes it difficult to pick well-combined characters, so you will have to adapt to the situation.
+
+Note! Picking characters is an important part of the game. With a balanced band of allies that can withstand enemy attacks, you have a better chance of victory, so it is important to carefully consider the strategy even during the game setup.
+
+Gameplay
+The game is played over a series of rounds until 1 of the Castles is destroyed (see "End of the Game" on p. 10).
+
+Each round consists of the First player's turn, then the Second player's turn. Each player's turn is divided into 3 phases:
+
+Time Phase
+Ability Phase
+Control Phase
+At the beginning of each round, the First player rotates the Time Dial 1 sector clockwise and performs the 3 subsequent phases. Then the Second player performs these 3 phases, and both players proceed to the next round. At the beginning of the new round, the First player rotates the Time Dial again. The player who rotates the Time Dial is called the Timekeeper. The Second player will never become the Timekeeper and will never rotate the Time Dial.
+
+Skip the Time phase during the first round.
+
+The Time Dial shows a pointer, a divider between sectors, and sectors marked with a cooldown of 1 round or 2 rounds.
+
+1. Time Phase
+Whenever the Timekeeper rotates the Time Dial 1 sector clockwise, all characters' Abilities become 1 round closer to being returned from cooldown. An Ability becomes charged when the Time Dial pointer stops on a sector with that Ability token.
+
+During the Time phase, if you are the current player, perform the following steps:
+
+Remove all your charged Ability tokens from the Sigil of Time and place them in the respective slots on your Character sheets. Then return the shifted Core Ability tokens back to the respective slots.
+Remove all positive effect markers from your Character sheets and all negative effect markers from your opponent's Character sheets to the supply. (Also, return the Architectus's Obstacle marker to the supply if you placed it in the previous round.)
+Note! During your turn, you should only remove the effect markers that you placed in the previous round (the effects applied by your opponent are still active).
+
+2. Ability Phase
+During this phase, you may use any available Abilities of your non-Stunned characters (see "Effect Markers" on p. 11). An Ability is considered available if its Ability token is in its respective slot on the Character sheet (i.e., the token is not shifted or not placed on the Sigil of Time). You may skip this phase if you decide not to use any available Abilities, or you may choose to only use some of them.
+
+Each character has 3 unique Abilities: 1 Core Ability used to attack or maneuver and 2 Support Abilities used to apply effects, move characters around the field, or otherwise shift the balance of power. (The Ability action is listed next to the attack symbol.)
+
+Each character sheet labels the Ability token image, maneuver symbol, attack symbol, Ability target, Ability action, Ability cooldown, Ability range, Core Ability name, flavor text, Support Ability name, and Ability description.
+
+Allied characters are characters that belong to your band (and your teammate's band in a four-player game).
+
+'The target within 2 hexes from your character' means the target is either in an adjacent hex or 1 hex away from your character.
+
+Core Ability
+A Core Ability allows your character to perform an attack action OR a maneuver action, but not both. It may be used once each round (its cooldown takes 1 round). Before using a Core Ability, shift its token on the Character sheet to the attack symbol if you want to perform an attack action, or to the maneuver symbol if you want to perform a maneuver action (this is a reminder). During your next Time phase, you will return the shifted token back to its respective slot.
+
+Maneuver Action
+
+Your character may perform a maneuver, i.e., move into any adjacent unoccupied hex, except for your opponent's Castle hex. A hex is considered unoccupied if there is no Character token and Architectus's Obstacle marker is not present.
+
+To perform a maneuver, shift the chosen character's Core Ability token to the maneuver symbol, then move this character's token onto any adjacent unoccupied hex. A character can move into a hex of any terrain type (Plain, Forest, Mountain, or even Water).
+
+Note! Two characters may not perform a maneuver simultaneously to swap positions.
+
+Example: Your character Saxum can perform a maneuver to go to an adjacent unoccupied hex and has 3 options to move: to a Water hex, to a Plain hex, and to your Castle hex. Saxum may not move to the hex occupied by an ally, an enemy, or the Obstacle marker.
+
+Attack Action
+
+Your character, instead of performing a maneuver, may perform an attack. Attacks vary by their ranges, points, and number of targets. Attack points and Attack range may be constant or dependent on the conditions listed on the Character sheet. An attack can only target an opponent's character(s).
+
+To perform an attack, do the following:
+
+Declare the chosen Core Ability name and shift its token to the attack symbol.
+
+Declare the target(s) that fall within the Attack range (see the description on the Character sheet next to the target symbol). Your characters' attacks cannot deal Injuries to allies.
+
+Calculate your character's Attack points. To do this, note the conditions listed on the character sheet. The attacking character gains 1 Attack point per Attack Increase effect and loses 1 Attack point per Attack Decrease effect. The number of Attack points never becomes negative.
+
+Calculate the Injuries dealt to each target by subtracting the target's Defense points from your character's Attack points. By default, each character has 0 Defense points but can gain 1 point per Defense Increase effect and lose 1 point per Defense Decrease effect. The number of Defense points never becomes negative. If there are more Defense Decrease effects than Defense Increase effects applied to a character, they have 0 Defense points.
+
+Example: Your character Catapultus attacks Saxum, who has 1 Defense Increase effect. Catapultus has 2 Attack points (as Saxum is a Big character), but he deals only 1 Injury (2 − 1 = 1). Your character Malleus can attack this enemy too, but he has only 1 Attack point, so he will deal no Injuries to Saxum (1 − 1 = 0). A target's Defense Increase effects are considered for every attack when subtracting its Defense points from your character's Attack points.
+
+Your opponent flips over Vitality markers to the Injury side on their targeted character's sheet equal to the number of suffered Injuries. Once the last marker is flipped over, the targeted character is considered exiled. If your character is exiled, perform the following steps:
+
+Place the exiled character's token on the Castle hex. If it is occupied, place the token on the respective Character sheet instead (see "The Summoner's Compel rule" below).
+Remove all effect markers from the exiled character's sheet and flip over all Vitality markers to the Vitality side (leave this character's Ability tokens on the Sigil of Time).
+Your Castle suffers 1 Damage (advance your Castle marker 1 space on the corresponding track).
+Declare victory if your opponent's Castle marker reaches the last space of its track.
+
+The Summoner's Compel rule. Whenever you have a Character token on its sheet (for example, during the first round or when your character is exiled), immediately place it on your unoccupied Castle hex (if you have more than 1 Character token on the Character sheets, take the leftmost one). If your Castle hex is already occupied, leave the Character tokens on their sheets until your character moves away from your Castle hex (by performing a maneuver or using an Ability that allows them to move). As soon as your Castle hex is no longer occupied, immediately place the next Character token from its sheet there.
+
+Support Abilities
+Support Abilities can literally and figuratively shift the tide of battle. Some of these Abilities initiate one-shot actions (restore 1 Vitality point, copy an effect, or move a character on the field, etc.), and some apply effects (a positive effect on an ally, a negative effect on an enemy or a neutral effect on a hex).
+
+All effects applied to a character temporarily change their stats. Once your character uses their Ability to apply an effect, this effect is considered applied; it lasts for your current turn, then during your opponent's turn, and ends during your next turn's Time phase (when you remove the respective effect marker).
+
+Most Support Abilities have a constant cooldown. However, some Support Abilities have a cooldown that depends on the conditions listed on the Character sheets next to the cooldown symbol.
+
+To use a Support Ability, perform the following steps:
+
+Declare the chosen Support Ability name.
+
+Declare the target(s) that fall within the Ability range (see the description on the Character sheet next to the target symbol).
+
+Use the Support Ability:
+
+If this Ability initiates a one-shot action, immediately perform the action (see "One-Shot Actions" on p. 12).
+If this Ability applies an effect, take the corresponding effect marker from the shared supply and place it on the targeted character's sheet (for easier tracking, you may place it on the target's token on the field). The Obstacle marker should be placed on an unoccupied hex (except for Castle hexes).
+Note! If an Ability initiates a move action and then applies an effect, the character must complete the move part of the action to apply the effect.
+
+Calculate the cooldown of the used Ability. Note the conditions listed on the Character sheet (if any). Place the respective Ability token on your Cooldown area of the Sigil of Time in the sector marked by the number equal to the calculated cooldown. One sector may contain an unlimited number of Ability tokens.
+
+An Ability cooldown always takes from 1 to 6 rounds. If the calculated time is less than 1 round, place the Ability token in the sector marked by "1." If the time exceeds 6 rounds, place the Ability token in the sector marked by "6." For example, a character having multiple Poison effect markers on their sheet (see "Effect Markers" on p. 11) uses an Ability, and its cooldown increases to 7 rounds. However, the Ability token should still be placed in the sector marked by "6," so actually, the cooldown will take 6 rounds.
+
+3. Control Phase
+When you have used all chosen available Abilities, declare the beginning of the Control phase. During this phase, each Catapult Tower under your control deals 1 Damage to the opponent's Castle.
+
+You control a Catapult Tower whenever the Control points sum of all your characters in that Tower's control area (see picture below) exceeds the Control points sum of all your opponent's characters there (including the Control points of Stunned characters). If your Control points sum is equal to your opponent's Control points sum, the Tower does not fire.
+
+By default, each character has 1 Control point but can gain 1 point per Control Increase effect and lose 1 point per Control Decrease effect (the number of points never becomes negative).
+
+Note! During the Control phase, only the Catapult Towers under the current player's control may fire (i.e., Towers under your opponent's control never fire at the end of your turn).
+
+On the Kingdom of Two Castles field, each Catapult Tower's control area consists of 1 Tower hex and the 4 adjacent hexes (see Towers' control areas on the Four-Way Crossing field on p. 15).
+
+During your Control phase, do the following:
+
+For each Tower under your control, your opponent's Castle suffers 1 Damage (the opponent advances their Castle marker 1 space on the corresponding track).
+Declare victory if your opponent's Castle marker reaches the last space of its track.
+The Second Player's Turn
+
+After the First player has performed the Control phase, the Second player takes their turn and performs the same 3 phases in the same order, starting with the Time phase. The Second player never rotates the Time Dial.
+
+End of the Round
+
+After the Second player has performed the 3 phases, the round is over. At the beginning of the next round, the First player rotates the Time Dial 1 sector clockwise.
+
+End of the Game
+The game ends immediately when one player's Castle marker reaches the last space of the corresponding track. The other player is declared the winner.
+
+Effect Markers
+There are 14 lasting effects: 7 positive (green), 6 negative (red) and 1 neutral (blue).
+
+Attack Increase. This character's number of Attack points is increased by 1.
+
+Attack Decrease. This character's number of Attack points is decreased by 1.
+
+A character's Attack points are shown on their sheet, and this number never becomes negative.
+
+Defense Increase. This character's number of Defense points is increased by 1.
+
+Defense Decrease. This character's number of Defense points is decreased by 1.
+
+By default, each character has 0 Defense points, and this number never becomes negative.
+
+Control Increase. This character's number of Control points is increased by 1.
+
+Control Decrease. This character's number of Control points is decreased by 1.
+
+By default, each character has 1 Control point, and this number never becomes negative. Note that Control Increase/Decrease effects will be resolved twice: during the current player's Control phase and then during the opponent's.
+
+Swiftness. This character can use their Core Ability to perform BOTH a maneuver and an attack in the same turn (in any order).
+
+When you perform a character's Core Ability action a second time, flip over their Core Ability token as a reminder.
+
+Slowness. This character cannot perform a maneuver. However, they can still perform an attack and use any Support Abilities, even those initiating a move action (except for Cerberus's 'Vehemence', which explicitly grants a bonus maneuver).
+
+The "X Increase/Decrease" effects of the same type are considered contrary. These effects should be summed up. For example, if there are 3 Defense Increase and 1 Defense Decrease markers on a character, they have 2 Defense points (0 + 3 − 1 = 2).
+
+Swiftness and Slowness are also considered contrary, but these effects do not sum up. If there are more Swiftness markers than Slowness on a Character sheet, this character is Swiftened. If vice versa, this character is Slowed. If there are equal number of markers, the character is neither Swiftened nor Slowed.
+
+Flying. This character has an increased maneuver distance: they can move into any unoccupied hex in a straight line from their current hex (any occupied hex may be skipped).
+
+Resistance. This character cannot be targeted by an enemy's Support Abilities but can still be attacked by their Core Abilities.
+
+Vampirism. This character restores 1 Vitality point if they deal at least 1 Injury with their Core Ability. The character can restore only 1 per attack.
+
+Stun. This character cannot perform a maneuver or use any Abilities, but can still be moved by other characters' Abilities. During the Control phase, a Stunned character's Control points are counted as usual.
+
+Poison. Whenever this character uses a Support Ability, its cooldown takes 1 round longer for each Poison marker on this character's sheet. An Ability cooldown never exceeds 6 rounds.
+
+Obstacle. A hex with an Obstacle marker is considered occupied for all characters. The Obstacle cannot be destroyed. When calculating Ballistarius's Attack points, consider a hex with the Obstacle marker as an occupied hex.
+
+The Obstacle marker should be placed only on an unoccupied hex (except for Castle hexes), while other effect markers should be placed on Character sheets.
+
+One-Shot Actions
+Unlike lasting effects that temporarily change the character's stats or affect hexes, one-shot action effects are applied immediately. In addition to dealing Injuries with an attack, there are 5 unique types of one-shot actions.
+
+Move
+
+Maneuver and some Support Abilities allow you to move characters around the field. The direction of movement is listed in the Ability description.
+
+Restoration
+
+Some Support Abilities restore Vitality points of Injured characters or decrease Castle Damage points.
+
+Fidea's 'Resurrection': flip over 1 Vitality marker to the Vitality side on the Character sheet of any Injured allied character.
+Goetium's 'Ritual of Vitality': flip over 1 Vitality marker to the Injury side on the Character sheet of any allied character. Then, flip over 1 Vitality marker to the Vitality side on the Character sheet of any Injured allied character. You may not exile a character with this action.
+Architectus's 'Reconstruction': move your Castle Marker 1 space back on its track (decrease 1 Castle Damage point).
+Shift of Cooldown
+
+Tempus's 'Timepiece' allows you to speed up the cooldown of an ally's Support Abilities by 1 round. The cooldown of Core Abilities cannot be sped up.
+
+When you use this Ability, shift one or both of the target's Ability tokens 1 sector counterclockwise on your Cooldown area (move to a lower numbered sector). If the Ability token is shifted from the sector marked by 1 to the sector with a pointer, this token should be returned to the targeted character's sheet—this Ability can be used during the current round.
+
+Copy Effect
+
+Aqus's 'Fluidity' allows you to copy the most recent lasting positive effect applied to the target (any enemy or ally, except Aqus). When you use this Ability, place an effect marker of the same type from the supply on Aqus's sheet (do not remove the effect from the target). Since the order of the applied effects matters, we recommend you line up the effect markers on Character sheets from left to right when Aqus is in play. Aqus cannot copy a Resistance effect, since a character with a Resistance effect may not be targeted by Support Abilities.
+
+Replace Effects
+
+Carnifex's 'Convict the Guilty' allows you to replace the enemy's positive effects with contrary negative effects. When you use this Ability, after move action remove all applicable positive effect markers from the targeted character's sheet and place respective contrary negative effect markers there (new effects are considered applied).
+
+Castle Hex Clarifications
+A Castle hex (like any other hex) cannot contain multiple characters. If a character is exiled and the Castle hex is occupied, the exiled character's token remains on the respective sheet until the Castle hex becomes unoccupied.
+Your character may not occupy an opponent's Castle hex in any way.
+While your character on your Castle hex, they may use their Abilities as usual.
+While your character is on your Castle hex, they cannot be targeted by either an enemy's Core Ability or Support Abilities. This means that your character is in a safe zone (enemies may not attack such character, apply negative effects to them, or move them). Manus may not use his 'Mechanical Hand' to pull his enemy from the Castle hex (but Manus can use this Ability to pull an ally). Goetium may use his 'Ritual of Vitality' to Injure himself (or his ally), even if he (or his ally) occupies the Castle hex.
+Your character may be moved into your Castle hex if an enemy or an ally uses a certain Support Ability. Vinctum can use his 'Iron Mask' to move his enemy into the enemy's unoccupied Castle hex.
+Four-Player Game
+No one can remember how many cycles have passed since the beginning of the chaos and destruction brought by the war that descended upon the once prosperous Kingdom of Two Castles. Sparks from the conflict reached the waking world, igniting a fire that grows, drawing in new lands. Those who wanted to gain power sent their troops to storm the North and South Castles in order to take possession of the Bestiary of Sigillum manuscripts.
+
+Ruins of castles sat in abandon under weeds and ancient dust. Oceans of time passed and yet no winner could claim victory. Balance was established amid the four poles, along the borders of which new structures sprung up. It seemed that the balance of power would be maintained for cycles to come. Whenever one tried to wrest the balance in their favor, they would inevitably meet the resistance of the others. But the beginning of secret negotiations amongst alliances destroyed the stalemate. Sigillum again stood at the crossroads, which would later be called the "Four-Way Crossing".
+
+In the four-player variant of the game, two teams of two players face off against each other. Follow the two-player game rules (see p. 6), but with some changes in the setup and phases of each round.
+
+Four-Player Setup
+General Setup
+
+Position the game board with the Four-Way Crossing field side up in the middle of the table and place the Sigil of Time board next to it. Set the Time Dial pointers to any of the sectors.
+Place all effect markers next to the game board, forming the shared supply.
+Divide into two teams of two players each.
+Determine the First team at random (this team will be the First team throughout the game). Declare one of the First team players to be the Timekeeper, who will be in charge of rotating the Time Dial during the game.
+The First team chooses any 2 Castles (these may be opposite Castles) and takes 4 character bases and a Castle marker of the same color. The Second team occupies the other 2 Castles and takes the same components of the remaining color.
+Each team places their Castle marker on the first space (with the castle symbol) of the corresponding Castle track on the Sigil of Time board. The First team advances their marker 3 spaces to set initial Damage (the First team cannot decrease these 3 Damage points for the rest of the game).
+Teammates share 1 Castle track, so whenever 1 of your Castles suffers Damage, your team advances your Castle marker the corresponding number of spaces on your shared Castle track.
+
+If the teammates' Castles are located on different halves of the board, the First team shares the Castle track (and the Cooldown area) that is closer to the Timekeeper.
+
+Player Setup
+
+Starting with the Timekeeper and proceeding clockwise around the table, players take turns picking 1 of the available characters. This process repeats until all players pick a band of 2 characters each (see "Player Setup" on p. 7). It does not matter whether teammates are sitting on opposite sides or next to each other.
+
+Novice summoner mode. For the best learning experience and to get a full grasp of the rules, we recommend that novice summoners pick the following 2 bands: Saxum + Arborus and Armus + Illesebra for the First team and Architectus + Malleus and Catapultus + Vinctum for the Second team (see other pre-made character combinations for novice summoners on p. 15).
+
+Experienced summoner mode. If you wish, limit the number of characters available for summoning. Starting with the Timekeeper and proceeding clockwise around the table, take turns banning 1 of the available characters and returning the respective components to the box. This process repeats until all players ban 2 characters each. Then both teams pick characters as usual.
+
+At the beginning of the game, "bind" your 2 characters to 1 of your team's Castles to indicate in which Castle hex your characters will be re-summoned when exiled.
+
+Characters of one team can move and be moved into their teammate's unoccupied Castle hex.
+
+Gameplay
+A four-player game is played over a series of rounds until 1 of the teams destroys the opponents' Castles (see "End of the Game" on p. 15).
+
+Each round consists of the First team's turn, then the Second team's turn. Each team's turn is divided into 3 phases:
+
+Time Phase
+Ability Phase
+Control Phase
+At the beginning of each round, the Timekeeper rotates the Time Dial 1 sector clockwise, and the First team performs the 3 subsequent phases. Then the Second team performs these 3 phases, and both teams proceed to the next round. At the beginning of the new round, the Timekeeper rotates the Time Dial again. The Time Dial is only rotated by the Timekeeper.
+
+Skip the Time phase during the first round.
+
+1. Time Phase
+Perform this phase following the two-player game rules (see "Time Phase" on p. 7). Both teammates simultaneously remove all the effect markers that they placed in the previous round.
+
+2. Ability Phase
+During this phase, teammates take turns in alternating order to use the Abilities of their non-Stunned characters (see "Effect Markers" on p. 11).
+
+Teammates discuss which of them will be the first to use an Ability this round. In the next round, the other teammate may go first.
+The first teammate uses 1 of their characters' available Abilities, following the two-player game rules (see "Ability Phase" on p. 8). Characters from the same team are considered allies. Even though a teammate manages only 2 characters, they may apply positive effects to all team characters. After being used, the Ability tokens of a team's characters are placed on the same Cooldown area on the Sigil of Time.
+After one teammate has used an Ability, it is time for the other to use 1 of their characters' available Abilities. Continue alternating between teammates.
+If a teammate does not plan to use anymore Abilities, they pass. The other teammate continues to use their characters' Abilities until they also pass. When both teammates have passed, they proceed to the Control phase.
+3. Control Phase
+Each Catapult Tower under your team's control deals 1 Damage to your opponents' Castle (it does not matter which one). For each Damage point, your opponents advance their Castle marker 1 space on the corresponding track.
+
+Your team controls a Catapult Tower whenever the Control points sum of all your team's characters in that Tower's control area (see picture on p. 15) exceeds the Control points sum of all your opponents' characters there (including the Control points of Stunned characters). If your team's Control points sum is equal to your opponents' Control points sum, the Tower does not fire.
+
+Note! During the Control phase, only the Catapult Towers under the current team's control may fire.
+
+On the Four-Way Crossing field, each of the 2 "Vertical" Catapult Towers' control areas consists of 2 adjacent hexes, and each of the 2 "Horizontal" Catapult Towers' control areas consists of 3 adjacent hexes.
+
+The Second Team's Turn
+
+After the First team has performed the Control phase, the Second team takes their turn and performs the same 3 phases in the same order, starting with the Time phase.
+
+End of the Round
+
+After the Second team has performed 3 phases, the round is over. At the beginning of the next round, the Timekeeper rotates the Time Dial 1 sector clockwise.
+
+End of the Game (Four-Player)
+The game ends immediately when one team's Castle marker reaches the last space of the corresponding track. The players of the other team are declared the winners.
+
+Two-Player Game on the Four-Way Crossing Field
+Follow the four-player game rules but pick 4 characters and choose 2 Castles, your opponent does the same. At the beginning of the game, "bind" your 2 characters to 1 of your Castles to indicate in which Castle hex your characters will be re-summoned when exiled.
+
+Your characters can move and be moved into both of your Castle hexes unless these hexes are already occupied.
+
+During the Ability phase, you may use any available Abilities of your characters in any order.
+
+Pre-Made Character Combinations
+Bestiary of Sigillum is a game of strategy and skill that offers a wide variety of characters. Learning how to play well involves learning the characters' potential strengths and weaknesses, and how they interact with each other. For the best learning experience, we recommend that novice summoners use pre-made character combinations.
+
+Choose any 2 bands below and start the game (see "Player Setup" on p. 7 for two-player game and p. 14 for four-player game).
+
+Saxum, Illesebra, Armus (+Arborus). These characters are able to increase allies' Defense and Stun enemies. Saxum deals an incredible amount of Injuries with each Defense Increase, while Illesebra can strike all Stunned enemies at once.
+Architectus, Malleus, Catapultus (+Vinctum). Control Increase makes it easier to control Towers, win Control ties and allows Architectus to deal more Injuries.
+Toxicum, Frigus, Messum (+Caballus). This is a band of Ranged characters. Mass negative effects is their major advantage, allowing Toxicum and Frigus to deal Injuries more often.
+Cornibus, Mortum, Cerberus (+Fidea). This band has great maneuverability, enough to control Towers on their first turn.
+Aqus, Ballistarius, Tempus (+Iratus). These Agility characters are able to increase their attack, which, combined with Swiftness, makes them truly impressive.
+Quick Reference
+Ability Ranges
+The target is the Ability bearer.
+The target is in an adjacent hex.
+The target is in an adjacent hex or the target is the Ability bearer.
+The targets are in any hexes in a straight line.
+The target is in any hex on the field.
+The target is in any hex on the field or the target is the Ability bearer.
+The target is in any hex 1 unoccupied hex away in a straight line.
+The target is in any hex in a straight line.
+See the Ability descriptions on the right for more details.
+
+Effect Markers
++1 Attack point
+−1 Attack point
++1 Defense point
+−1 Defense point
++1 Control point
+−1 Control point
+Attack + maneuver
+Cannot maneuver
+Maneuver into a hex in a straight line
+Get protection from Support Abilities
+Restore 1 Vitality point with an attack
+Cannot maneuver or use Abilities
+Cooldown takes +X rounds longer (X = number of Poison markers)
+Occupied hex
+Gameplay
+At the beginning of each round, the Timekeeper rotates the Time Dial 1 sector clockwise.
+
+1. Time Phase
+Return all your charged Ability tokens to your Character sheets. Return the shifted Core Ability tokens. Remove all effect markers that you placed in the previous round.
+
+2. Ability Phase
+Use any available Abilities of your non-Stunned characters in any order (alternating between teammates).
+
+Core Ability. Perform a maneuver OR an attack.
+
+Before using a Core Ability, shift its token to the respective symbol on the Character sheet.
+
+Maneuver: move this character into any adjacent unoccupied hex, except for the opponent's Castle hex.
+
+Attack: deal Injuries to each target equal to the difference between this character's Attack points and the target's number of Defense points.
+
+Support Abilities. Initiate a one-shot action or apply an effect to place the corresponding effect marker on the targeted hex or character's sheet.
+
+After you have used a Support Ability, calculate its cooldown and place its token into the respective sector on the Sigil of Time.
+
+3. Control Phase
+Calculate the Control points sum of the allies and enemies (including Stunned characters) in each Catapult Tower's control area. For each Tower under allied control, your opponent advances their Castle marker 1 space on the corresponding track.
+
+End of the Round
+After both players (teams) have performed the 3 phases, the next round begins.

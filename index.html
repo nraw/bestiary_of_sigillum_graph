@@ -86,9 +86,13 @@
             <h1 class="title">Bestiary of Sigillum</h1>
             <p class="subtitle">Interactive Hero Network Visualization</p>
         </div>
+        <nav class="tabs" role="tablist" aria-label="Views">
+            <button class="tab" role="tab" type="button" id="tabGraph" aria-controls="graphView" aria-selected="true">Graph</button>
+            <button class="tab" role="tab" type="button" id="tabDraft" aria-controls="draftView" aria-selected="false" tabindex="-1">Draft</button>
+        </nav>
     </header>
 
-    <main class="layout">
+    <main class="layout" id="graphView" role="tabpanel" aria-labelledby="tabGraph">
         <aside class="panel-column left-column" aria-label="Search and hero details">
             <section class="panel search-panel" aria-label="Search and filters">
                 <div class="search-box">
@@ -116,6 +120,7 @@
         <section class="graph-panel" aria-label="Network visualization">
             <div class="graph-toolbar" role="toolbar" aria-label="Graph controls">
                 <div class="toolbar-main">
+                <button class="btn btn-gold" type="button" id="backToDraft" hidden>← Back to draft</button>
                 <div class="graph-title" id="graphTitle" aria-live="polite">Hero Network</div>
                 <div class="btn-group">
                     <button class="icon-btn" type="button" data-action="zoom-in" aria-label="Zoom in" title="Zoom in (+)">
@@ -165,6 +170,133 @@
         </aside>
     </main>
 
+    <main class="draft-layout" id="draftView" role="tabpanel" aria-labelledby="tabDraft" hidden>
+        <aside class="panel draft-pool" aria-labelledby="poolHeading">
+            <h2 class="draft-heading" id="poolHeading">Hero Pool</h2>
+            <div class="search-box">
+                <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg>
+                <input type="search" id="poolSearch" placeholder="Search heroes, traits or roles…" autocomplete="off"
+                       aria-label="Search the hero pool">
+            </div>
+            <div class="chips" id="attributeFilter" role="group" aria-label="Filter by attribute"></div>
+            <div class="chips" id="roleFilter" role="group" aria-label="Filter by battle role"></div>
+            <div class="pool-toggles">
+                <label class="toggle"><input type="checkbox" id="fillsToggle"> Fills a missing role</label>
+                <label class="toggle"><input type="checkbox" id="unavailableToggle"> Show unavailable</label>
+            </div>
+            <div class="excluded" id="excludedBox">
+                <div class="mini-heading">
+                    <span id="excludedTitle">Excluded</span>
+                    <button class="link-btn" type="button" id="addExcluded">+ Exclude hero</button>
+                </div>
+                <div class="excluded-chips" id="excludedChips" data-drop="excluded"></div>
+            </div>
+            <div class="pool-count" id="poolCount" aria-live="polite"></div>
+            <div class="pool-grid" id="poolGrid" role="list"></div>
+        </aside>
+
+        <section class="panel draft-main" aria-label="Draft">
+            <div class="mode-switch" role="radiogroup" aria-label="Draft mode">
+                <button class="mode-btn" type="button" role="radio" data-mode="solo" aria-checked="true">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+                    Build my band<span class="mode-dot" hidden aria-label="(draft in progress)"></span>
+                </button>
+                <button class="mode-btn" type="button" role="radio" data-mode="two-player" aria-checked="false">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3.5"/><circle cx="16.5" cy="9" r="3"/><path d="M2 20c0-3.6 2.7-6.5 6-6.5s6 2.9 6 6.5M14 14.2c3.6-.6 7 1.9 7 5.8"/></svg>
+                    Two-player draft<span class="mode-dot" hidden aria-label="(draft in progress)"></span>
+                </button>
+            </div>
+
+            <div class="setup" id="twoPlayerSetup" hidden></div>
+            <ol class="sequence" id="sequence" aria-label="Draft order" hidden></ol>
+
+            <section class="draft-section" aria-labelledby="bandHeading">
+                <div class="section-head">
+                    <h2 class="draft-heading" id="bandHeading">Your Band</h2>
+                    <span class="hint" title="The first hero you pick starts on your Castle hex; the next enters only when it is empty.">Pick order matters in game ⓘ</span>
+                    <div class="head-actions">
+                        <button class="btn btn-ghost" type="button" id="undoBtn" title="Undo (Ctrl/⌘+Z)">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Undo
+                        </button>
+                        <button class="btn btn-ghost" type="button" id="resetBtn">Reset</button>
+                    </div>
+                </div>
+                <div class="slots" id="bandSlots"></div>
+            </section>
+
+            <section class="draft-section" aria-labelledby="againstHeading">
+                <div class="section-head">
+                    <h2 class="draft-heading draft-heading--enemy" id="againstHeading">Against</h2>
+                    <span class="hint" id="againstHint">Heroes you expect to face</span>
+                    <div class="head-actions">
+                        <button class="link-btn" type="button" id="addEnemy">+ Add enemy</button>
+                    </div>
+                </div>
+                <div class="against" id="againstRow" data-drop="enemies"></div>
+                <div class="bans-row" id="bansRow" hidden></div>
+            </section>
+
+            <section class="draft-section" aria-labelledby="suggestHeading">
+                <div class="section-head">
+                    <h2 class="draft-heading" id="suggestHeading">Next Pick</h2>
+                    <span class="hint" id="stepLabel"></span>
+                    <div class="head-actions">
+                        <label class="toggle" id="opponentToggleWrap" hidden><input type="checkbox" id="opponentToggle"> What would they want?</label>
+                        <button class="link-btn" type="button" id="allSuggestions"></button>
+                    </div>
+                </div>
+                <p class="intro" id="draftIntro" hidden></p>
+                <ol class="suggestions-list" id="suggestionList"></ol>
+            </section>
+
+            <section class="draft-section" id="completionSection" aria-labelledby="completionHeading" hidden>
+                <div class="section-head">
+                    <h2 class="draft-heading" id="completionHeading">Complete Your Band</h2>
+                    <span class="hint" id="completionHint"></span>
+                </div>
+                <div class="completions" id="completionList"></div>
+            </section>
+        </section>
+
+        <aside class="panel draft-analysis" aria-labelledby="analysisHeading">
+            <h2 class="draft-heading" id="analysisHeading">Band Analysis</h2>
+            <section class="analysis-block" aria-labelledby="balanceHeading">
+                <h3 class="mini-heading" id="balanceHeading">Team balance</h3>
+                <p class="analysis-sub" id="balanceSummary"></p>
+                <ul class="role-list" id="roleList"></ul>
+            </section>
+            <section class="analysis-block" aria-labelledby="scoreHeading">
+                <h3 class="mini-heading" id="scoreHeading">Band score</h3>
+                <p class="analysis-sub" id="scoreCaption"></p>
+                <p class="band-score" id="bandScore"></p>
+                <div class="score-bar" aria-hidden="true"><span id="scoreBar"></span></div>
+                <p class="analysis-sub" id="scoreDetail"></p>
+            </section>
+            <section class="analysis-block" id="threatBlock" aria-labelledby="threatHeading" hidden>
+                <h3 class="mini-heading" id="threatHeading">Threats from Against</h3>
+                <ul class="reason-list" id="threatList"></ul>
+            </section>
+            <section class="analysis-block" id="synergyBlock" aria-labelledby="synergyHeading" hidden>
+                <h3 class="mini-heading" id="synergyHeading">Synergy in band</h3>
+                <ul class="reason-list" id="synergyList"></ul>
+            </section>
+            <button class="btn btn-ghost view-graph" type="button" id="viewInGraph">View band in graph →</button>
+        </aside>
+
+        <div class="sr-only" id="draftLive" aria-live="polite"></div>
+        <div class="card-menu" id="cardMenu" role="menu" hidden></div>
+        <div class="toast" id="draftToast" role="status" hidden></div>
+    </main>
+
+    <dialog class="hero-picker" id="heroPicker" aria-labelledby="pickerTitle">
+        <form method="dialog" class="picker-head">
+            <h2 class="draft-heading" id="pickerTitle">Choose a hero</h2>
+            <button class="icon-btn" value="cancel" aria-label="Close">✕</button>
+        </form>
+        <input type="search" id="pickerSearch" placeholder="Search heroes…" aria-label="Search heroes" autocomplete="off">
+        <div class="picker-grid" id="pickerGrid"></div>
+    </dialog>
+
     <footer class="footer">
         <p>© 2025 nraw · Unofficial work based on the Bestiary of Sigillum. All rights to the original game belong to
             <a href="https://www.intaglyph.ru" target="_blank" rel="noopener noreferrer">Intaglyph</a>.</p>
@@ -174,6 +306,9 @@
     <script src="search.js"></script>
     <script src="graph-logic.js"></script>
     <script src="synergy.js"></script>
+    <script src="draft.js"></script>
+    <script src="draft-view.js"></script>
     <script src="script.js"></script>
+    <script src="draft-ui.js"></script>
 </body>
 </html>

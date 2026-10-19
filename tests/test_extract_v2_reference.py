@@ -247,3 +247,41 @@ def test_real_pdf_ranges(pdf_cards):
     assert by_name["FLUIDITY"] == "any_hex"
     assert by_name["RECONSTRUCTION"] is None  # targets the castle: no range symbol on the card
     assert sum(r is None for r in by_name.values()) == 26
+
+
+def test_classify_attribute_maps_banner_fills_to_attributes():
+    assert ev2.classify_attribute((0.93, 0.11, 0.14)) == "Strength"
+    assert ev2.classify_attribute((0.05, 0.58, 0.27)) == "Agility"
+    assert ev2.classify_attribute((0.0, 0.44, 0.31)) == "Agility"  # Eresida's darker green
+    assert ev2.classify_attribute((0.0, 0.36, 0.62)) == "Intelligence"
+    with pytest.raises(ValueError):
+        ev2.classify_attribute((0.5, 0.5, 0.5))
+
+
+def test_banner_attribute_uses_the_fill_drawn_last():
+    # Some banners are a red base with the real colour painted over it
+    drawings = [{"seqno": 2, "fill": (0.0, 0.36, 0.62)}, {"seqno": 1, "fill": (0.93, 0.11, 0.14)}]
+    assert ev2.banner_attribute(drawings) == "Intelligence"
+    with pytest.raises(ValueError):
+        ev2.banner_attribute([])
+
+
+def test_merge_into_json_adds_attribute():
+    data = {"bestiary_of_sigillum": {"characters": [
+        {"id": 1, "name": "ARCHITECTUS", "core_ability": {"target": "t"},
+         "support_abilities": [{"target": "a"}, {"target": "b"}]},
+    ]}}
+    card = ev2.parse_card(synthetic_card(), SYNTHETIC_ICONS)
+    card["attribute"] = "Strength"
+    ev2.merge_into_json(data, [card])
+    assert data["bestiary_of_sigillum"]["characters"][0]["attribute"] == "Strength"
+
+
+def test_real_pdf_attributes(pdf_cards):
+    from collections import Counter
+    by_name = {c["name"]: c["attribute"] for c in pdf_cards}
+    assert Counter(by_name.values()) == {"Strength": 12, "Agility": 12, "Intelligence": 12}
+    # Header colours on the community combinations sheet
+    assert by_name["AQUS"] == by_name["TEMPUS"] == by_name["ERESIDA"] == by_name["EQUITA"] == "Agility"
+    assert by_name["SAXUM"] == by_name["BREWUS"] == by_name["MECHANICUS"] == "Strength"
+    assert by_name["FRIGUS"] == by_name["MAGNUS"] == by_name["ILLESEBRA"] == by_name["LIBRORUM"] == "Intelligence"
