@@ -171,19 +171,20 @@
     </main>
 
     <main class="draft-layout" id="draftView" role="tabpanel" aria-labelledby="tabDraft" hidden>
-        <aside class="panel draft-pool" aria-labelledby="poolHeading">
-            <h2 class="draft-heading" id="poolHeading">Hero Pool</h2>
-            <div class="search-box">
-                <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg>
-                <input type="search" id="poolSearch" placeholder="Search heroes, traits or roles…" autocomplete="off"
-                       aria-label="Search the hero pool">
+        <section class="panel draft-main" aria-label="Draft">
+            <div class="mode-switch" role="radiogroup" aria-label="Draft mode">
+                <button class="mode-btn" type="button" role="radio" data-mode="two-player" aria-checked="true">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3.5"/><circle cx="16.5" cy="9" r="3"/><path d="M2 20c0-3.6 2.7-6.5 6-6.5s6 2.9 6 6.5M14 14.2c3.6-.6 7 1.9 7 5.8"/></svg>
+                    Two-player draft<span class="mode-dot" hidden aria-label="(draft in progress)"></span>
+                </button>
+                <button class="mode-btn" type="button" role="radio" data-mode="solo" aria-checked="false">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+                    Build my band<span class="mode-dot" hidden aria-label="(draft in progress)"></span>
+                </button>
             </div>
-            <div class="chips" id="attributeFilter" role="group" aria-label="Filter by attribute"></div>
-            <div class="chips" id="roleFilter" role="group" aria-label="Filter by battle role"></div>
-            <div class="pool-toggles">
-                <label class="toggle"><input type="checkbox" id="fillsToggle"> Fills a missing role</label>
-                <label class="toggle"><input type="checkbox" id="unavailableToggle"> Show unavailable</label>
-            </div>
+
+            <div class="setup" id="twoPlayerSetup" hidden></div>
+            <ol class="sequence" id="sequence" aria-label="Draft order" hidden></ol>
             <div class="excluded" id="excludedBox">
                 <div class="mini-heading">
                     <span id="excludedTitle">Excluded</span>
@@ -191,29 +192,12 @@
                 </div>
                 <div class="excluded-chips" id="excludedChips" data-drop="excluded"></div>
             </div>
-            <div class="pool-count" id="poolCount" aria-live="polite"></div>
-            <div class="pool-grid" id="poolGrid" role="list"></div>
-        </aside>
 
-        <section class="panel draft-main" aria-label="Draft">
-            <div class="mode-switch" role="radiogroup" aria-label="Draft mode">
-                <button class="mode-btn" type="button" role="radio" data-mode="solo" aria-checked="true">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
-                    Build my band<span class="mode-dot" hidden aria-label="(draft in progress)"></span>
-                </button>
-                <button class="mode-btn" type="button" role="radio" data-mode="two-player" aria-checked="false">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3.5"/><circle cx="16.5" cy="9" r="3"/><path d="M2 20c0-3.6 2.7-6.5 6-6.5s6 2.9 6 6.5M14 14.2c3.6-.6 7 1.9 7 5.8"/></svg>
-                    Two-player draft<span class="mode-dot" hidden aria-label="(draft in progress)"></span>
-                </button>
-            </div>
-
-            <div class="setup" id="twoPlayerSetup" hidden></div>
-            <ol class="sequence" id="sequence" aria-label="Draft order" hidden></ol>
-
-            <section class="draft-section" aria-labelledby="bandHeading">
+            <section class="draft-section" id="bandSection" aria-labelledby="bandHeading">
                 <div class="section-head">
                     <h2 class="draft-heading" id="bandHeading">Your Band</h2>
-                    <span class="hint" title="The first hero you pick starts on your Castle hex; the next enters only when it is empty.">Pick order matters in game ⓘ</span>
+                    <span class="turn-tag" id="bandTurn" hidden></span>
+                    <span class="hint" title="The first hero picked starts on the Castle hex; the next enters only when it is empty.">Pick order matters in game ⓘ</span>
                     <div class="head-actions">
                         <button class="btn btn-ghost" type="button" id="undoBtn" title="Undo (Ctrl/⌘+Z)">
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Undo
@@ -224,29 +208,16 @@
                 <div class="slots" id="bandSlots"></div>
             </section>
 
-            <section class="draft-section" aria-labelledby="againstHeading">
+            <section class="draft-section" id="againstSection" aria-labelledby="againstHeading">
                 <div class="section-head">
                     <h2 class="draft-heading draft-heading--enemy" id="againstHeading">Against</h2>
+                    <span class="turn-tag" id="againstTurn" hidden></span>
                     <span class="hint" id="againstHint">Heroes you expect to face</span>
                     <div class="head-actions">
                         <button class="link-btn" type="button" id="addEnemy">+ Add enemy</button>
                     </div>
                 </div>
                 <div class="against" id="againstRow" data-drop="enemies"></div>
-                <div class="bans-row" id="bansRow" hidden></div>
-            </section>
-
-            <section class="draft-section" aria-labelledby="suggestHeading">
-                <div class="section-head">
-                    <h2 class="draft-heading" id="suggestHeading">Next Pick</h2>
-                    <span class="hint" id="stepLabel"></span>
-                    <div class="head-actions">
-                        <label class="toggle" id="opponentToggleWrap" hidden><input type="checkbox" id="opponentToggle"> What would they want?</label>
-                        <button class="link-btn" type="button" id="allSuggestions"></button>
-                    </div>
-                </div>
-                <p class="intro" id="draftIntro" hidden></p>
-                <ol class="suggestions-list" id="suggestionList"></ol>
             </section>
 
             <section class="draft-section" id="completionSection" aria-labelledby="completionHeading" hidden>
@@ -258,8 +229,44 @@
             </section>
         </section>
 
+        <aside class="panel draft-pool" aria-labelledby="poolHeading">
+            <div class="pool-head">
+                <h2 class="draft-heading" id="poolHeading">Hero Pool</h2>
+                <span class="step-badge" id="stepLabel" aria-live="polite"></span>
+            </div>
+            <p class="intro" id="draftIntro" hidden></p>
+            <div class="search-box">
+                <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg>
+                <input type="search" id="poolSearch" placeholder="Search heroes, traits or roles…" autocomplete="off"
+                       aria-label="Search the hero pool">
+            </div>
+            <div class="chips" id="attributeFilter" role="group" aria-label="Filter by attribute"></div>
+            <div class="chips" id="roleFilter" role="group" aria-label="Filter by battle role"></div>
+            <div class="pool-toggles">
+                <label class="toggle"><input type="checkbox" id="fillsToggle"> Fills a missing role</label>
+                <label class="toggle"><input type="checkbox" id="unavailableToggle"> Show unavailable</label>
+            </div>
+            <div class="pool-bar">
+                <span class="pool-count" id="poolCount" aria-live="polite"></span>
+                <div class="sort-switch" role="radiogroup" aria-label="Sort heroes">
+                    <button type="button" role="radio" data-sort="recommended" aria-checked="true">Recommended</button>
+                    <button type="button" role="radio" data-sort="name" aria-checked="false">A–Z</button>
+                </div>
+            </div>
+            <div class="pool-grid" id="poolGrid" role="list"></div>
+        </aside>
+
         <aside class="panel draft-analysis" aria-labelledby="analysisHeading">
             <h2 class="draft-heading" id="analysisHeading">Band Analysis</h2>
+            <div class="player-switch" id="focusSwitch" role="radiogroup" aria-label="Analyse the band of" hidden>
+                <button type="button" role="radio" data-focus="1" aria-checked="true">Player 1</button>
+                <button type="button" role="radio" data-focus="2" aria-checked="false">Player 2</button>
+            </div>
+            <section class="analysis-block why-block" id="whyBlock" aria-labelledby="whyHeading" hidden>
+                <h3 class="mini-heading" id="whyHeading"></h3>
+                <p class="analysis-sub" id="whySummary"></p>
+                <ul class="reason-list" id="whyList"></ul>
+            </section>
             <section class="analysis-block" aria-labelledby="balanceHeading">
                 <h3 class="mini-heading" id="balanceHeading">Team balance</h3>
                 <p class="analysis-sub" id="balanceSummary"></p>

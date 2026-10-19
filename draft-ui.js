@@ -14,7 +14,7 @@
         'ban-first': { label: 'Ban phase first', hint: 'Each player bans 3, alternating, then picks' },
         interleaved: { label: 'Interleaved', hint: 'Ban 1 each, pick 1 each, three times' }
     };
-    const REASON_BADGE = { picked: 'Picked', facing: 'Facing', excluded: 'Excluded', banned: 'Banned' };
+    const REASON_BADGE = { picked: 'Picked', facing: 'Facing', excluded: 'Excluded', banned: 'Banned', player1: 'Player 1', player2: 'Player 2' };
 
     const ICON = {
         Strength: '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M12 8v8M8.5 12h7"/>',
@@ -31,12 +31,11 @@
     let lastReset = null;
     const ui = {
         tab: 'graph',
-        mode: 'solo',
+        mode: 'two-player',
         states: { solo: Draft.createDraft('solo'), 'two-player': Draft.createDraft('standard') },
-        filters: { term: '', attribute: 'All', role: null, fills: false, showUnavailable: false },
-        showAll: false,
-        showOpponent: false,
-        expanded: null,
+        filters: { term: '', attribute: 'All', roles: [], fills: false, showUnavailable: false }, // roles combine with OR
+        sort: 'recommended',
+        focus: null, // two-player analysis: null follows whoever acts, or a chosen player
         picker: null
     };
 
@@ -76,7 +75,7 @@
             if (saved.states?.solo?.format === 'solo') ui.states.solo = saved.states.solo;
             const two = saved.states?.['two-player'];
             if (two && Draft.DRAFT_FORMATS.includes(two.format) && two.format !== 'solo') ui.states['two-player'] = two;
-            if (saved.mode === 'two-player') ui.mode = 'two-player';
+            if (saved.mode === 'solo' || saved.mode === 'two-player') ui.mode = saved.mode;
         } catch (error) {
             localStorage.removeItem(STORAGE_KEY);
         }
@@ -139,7 +138,9 @@
         $('roleFilter').addEventListener('click', event => {
             const chip = event.target.closest('[data-role]');
             if (!chip) return;
-            ui.filters.role = ui.filters.role === chip.dataset.role ? null : chip.dataset.role;
+            const role = chip.dataset.role;
+            const roles = ui.filters.roles;
+            ui.filters.roles = roles.includes(role) ? roles.filter(r => r !== role) : [...roles, role];
             renderPool();
         });
         $('poolSearch').addEventListener('input', event => { ui.filters.term = event.target.value; renderPool(); });
@@ -150,7 +151,6 @@
             const button = event.target.closest('[data-mode]');
             if (button && button.dataset.mode !== ui.mode) {
                 ui.mode = button.dataset.mode;
-                ui.expanded = null;
                 render();
             }
         });
@@ -158,18 +158,30 @@
         $('undoBtn').addEventListener('click', doUndo);
         $('resetBtn').addEventListener('click', doReset);
         $('addEnemy').addEventListener('click', () => openPicker('enemy'));
-        $('addExcluded').addEventListener('click', () => openPicker(solo() ? 'exclude' : 'carry'));
-        $('allSuggestions').addEventListener('click', () => { ui.showAll = !ui.showAll; render(); });
-        $('opponentToggle').addEventListener('change', event => { ui.showOpponent = event.target.checked; render(); });
+        $('addExcluded').addEventListener('click', () => openPicker('exclude'));
+        $('sequence').addEventListener('click', event => {
+            if (event.target.closest('[data-act="add-extra"]')) openPicker('carry');
+            const name = event.target.closest('[data-remove-extra]')?.dataset.removeExtra;
+            if (name) setCarryOver(state().carryOverBans.filter(n => n !== name));
+        });
+        document.querySelector('.sort-switch').addEventListener('click', event => {
+            const button = event.target.closest('[data-sort]');
+            if (button) { ui.sort = button.dataset.sort; renderStep(); renderPool(); }
+        });
+        $('focusSwitch').addEventListener('click', event => {
+            const button = event.target.closest('[data-focus]');
+            if (button) { ui.focus = Number(button.dataset.focus); render(); }
+        });
         $('viewInGraph').addEventListener('click', () => {
             setTab('graph');
-            window.BestiaryGraph?.showBand(Draft.myBand(state()), Draft.opponentBand(state()));
+            const bands = Draft.bands(state());
+            window.BestiaryGraph?.showBand(bands[view.focus], bands[view.focus === 1 ? 2 : 1]);
         });
 
         setupPool();
         setupSlots();
         setupAgainst();
-        setupSuggestions();
+        setupCompletions();
         setupPicker();
         setupMenu();
         setupKeys();
@@ -179,7 +191,7 @@
 
     function commit(next, message) {
         ui.states[ui.mode] = next;
-        ui.expanded = null;
+        ui.focus = null;
         render();
         if (message) announce(message);
     }
@@ -197,8 +209,8 @@
     function primaryAction(name) {
         const step = Draft.currentStep(state());
         if (!step) return;
-        const verb = step.player !== state().me ? `Opponent ${step.action === 'ban' ? 'banned' : 'picked'}`
-            : step.action === 'ban' ? 'Banned' : 'Added';
+        const done = step.action === 'ban' ? 'banned' : 'selected';
+        const verb = solo() ? done[0].toUpperCase() + done.slice(1) : `Player ${step.player} ${done}`;
         attempt(s => Draft.applyAction(s, name), () => `${verb} ${display(name)}. ${summary()}`);
     }
 
@@ -215,11 +227,10 @@
     }
 
     function doReset() {
-        const what = solo() ? 'Clear band, enemies and exclusions?' : 'Start a new two-player draft?';
-        if (!window.confirm(what)) return;
+        // No confirmation: the toast offers Undo instead
         lastReset = { mode: ui.mode, state: state() };
         const fresh = solo() ? Draft.createDraft('solo')
-            : Draft.createDraft(state().format, { me: state().me, carryOverBans: state().carryOverBans });
+            : Draft.createDraft(state().format, { carryOverBans: state().carryOverBans });
         commit(fresh, 'Cleared.');
         toast('Cleared.', { label: 'Undo', run: () => {
             if (!lastReset) return;
@@ -247,7 +258,7 @@
     // ---- Render --------------------------------------------------------------------------
 
     function render() {
-        view = draftView(state(), ctx, { limit: ui.showAll ? Infinity : 3, showOpponent: ui.showOpponent });
+        view = draftView(state(), ctx, { player: ui.focus });
         renderMode();
         renderSetup();
         renderSequence();
@@ -255,7 +266,8 @@
         renderExcluded();
         renderSlots(view);
         renderAgainst();
-        renderSuggestions();
+        renderStep();
+        showWhy(null);
         renderCompletions();
         renderAnalysis(view);
         $('undoBtn').disabled = Draft.undo(state()) === state();
@@ -268,7 +280,7 @@
         const key = heroes ? [].concat(heroes).join('|') : null;
         if (key === previewKey) return;
         previewKey = key;
-        const v = heroes ? draftView(state(), ctx, { preview: heroes, limit: 1 }) : view;
+        const v = heroes ? draftView(state(), ctx, { preview: heroes, player: ui.focus }) : view;
         renderSlots(v);
         renderAnalysis(v);
     }
@@ -291,8 +303,8 @@
         if (solo()) return;
         const s = state();
         if (s.history.length) {
-            el.innerHTML = `<p class="setup-summary">${FORMAT_INFO[s.format].label} · You are the
-                ${s.me === 1 ? 'First' : 'Second'} player${s.carryOverBans.length ? ` · ${s.carryOverBans.length} carried-over ban${s.carryOverBans.length > 1 ? 's' : ''}` : ''}</p>`;
+            el.innerHTML = `<p class="setup-summary">${FORMAT_INFO[s.format].label} · Player 1 starts${s.carryOverBans.length
+                ? ` · ${s.carryOverBans.length} carried-over ban${s.carryOverBans.length > 1 ? 's' : ''}` : ''}</p>`;
             return;
         }
         el.innerHTML = `
@@ -300,15 +312,10 @@
                 ${Object.entries(FORMAT_INFO).map(([id, f]) => `
                     <label class="radio-card"><input type="radio" name="format" value="${id}" ${s.format === id ? 'checked' : ''}>
                         <span><strong>${f.label}</strong><small>${f.hint}</small></span></label>`).join('')}
-            </fieldset>
-            <fieldset class="setup-group setup-group--seat"><legend>I am the</legend>
-                ${[1, 2].map(p => `<label class="radio-pill"><input type="radio" name="seat" value="${p}" ${s.me === p ? 'checked' : ''}>
-                    ${p === 1 ? 'First' : 'Second'} player</label>`).join('')}
             </fieldset>`;
         el.onchange = event => {
             const format = el.querySelector('[name=format]:checked').value;
-            const me = Number(el.querySelector('[name=seat]:checked').value);
-            commit(Draft.createDraft(format, { me, carryOverBans: state().carryOverBans }));
+            commit(Draft.createDraft(format, { carryOverBans: state().carryOverBans }));
             if (event.target.name) el.querySelector(`[name=${event.target.name}]:checked`).focus();
         };
     }
@@ -317,13 +324,22 @@
         const el = $('sequence');
         el.hidden = !view.sequence;
         if (!view.sequence) return;
-        el.innerHTML = view.sequence.map(s => `
-            <li class="seq-step seq--${s.status} ${s.mine ? 'seq--mine' : 'seq--theirs'} seq--${s.action}"
-                ${s.status === 'current' ? 'aria-current="step"' : ''}
-                title="${s.mine ? 'You' : 'Opponent'}: ${s.action}${s.hero ? ` · ${display(s.hero)}` : ''}">
-                <span class="seq-action">${s.action === 'ban' ? 'Ban' : 'Pick'}</span>
-                <span class="seq-who">${s.hero ? escapeHtml(display(s.hero)) : s.mine ? 'You' : 'Opp.'}</span>
+        // Extra (carry-over) bans lead the row; they can be changed until the draft starts
+        const editable = !state().history.length;
+        const extras = view.excluded.map(n => `
+            <li class="seq-step seq--extra" title="Extra ban: ${escapeHtml(display(n))}">
+                <span class="seq-action">Extra ban</span>
+                <span class="seq-who">${escapeHtml(display(n))}${editable
+                    ? ` <button type="button" class="seq-remove" data-remove-extra="${n}" aria-label="Remove extra ban ${escapeHtml(display(n))}">✕</button>` : ''}</span>
             </li>`).join('');
+        const add = editable ? '<li class="seq-add-item"><button type="button" class="seq-add" data-act="add-extra">+ Add extra bans</button></li>' : '';
+        el.innerHTML = extras + view.sequence.map(s => `
+            <li class="seq-step seq--${s.status} seq--p${s.player} seq--${s.action}"
+                ${s.status === 'current' ? 'aria-current="step"' : ''}
+                title="Player ${s.player}: ${s.action}${s.hero ? ` · ${display(s.hero)}` : ''}">
+                <span class="seq-action">P${s.player} ${s.action === 'ban' ? 'Ban' : 'Pick'}</span>
+                <span class="seq-who">${s.hero ? escapeHtml(display(s.hero)) : '—'}</span>
+            </li>`).join('') + add;
     }
 
     // ---- Pool ----------------------------------------------------------------------------
@@ -332,7 +348,7 @@
         const f = ui.filters;
         if (!entry.available && !f.showUnavailable) return false;
         if (f.attribute !== 'All' && entry.attribute !== f.attribute) return false;
-        if (f.role && !entry.battleRoles.includes(f.role)) return false;
+        if (f.roles.length && !f.roles.some(r => entry.battleRoles.includes(r))) return false;
         if (f.fills) {
             const missing = view.analysis.roles.filter(r => !r.coveredBy).map(r => r.role);
             if (!entry.battleRoles.some(r => missing.includes(r))) return false;
@@ -344,25 +360,39 @@
             .some(text => text.toLowerCase().includes(term));
     }
 
+    // Same verbs for both players: Select (pick) and Ban; Player 2's turn is marked in crimson
+    const p2Turn = () => !solo() && view.step.player === 2;
     function poolCorner(entry) {
         if (!entry.available || !view.step.action) return '';
-        if (!view.step.mine) return '<span class="tile-corner tile-corner--record" aria-hidden="true">●</span>';
-        return `<span class="tile-corner" aria-hidden="true">${view.step.action === 'ban' ? '⊘' : '+'}</span>`;
+        return `<span class="tile-corner${p2Turn() ? ' tile-corner--p2' : ''}" aria-hidden="true">${view.step.action === 'ban' ? '⊘' : '+'}</span>`;
     }
 
     function primaryLabel(entry) {
         if (!entry.available) return `${entry.display}: ${REASON_BADGE[entry.unavailableReason]}`;
         if (!view.step.action) return entry.display;
-        if (!view.step.mine) return `Record ${entry.display} as the opponent's ${view.step.action}`;
-        return view.step.action === 'ban' ? `Ban ${entry.display}` : `Add ${entry.display} to your band`;
+        const verb = view.step.action === 'ban' ? 'Ban' : 'Select';
+        return `${verb} ${entry.display}${solo() ? '' : ` for Player ${view.step.player}`}`;
+    }
+
+    function sortPool(entries) {
+        if (ui.sort !== 'recommended' || !view.suggestions.items.length) return entries;
+        const rank = e => (e.suggestion ? e.suggestion.rank : Infinity);
+        return [...entries].sort((a, b) => rank(a) - rank(b) || a.id - b.id);
+    }
+
+    function tileRank(entry) {
+        const s = entry.suggestion;
+        if (!s || ui.sort !== 'recommended') return '';
+        return `<span class="tile-rank${s.rank <= 3 ? ' is-top' : ''}" title="Rank ${s.rank}; best band with this hero: ${s.percentLabel}">
+            #${s.rank} · ${s.percentLabel}</span>`;
     }
 
     function renderPool() {
         document.querySelectorAll('#attributeFilter .chip').forEach(c =>
             c.setAttribute('aria-pressed', String(c.dataset.attribute === ui.filters.attribute)));
         document.querySelectorAll('#roleFilter .chip').forEach(c =>
-            c.setAttribute('aria-pressed', String(c.dataset.role === ui.filters.role)));
-        const entries = view.pool.filter(poolFilter);
+            c.setAttribute('aria-pressed', String(ui.filters.roles.includes(c.dataset.role))));
+        const entries = sortPool(view.pool.filter(poolFilter));
         $('poolCount').textContent = `${view.counts.available} available · ${view.counts.unavailable} unavailable`
             + (entries.length < (ui.filters.showUnavailable ? 36 : view.counts.available) ? ` · ${entries.length} shown` : '');
         if (!entries.length) {
@@ -371,7 +401,7 @@
             return;
         }
         $('poolGrid').innerHTML = entries.map(e => `
-            <div class="hero-tile attr--${e.attribute}${e.available ? '' : ` is-unavailable is-${e.unavailableReason}`}${view.step.mine ? '' : ' is-recording'}"
+            <div class="hero-tile attr--${e.attribute}${e.available ? '' : ` is-unavailable is-${e.unavailableReason}`}${e.suggestion && e.suggestion.rank <= 3 && ui.sort === 'recommended' ? ' is-top' : ''}"
                  role="listitem" data-hero="${e.name}" ${e.available ? 'draggable="true"' : ''}>
                 <button class="tile-main" type="button" data-act="primary" aria-label="${escapeHtml(primaryLabel(e))}"
                         ${e.available && view.step.action ? '' : 'aria-disabled="true"'}>
@@ -380,6 +410,7 @@
                     <span class="tile-name">${escapeHtml(e.display)}</span>
                     ${rolePills(e.battleRoles)}
                     <span class="tile-size">${e.size}</span>
+                    ${tileRank(e)}
                     ${e.available ? '' : `<span class="tile-badge">${REASON_BADGE[e.unavailableReason]}</span>`}
                 </button>
                 ${poolCorner(e)}
@@ -392,7 +423,7 @@
         const grid = $('poolGrid');
         grid.addEventListener('click', event => {
             if (event.target.closest('[data-act="clear-filters"]')) {
-                Object.assign(ui.filters, { term: '', attribute: 'All', role: null, fills: false });
+                Object.assign(ui.filters, { term: '', attribute: 'All', roles: [], fills: false });
                 $('poolSearch').value = '';
                 $('fillsToggle').checked = false;
                 renderPool();
@@ -412,13 +443,15 @@
         });
         const hover = event => {
             const tile = event.target.closest('[data-hero]');
-            const pickable = tile && view.step.mine && view.step.action === 'pick' && Draft.isAvailable(state(), tile.dataset.hero);
+            const pickable = tile && view.step.action === 'pick' && Draft.isAvailable(state(), tile.dataset.hero);
             preview(pickable ? tile.dataset.hero : null);
+            showWhy(tile ? tile.dataset.hero : null);
         };
+        const leave = () => { preview(null); showWhy(null); };
         grid.addEventListener('mouseover', hover);
         grid.addEventListener('focusin', hover);
-        grid.addEventListener('mouseleave', () => preview(null));
-        grid.addEventListener('focusout', event => { if (!grid.contains(event.relatedTarget)) preview(null); });
+        grid.addEventListener('mouseleave', leave);
+        grid.addEventListener('focusout', event => { if (!grid.contains(event.relatedTarget)) leave(); });
         grid.addEventListener('dragstart', event => {
             const tile = event.target.closest('[data-hero]');
             if (!tile) return;
@@ -429,8 +462,8 @@
 
     function renderExcluded() {
         const list = view.excluded;
-        const editable = solo() || !state().history.length;
-        $('excludedBox').hidden = !solo() && !editable && !list.length;
+        const editable = solo();
+        $('excludedBox').hidden = !solo(); // two-player extra bans live in the turn tracker
         $('excludedTitle').textContent = solo() ? 'Excluded' : 'Carry-over bans';
         $('addExcluded').hidden = !editable;
         $('addExcluded').textContent = solo() ? '+ Exclude hero' : '+ Add ban';
@@ -442,36 +475,51 @@
 
     // ---- Band slots ----------------------------------------------------------------------
 
-    function renderSlots(v) {
-        const editable = solo();
-        $('bandSlots').innerHTML = v.slots.map(slot => {
-            if (!slot.hero) {
-                return `<div class="slot is-empty" data-slot="${slot.index}" data-drop="slot">
-                    <span class="slot-num">${slot.index + 1}</span>
-                    <button class="slot-add" type="button" data-act="choose" ${v.step.mine && v.step.action === 'pick' ? '' : 'disabled'}>
-                        <span class="slot-plus" aria-hidden="true">+</span>Choose ${['1st', '2nd', '3rd'][slot.index]} hero</button>
-                </div>`;
-            }
-            const hero = heroOf(slot.hero);
-            const roles = Draft.battleRoles(hero);
-            const canEdit = editable && !slot.preview;
-            return `<div class="slot attr--${hero.attribute}${slot.preview ? ' is-preview' : ''}" data-slot="${slot.index}"
-                        data-hero="${slot.hero}" data-drop="slot" ${canEdit ? 'draggable="true" tabindex="0"' : ''}
-                        aria-label="${slot.index + 1}. ${escapeHtml(display(slot.hero))}${slot.preview ? ' (preview)' : ''}">
+    function slotHtml(slot, { editable, choosable, count }) {
+        if (!slot.hero) {
+            return `<div class="slot is-empty" data-slot="${slot.index}" data-drop="slot">
                 <span class="slot-num">${slot.index + 1}</span>
-                ${banner(hero.attribute)}
-                ${slot.preview ? '<span class="slot-ribbon">Preview</span>' : ''}
-                ${canEdit ? `<button class="slot-remove" type="button" data-act="remove" aria-label="Remove ${escapeHtml(display(slot.hero))}">✕</button>` : ''}
-                ${portrait(slot.hero, 'slot-portrait')}
-                <span class="slot-name">${escapeHtml(display(slot.hero))}</span>
-                ${rolePills(roles)}
-                ${slot.startsOnCastle ? '<span class="slot-castle">1st pick · Starts on Castle</span>' : ''}
-                ${canEdit ? `<span class="slot-move">
-                    <button type="button" data-act="left" aria-label="Move ${escapeHtml(display(slot.hero))} earlier" ${slot.index === 0 ? 'disabled' : ''}>◀</button>
-                    <button type="button" data-act="right" aria-label="Move ${escapeHtml(display(slot.hero))} later" ${slot.index >= Draft.myBand(state()).length - 1 ? 'disabled' : ''}>▶</button>
-                </span>` : ''}
+                <button class="slot-add" type="button" data-act="choose" ${choosable ? '' : 'disabled'}>
+                    <span class="slot-plus" aria-hidden="true">+</span>Choose ${['1st', '2nd', '3rd'][slot.index]} hero</button>
             </div>`;
-        }).join('');
+        }
+        const hero = heroOf(slot.hero);
+        const canEdit = editable && !slot.preview;
+        return `<div class="slot attr--${hero.attribute}${slot.preview ? ' is-preview' : ''}" data-slot="${slot.index}"
+                    data-hero="${slot.hero}" data-drop="slot" ${canEdit ? 'draggable="true" tabindex="0"' : ''}
+                    aria-label="${slot.index + 1}. ${escapeHtml(display(slot.hero))}${slot.preview ? ' (preview)' : ''}">
+            <span class="slot-num">${slot.index + 1}</span>
+            ${banner(hero.attribute)}
+            ${slot.preview ? '<span class="slot-ribbon">Preview</span>' : ''}
+            ${canEdit ? `<button class="slot-remove" type="button" data-act="remove" aria-label="Remove ${escapeHtml(display(slot.hero))}">✕</button>` : ''}
+            ${portrait(slot.hero, 'slot-portrait')}
+            <span class="slot-name">${escapeHtml(display(slot.hero))}</span>
+            ${rolePills(Draft.battleRoles(hero))}
+            ${slot.startsOnCastle ? '<span class="slot-castle">1st pick · Starts on Castle</span>' : ''}
+            ${canEdit ? `<span class="slot-move">
+                <button type="button" data-act="left" aria-label="Move ${escapeHtml(display(slot.hero))} earlier" ${slot.index === 0 ? 'disabled' : ''}>◀</button>
+                <button type="button" data-act="right" aria-label="Move ${escapeHtml(display(slot.hero))} later" ${slot.index >= count - 1 ? 'disabled' : ''}>▶</button>
+            </span>` : ''}
+        </div>`;
+    }
+
+    // Solo: your band (editable). Two-player: Player 1 here and Player 2 in the second section.
+    function renderSlots(v) {
+        const picking = v.step.action === 'pick';
+        if (v.mode === 'solo') {
+            const count = v.slots.filter(x => x.hero && !x.preview).length;
+            $('bandSlots').innerHTML = v.slots.map(x => slotHtml(x, { editable: true, choosable: picking, count })).join('');
+            return;
+        }
+        const row = p => p.slots.map(x => slotHtml(x, { editable: false, choosable: picking && p.acting })).join('');
+        $('bandSlots').innerHTML = row(v.players[0]);
+        $('againstRow').innerHTML = row(v.players[1]);
+        [['bandSection', 'bandTurn', v.players[0]], ['againstSection', 'againstTurn', v.players[1]]].forEach(([section, tag, p]) => {
+            $(section).classList.toggle('is-acting', p.acting);
+            $(section).classList.toggle('is-p2', p.player === 2);
+            $(tag).hidden = !p.acting;
+            $(tag).textContent = p.acting ? (v.step.action === 'ban' ? 'Banning now' : 'Picking now') : '';
+        });
     }
 
     function moveSlot(index, delta) {
@@ -491,7 +539,7 @@
             else if (act === 'left') moveSlot(index, -1);
             else if (act === 'right') moveSlot(index, 1);
             else if (act === 'choose') {
-                const first = document.querySelector('#suggestionList [data-act="add"]');
+                const first = document.querySelector('#poolGrid .hero-tile:not(.is-unavailable) .tile-main');
                 if (first) first.focus(); else openPicker('pick');
             }
         });
@@ -502,7 +550,7 @@
                 event.preventDefault();
                 const index = Number(slot.dataset.slot);
                 const to = index + (event.key === 'ArrowLeft' ? -1 : 1);
-                if (to >= 0 && to < Draft.myBand(state()).length) moveSlot(index, to - index);
+                if (to >= 0 && to < state().band.length) moveSlot(index, to - index);
             }
         });
         slots.addEventListener('dragstart', event => {
@@ -514,7 +562,7 @@
             if (data.slot !== undefined && target && target.dataset.hero) {
                 const to = Number(target.dataset.slot);
                 if (to !== Number(data.slot)) attempt(s => Draft.movePick(s, Number(data.slot), to), 'Band reordered.');
-            } else if (data.hero && view.step.mine && view.step.action === 'pick') {
+            } else if (data.hero && view.step.action === 'pick') {
                 primaryAction(data.hero);
             }
         });
@@ -542,35 +590,35 @@
     // ---- Against row and bans ------------------------------------------------------------
 
     function renderAgainst() {
-        const list = view.against;
-        $('againstHeading').textContent = solo() ? 'Against' : 'Opponent';
-        $('againstHint').textContent = solo() ? 'Heroes you expect to face' : 'Their band, in pick order';
-        $('addEnemy').hidden = !solo() || list.length >= 3;
-        $('againstRow').innerHTML = list.length
-            ? list.map((n, i) => {
+        $('bandHeading').textContent = solo() ? 'Your Band' : 'Player 1';
+        $('againstHeading').textContent = solo() ? 'Against' : 'Player 2';
+        $('againstHeading').classList.toggle('draft-heading--enemy', solo());
+        $('againstHint').textContent = solo() ? 'Heroes you expect to face' : '';
+        $('againstRow').classList.toggle('slots', !solo());
+        $('addEnemy').hidden = !solo() || view.against.length >= 3;
+        if (!solo()) return; // Player 2's band is drawn by renderSlots
+        ['bandSection', 'againstSection'].forEach(id => $(id).classList.remove('is-acting', 'is-p2'));
+        ['bandTurn', 'againstTurn'].forEach(id => { $(id).hidden = true; });
+        $('againstRow').innerHTML = view.against.length
+            ? view.against.map(n => {
                 const hero = heroOf(n);
                 return `<div class="enemy-card attr--${hero.attribute}">
                     ${banner(hero.attribute)}
-                    ${solo() ? `<button class="slot-remove" type="button" data-remove="${n}" aria-label="Stop facing ${escapeHtml(display(n))}">✕</button>`
-                        : `<span class="slot-num">${i + 1}</span>`}
+                    <button class="slot-remove" type="button" data-remove="${n}" aria-label="Stop facing ${escapeHtml(display(n))}">✕</button>
                     ${portrait(n, 'enemy-portrait')}
-                    <span class="enemy-name"><span class="enemy-mark" aria-hidden="true">⚔</span> ${escapeHtml(display(n))}</span>
+                    <span class="enemy-name">${icon('Attacker', 'ico enemy-mark')} ${escapeHtml(display(n))}</span>
                     ${rolePills(Draft.battleRoles(hero))}
                 </div>`;
             }).join('')
-            : `<p class="empty-note">${solo() ? 'Add heroes you expect to face to get counter-picks.' : 'The opponent has not picked yet.'}</p>`;
-
-        const bansRow = $('bansRow');
-        bansRow.hidden = solo() || !view.bans || !(view.bans.mine.length || view.bans.theirs.length);
-        if (!bansRow.hidden) {
-            const chips = list => list.map(n => `<span class="ex-chip is-banned">${escapeHtml(display(n))}</span>`).join('') || '<span class="muted">—</span>';
-            bansRow.innerHTML = `<div><span class="mini-heading">Your bans</span>${chips(view.bans.mine)}</div>
-                <div><span class="mini-heading">Their bans</span>${chips(view.bans.theirs)}</div>`;
-        }
+            : '<p class="empty-note">Add heroes you expect to face to get counter-picks.</p>';
     }
 
     function setupAgainst() {
         $('againstRow').addEventListener('click', event => {
+            if (event.target.closest('[data-act="choose"]')) {
+                document.querySelector('#poolGrid .hero-tile:not(.is-unavailable) .tile-main')?.focus();
+                return;
+            }
             const name = event.target.closest('[data-remove]')?.dataset.remove;
             if (name) attempt(s => Draft.setEnemies(s, s.enemies.filter(n => n !== name)), `No longer facing ${display(name)}.`);
         });
@@ -581,7 +629,9 @@
             else setCarryOver(state().carryOverBans.filter(n => n !== name));
         });
         setupDrop($('againstRow'), (event, data) => {
-            if (data.hero && solo()) attempt(s => Draft.setEnemies(s, [...s.enemies, data.hero]), `Facing ${display(data.hero)}.`);
+            if (!data.hero) return;
+            if (solo()) attempt(s => Draft.setEnemies(s, [...s.enemies, data.hero]), `Facing ${display(data.hero)}.`);
+            else if (view.step.player === 2 && view.step.action === 'pick') primaryAction(data.hero);
         });
         setupDrop($('excludedChips'), (event, data) => {
             if (data.hero && solo()) attempt(s => Draft.setExcluded(s, [...s.excluded, data.hero]), `Excluded ${display(data.hero)}.`);
@@ -590,130 +640,63 @@
 
     function setCarryOver(names) {
         const s = state();
-        commit(Draft.createDraft(s.format, { me: s.me, carryOverBans: names }));
+        commit(Draft.createDraft(s.format, { carryOverBans: names }));
     }
 
-    // ---- Suggestions ---------------------------------------------------------------------
+    // ---- Step header (pool) --------------------------------------------------------------
 
-    const ACTION_BUTTON = { add: 'Add', ban: 'Ban', record: 'Record' };
-
-    function suggestionRow(item, index, action) {
-        const expanded = ui.expanded === item.name;
-        const reasons = item.reasons.map(r =>
-            `<li class="reason reason--${r.kind}" data-reason-id="${escapeHtml(r.id)}">${escapeHtml(r.text)}</li>`).join('');
-        const best = item.bestBand && action !== 'ban'
-            ? `<p class="best-band">Best band with ${escapeHtml(item.display)}: ${item.bestBand.map(display).map(escapeHtml).join(', ')} (${item.percentLabel})</p>` : '';
-        return `<li class="sugg${expanded ? ' is-expanded' : ''}" data-hero="${item.name}">
-            <span class="sugg-rank">${index + 1}</span>
-            ${portrait(item.name, 'sugg-portrait')}
-            <div class="sugg-who">
-                <span class="sugg-name">${escapeHtml(item.display)}</span>
-                ${rolePills(Draft.battleRoles(heroOf(item.name)))}
-            </div>
-            <div class="sugg-score" title="Best band with this hero, among all possible bands">
-                <span class="sugg-pct">${item.percentLabel}</span>
-                <span class="meter"><span style="width:${Math.max(4, 100 - item.topPercent)}%"></span></span>
-            </div>
-            <ul class="sugg-chips">
-                ${item.chips.map(c => `<li class="chip-r chip-r--${c.kind}" data-reason="${c.reasonId}">${escapeHtml(c.text)}</li>`).join('')}
-                ${item.moreChips ? `<li class="chip-r chip-r--more">+${item.moreChips} more</li>` : ''}
-            </ul>
-            <button class="btn btn-gold sugg-add" type="button" data-act="add">${ACTION_BUTTON[action]}</button>
-            <button class="icon-btn sugg-expand" type="button" data-act="expand" aria-expanded="${expanded}"
-                    aria-label="${expanded ? 'Hide' : 'Show'} all reasons for ${escapeHtml(item.display)}">›</button>
-            <div class="sugg-detail" ${expanded ? '' : 'hidden'}><ul class="reason-list">${reasons}</ul>${best}</div>
-        </li>`;
-    }
-
-    function swapRow(sw, index) {
-        return `<li class="sugg sugg--swap" data-swap-out="${sw.out}" data-swap-in="${sw.in}">
-            <span class="sugg-rank">${index + 1}</span>
-            ${portrait(sw.in, 'sugg-portrait')}
-            <div class="sugg-who"><span class="sugg-name">Replace ${escapeHtml(sw.display.out)} with ${escapeHtml(sw.display.in)}</span></div>
-            <div class="sugg-score"><span class="sugg-pct">${sw.percentLabel}</span>
-                <span class="meter"><span style="width:${Math.max(4, 100 - sw.topPercent)}%"></span></span></div>
-            <ul class="sugg-chips"></ul>
-            <button class="btn btn-gold sugg-add" type="button" data-act="swap">Swap</button>
-        </li>`;
-    }
-
-    function renderSuggestions() {
-        const { action, items, total } = view.suggestions;
-        const heading = { add: 'Next Pick', ban: 'Ban Suggestions', record: "Opponent's Turn" }[action]
-            || (view.swaps ? 'Swap Suggestions' : 'Draft Complete');
-        $('suggestHeading').textContent = heading;
-        $('stepLabel').textContent = view.step.label;
-        $('opponentToggleWrap').hidden = action !== 'record';
-        $('opponentToggle').checked = ui.showOpponent;
-        $('allSuggestions').hidden = !action || (action === 'record' && !ui.showOpponent) || total <= 3;
-        $('allSuggestions').textContent = ui.showAll ? 'Show top 3' : `All ${total} →`;
+    function renderStep() {
+        const { action } = view.suggestions;
+        $('stepLabel').textContent = action ? `${view.step.label} · ${action} a hero` : view.step.label;
+        $('stepLabel').className = `step-badge${p2Turn() ? ' step-badge--p2' : ''}${action ? '' : ' step-badge--done'}`;
         $('draftIntro').hidden = !view.intro;
         $('draftIntro').textContent = view.intro || '';
-
-        const list = $('suggestionList');
-        if (action === 'record' && !items.length) {
-            list.innerHTML = `<li class="empty-note">Click the hero your opponent ${view.step.action === 'ban' ? 'banned' : 'chose'} in the pool.</li>`;
-        } else if (!action && view.swaps) {
-            list.innerHTML = view.swaps.length ? view.swaps.map(swapRow).join('')
-                : '<li class="empty-note">No single swap improves this band.</li>';
-        } else if (!action) {
-            list.innerHTML = '<li class="empty-note">Both bands are complete.</li>';
-        } else {
-            list.innerHTML = items.map((item, i) => suggestionRow(item, i, action)).join('');
-        }
+        const ranked = view.suggestions.items.length > 0;
+        document.querySelector('.sort-switch').hidden = !ranked;
+        document.querySelectorAll('.sort-switch [data-sort]').forEach(b =>
+            b.setAttribute('aria-checked', String(b.dataset.sort === ui.sort)));
     }
 
-    function setupSuggestions() {
-        const list = $('suggestionList');
-        list.addEventListener('click', event => {
-            const act = event.target.closest('[data-act]')?.dataset.act;
-            const row = event.target.closest('.sugg');
-            if (!row) return;
-            if (act === 'swap') {
-                const { swapOut, swapIn } = row.dataset;
-                attempt(s => Draft.replacePick(s, swapOut, swapIn), () => `Swapped ${display(swapOut)} for ${display(swapIn)}. ${summary()}`);
-            } else if (act === 'add') {
-                primaryAction(row.dataset.hero);
-            } else if (act === 'expand' || event.target.closest('.sugg-chips')) {
-                ui.expanded = ui.expanded === row.dataset.hero ? null : row.dataset.hero;
-                renderSuggestions();
-                // Clicking a chip opens the row with that reason highlighted
-                const reasonId = event.target.closest('[data-reason]')?.dataset.reason;
-                if (reasonId) list.querySelector(`[data-hero="${row.dataset.hero}"] [data-reason-id="${CSS.escape(reasonId)}"]`)
-                    ?.classList.add('is-highlight');
-                list.querySelector(`[data-hero="${row.dataset.hero}"] .sugg-expand`)?.focus();
-            }
-        });
-        const hover = event => {
-            const row = event.target.closest('.sugg');
-            if (!row) return preview(null);
-            if (row.dataset.swapIn) return preview(null);
-            preview(view.suggestions.action === 'add' ? row.dataset.hero : null);
-        };
-        list.addEventListener('mouseover', hover);
-        list.addEventListener('focusin', hover);
-        list.addEventListener('mouseleave', () => preview(null));
-        list.addEventListener('focusout', event => { if (!list.contains(event.relatedTarget)) preview(null); });
+    // ---- Why a hero (analysis column, on hover / focus) -----------------------------------
 
+    function showWhy(name) {
+        const entry = name && view.pool.find(p => p.name === name);
+        const s = entry && entry.suggestion;
+        $('whyBlock').hidden = !s;
+        if (!s) return;
+        const p = view.suggestions.player;
+        $('whyHeading').textContent = `#${s.rank} ${entry.display}${solo() ? '' : ` for Player ${p}`}`;
+        $('whySummary').textContent = view.suggestions.action === 'ban'
+            ? `Player ${p === 1 ? 2 : 1}'s best band with ${entry.display}: ${s.percentLabel}`
+            : `Best band with ${entry.display}: ${s.percentLabel}${s.bestBand ? ` (${s.bestBand.map(display).join(', ')})` : ''}`;
+        $('whyList').innerHTML = s.reasons.map(r =>
+            `<li class="reason reason--${r.kind}">${escapeHtml(r.text)}</li>`).join('') || '<li class="muted">No specific reasons.</li>';
+    }
+
+    function setupCompletions() {
         const completions = $('completionList');
         completions.addEventListener('click', event => {
+            const swap = event.target.closest('[data-swap-in]');
+            if (swap) {
+                const { swapOut, swapIn } = swap.dataset;
+                attempt(s => Draft.replacePick(s, swapOut, swapIn), () => `Swapped ${display(swapOut)} for ${display(swapIn)}. ${summary()}`);
+                return;
+            }
             const card = event.target.closest('[data-band]');
             if (card) fillFromBand(card.dataset.band.split(','));
             if (event.target.closest('[data-act="copy"]')) copyBand();
         });
-        completions.addEventListener('mouseover', event => {
+        const hover = event => {
             const card = event.target.closest('[data-band]');
             preview(card ? card.dataset.band.split(',') : null);
-        });
-        completions.addEventListener('focusin', event => {
-            const card = event.target.closest('[data-band]');
-            preview(card ? card.dataset.band.split(',') : null);
-        });
+        };
+        completions.addEventListener('mouseover', hover);
+        completions.addEventListener('focusin', hover);
         completions.addEventListener('mouseleave', () => preview(null));
     }
 
     function fillFromBand(heroes) {
-        const missing = heroes.filter(n => !Draft.myBand(state()).includes(n));
+        const missing = heroes.filter(n => !Draft.bands(state())[view.step.player].includes(n));
         if (solo()) attempt(s => Draft.fillBand(s, missing), () => `Band filled: ${heroes.map(display).join(', ')}. ${summary()}`);
         else if (missing.length) primaryAction(missing[0]); // later picks are future turns
     }
@@ -722,8 +705,9 @@
         const section = $('completionSection');
         if (view.completions) {
             section.hidden = false;
-            $('completionHeading').textContent = 'Complete Your Band';
-            $('completionHint').textContent = 'Full 3-hero bands built on your current picks';
+            $('completionHeading').textContent = solo() ? 'Complete Your Band' : `Complete Player ${view.step.player}'s Band`;
+            $('completionHint').textContent = solo() ? 'Full 3-hero bands built on your current picks'
+                : `Full bands built on Player ${view.step.player}'s picks; choosing one selects its next hero`;
             $('completionList').innerHTML = view.completions.map(c => `
                 <button class="band-card" type="button" data-band="${c.heroes.join(',')}"
                         aria-label="${solo() ? 'Use' : 'Aim for'} ${c.heroes.map(display).join(', ')}: ${c.percentLabel}">
@@ -736,10 +720,17 @@
             $('completionHeading').textContent = 'Band Summary';
             $('completionHint').textContent = '';
             const a = view.analysis;
+            const swaps = view.swaps.length
+                ? `<p class="mini-heading">Swaps that improve it</p><ul class="swap-list">${view.swaps.map(sw => `
+                    <li><button class="swap-btn" type="button" data-swap-out="${sw.out}" data-swap-in="${sw.in}">
+                        ${portrait(sw.in, 'face-portrait')}<span>Replace ${escapeHtml(sw.display.out)} with ${escapeHtml(sw.display.in)}</span>
+                        <span class="band-pct">${sw.percentLabel}</span></button></li>`).join('')}</ul>`
+                : '<p class="muted">No single swap improves this band.</p>';
             $('completionList').innerHTML = `<div class="summary-card">
                 <p><strong>${Draft.myBand(state()).map(display).map(escapeHtml).join(', ')}</strong> · ${a.score.label}</p>
                 <p>Covers ${a.coveredCount} of 3 roles · ${escapeHtml(display(Draft.myBand(state())[0]))} starts on the Castle.</p>
                 <button class="btn btn-ghost" type="button" data-act="copy">Copy band</button>
+                ${swaps}
             </div>`;
         } else {
             section.hidden = true;
@@ -755,13 +746,17 @@
 
     function renderAnalysis(v) {
         const a = v.analysis;
-        $('balanceSummary').textContent = `Your band covers ${a.coveredCount} of 3 roles`;
+        const whose = solo() ? 'Your band' : `Player ${v.focus}'s band`;
+        $('focusSwitch').hidden = solo();
+        document.querySelectorAll('#focusSwitch [data-focus]').forEach(b =>
+            b.setAttribute('aria-checked', String(Number(b.dataset.focus) === v.focus)));
+        $('balanceSummary').textContent = `${whose} covers ${a.coveredCount} of 3 roles`;
         $('roleList').innerHTML = a.roles.map(r => `
             <li class="role-row${r.coveredBy ? ' is-covered' : ''}${r.change ? ' is-changed' : ''}">
                 ${icon(r.role, 'ico role-ico')}<span class="role-name">${r.role}</span>
                 <span class="role-status">${r.coveredBy ? `✓ ${escapeHtml(display(r.coveredBy))}` : '○ Missing'}</span>
             </li>`).join('');
-        $('scoreCaption').textContent = a.score.complete ? 'Your band' : 'Best band you can still reach';
+        $('scoreCaption').textContent = a.score.complete ? whose : 'Best band still reachable';
         $('bandScore').textContent = a.score.percent === null ? '—' : percentLabel(a.score.percent);
         $('scoreBar').style.width = a.score.percent === null ? '0%' : `${Math.max(3, 100 - a.score.percent)}%`;
         $('scoreDetail').textContent = a.score.change
@@ -769,13 +764,14 @@
             : 'Share of all possible 3-hero bands that score at least as well.';
         $('scoreDetail').classList.toggle('is-changed', Boolean(a.score.change));
 
+        $('threatHeading').textContent = solo() ? 'Threats from Against' : `Threats from Player ${v.focus === 1 ? 2 : 1}`;
         $('threatBlock').hidden = !a.threats.length;
         $('threatList').innerHTML = a.threats.map(t =>
             `<li class="reason reason--warning${t.preview ? ' is-changed' : ''}">${escapeHtml(t.text)}${t.preview ? ' (preview)' : ''}</li>`).join('');
         $('synergyBlock').hidden = !a.synergy.length;
         $('synergyList').innerHTML = a.synergy.map(s =>
             `<li class="reason reason--positive${s.preview ? ' is-changed' : ''}">${escapeHtml(s.text)}${s.preview ? ' (preview)' : ''}</li>`).join('');
-        $('viewInGraph').disabled = !Draft.myBand(state()).length;
+        $('viewInGraph').disabled = !Draft.bands(state())[v.focus].length;
     }
 
     // ---- Hero picker dialog (Against, Excluded, carry-over bans) --------------------------
@@ -785,7 +781,7 @@
             run: n => attempt(s => Draft.setEnemies(s, [...s.enemies, n]), `Facing ${display(n)}.`) },
         exclude: { title: 'Exclude a hero', can: n => Draft.isAvailable(state(), n),
             run: n => attempt(s => Draft.setExcluded(s, [...s.excluded, n]), `Excluded ${display(n)}.`) },
-        carry: { title: 'Ban from the previous game', can: n => !state().carryOverBans.includes(n),
+        carry: { title: 'Add an extra ban', can: n => !state().carryOverBans.includes(n),
             run: n => setCarryOver([...state().carryOverBans, n]) },
         pick: { title: 'Choose a hero', can: n => Draft.isAvailable(state(), n), run: n => primaryAction(n) }
     };
@@ -834,8 +830,8 @@
         const step = Draft.currentStep(s);
         const items = [];
         if (available && step) {
-            items.push(['primary', !step.player || step.player === s.me ? (step.action === 'ban' ? 'Ban' : 'Pick')
-                : `Record opponent's ${step.action}`]);
+            const verb = step.action === 'ban' ? 'Ban' : 'Select';
+            items.push(['primary', solo() ? verb : `${verb} for Player ${step.player}`]);
         }
         if (solo() && available && s.enemies.length < 3) items.push(['enemy', 'Add to Against']);
         if (solo() && available) items.push(['exclude', 'Exclude']);
@@ -894,8 +890,7 @@
             if (ui.tab !== 'draft') return;
             const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName);
             if (event.key === 'Escape') {
-                if (!$('cardMenu').hidden) { closeMenu(); return; }
-                if (ui.expanded) { ui.expanded = null; renderSuggestions(); }
+                if (!$('cardMenu').hidden) closeMenu();
                 return;
             }
             if (!typing && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {

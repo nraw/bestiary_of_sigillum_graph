@@ -6,7 +6,6 @@
     const { titleCase } = typeof module !== 'undefined' && module.exports ? require('./synergy.js') : root.Synergy;
 
     const MAX_CHIPS = 3;
-    const DEFAULT_LIMIT = 3;
     const COMPLETION_LIMIT = 3;
     const INTRO = 'Start with a versatile hero — one that can fill several roles.';
 
@@ -41,50 +40,37 @@
         };
     }
 
-    // Is it the user's turn to pick?
-    function myStep(state) {
-        const step = Draft.currentStep(state);
-        return step && step.player === state.me ? step : null;
-    }
-
-    function stepLabel(state) {
-        const step = Draft.currentStep(state);
-        if (!step) return state.format === 'solo' ? 'Band complete' : 'Draft complete';
-        const mine = step.player === state.me;
-        const done = state.format === 'solo'
-            ? state.band.length
-            : state.history.filter(h => h.player === step.player && h.action === step.action).length;
-        return `${mine ? 'Your' : 'Opponent'} ${step.action} ${done + 1} of 3`;
-    }
-
-    function sequence(state) {
-        if (state.format === 'solo') return null;
-        return Draft.draftSequence(state.format).map((s, index) => ({
-            index, player: s.player, action: s.action, mine: s.player === state.me,
-            hero: index < state.history.length ? state.history[index].hero : null,
-            status: index < state.history.length ? 'done' : index === state.history.length ? 'current' : 'upcoming'
-        }));
-    }
-
     function suggestionItem(s) {
         return { name: s.name, display: titleCase(s.name), image: image(s.name), score: s.score,
             topPercent: s.topPercent, percentLabel: percentLabel(s.topPercent), bestBand: s.bestBand,
             reasons: s.reasons, ...chipsFor(s.reasons) };
     }
 
-    function suggestions(state, ctx, options) {
+    // Every available hero ranked for whoever acts now, with the same verbs for both players
+    function suggestions(state, ctx) {
         const step = Draft.currentStep(state);
-        const limit = options.limit || DEFAULT_LIMIT;
-        if (!step) return { action: null, items: [], total: 0 };
-        const available = ctx.heroes.filter(h => Draft.isAvailable(state, h.name)).length;
-        if (step.player !== state.me) {
-            const items = options.showOpponent ? Draft.suggestFor(state, ctx, limit).items.map(suggestionItem) : [];
-            return { action: 'record', items, total: available };
-        }
+        if (!step) return { action: null, player: null, items: [] };
         const list = step.action === 'ban'
-            ? Draft.suggestBan(state, ctx, limit, { player: state.me })
-            : Draft.suggestPick(state, ctx, limit, { player: state.me });
-        return { action: step.action === 'ban' ? 'ban' : 'add', items: list.map(suggestionItem), total: available };
+            ? Draft.suggestBan(state, ctx, Infinity, { player: step.player })
+            : Draft.suggestPick(state, ctx, Infinity, { player: step.player });
+        return { action: step.action === 'ban' ? 'ban' : 'select', player: step.player, items: list.map(suggestionItem) };
+    }
+
+    function stepLabel(state) {
+        const step = Draft.currentStep(state);
+        if (!step) return state.format === 'solo' ? 'Band complete' : 'Draft complete';
+        if (state.format === 'solo') return `Your pick ${state.band.length + 1} of 3`;
+        const done = state.history.filter(h => h.player === step.player && h.action === step.action).length;
+        return `Player ${step.player} ${step.action} ${done + 1} of 3`;
+    }
+
+    function sequence(state) {
+        if (state.format === 'solo') return null;
+        return Draft.draftSequence(state.format).map((s, index) => ({
+            index, player: s.player, action: s.action,
+            hero: index < state.history.length ? state.history[index].hero : null,
+            status: index < state.history.length ? 'done' : index === state.history.length ? 'current' : 'upcoming'
+        }));
     }
 
     function bandCard(b, band) {
@@ -112,30 +98,53 @@
         };
     }
 
-    // Heroes a preview adds to the band (a single candidate, or a whole suggested band)
+    // Heroes a preview adds to the acting player's band (one candidate, or a whole suggested band)
     function previewHeroes(state, band, preview) {
-        if (!preview || !myStep(state) || myStep(state).action !== 'pick') return [];
+        const step = Draft.currentStep(state);
+        if (!preview || !step || step.action !== 'pick') return [];
         const wanted = (Array.isArray(preview) ? preview : [preview]).filter(n => !band.includes(n));
         if (wanted.some(n => !Draft.isAvailable(state, n))) return [];
         return wanted.slice(0, 3 - band.length);
     }
 
+    const slotsFor = (band, added) => [0, 1, 2].map(index => {
+        const shown = [...band, ...added];
+        return { index, hero: shown[index] || null, preview: index >= band.length && Boolean(shown[index]), startsOnCastle: index === 0 };
+    });
+
+    // In two-player mode a taken hero belongs to Player 1 or Player 2 (there is no "you")
+    function unavailable(state, name, bands) {
+        if (state.format !== 'solo') {
+            if (bands[1].includes(name)) return 'player1';
+            if (bands[2].includes(name)) return 'player2';
+        }
+        return Draft.unavailableReason(state, name);
+    }
+
     function draftView(state, ctx, options = {}) {
         const solo = state.format === 'solo';
-        const band = Draft.myBand(state);
-        const opponents = Draft.opponentBand(state);
+        const step = Draft.currentStep(state);
+        const acting = step ? step.player : null;
+        const bands = Draft.bands(state);
+        const focus = solo ? 1 : options.player || acting || 1;
+        const other = focus === 1 ? 2 : 1;
         const pool = ctx.heroes.map(h => h.name).filter(n => Draft.isAvailable(state, n));
-        const added = previewHeroes(state, band, options.preview);
-        const shown = [...band, ...added];
-        const mine = myStep(state);
+        const added = { 1: [], 2: [] };
+        if (acting) added[acting] = previewHeroes(state, bands[acting], options.preview);
 
-        const poolEntries = ctx.heroes.map(h => poolEntry(h, state));
+        const ranked = suggestions(state, ctx);
+        const rankOf = new Map(ranked.items.map((item, i) => [item.name, { rank: i + 1, ...item }]));
+        const poolEntries = ctx.heroes.map(h => {
+            const reason = unavailable(state, h.name, bands);
+            return { ...poolEntry(h, state), available: reason === null, unavailableReason: reason, suggestion: rankOf.get(h.name) || null };
+        });
         const available = poolEntries.filter(p => p.available).length;
 
-        const base = analysis(band, opponents, pool, ctx);
+        // Analysis of the focus band against the other; a preview shows when it's the focus band's turn
+        const base = analysis(bands[focus], bands[other], pool, ctx);
         let result = base;
-        if (added.length) {
-            result = analysis(shown, opponents, pool.filter(n => !added.includes(n)), ctx);
+        if (added[focus].length) {
+            result = analysis([...bands[focus], ...added[focus]], bands[other], pool.filter(n => !added[focus].includes(n)), ctx);
             result.roles.forEach((r, i) => { if (r.coveredBy && !base.roles[i].coveredBy) r.change = 'added'; });
             result.score.change = { from: base.score.percent, to: result.score.percent };
             // Mark what only the previewed heroes bring
@@ -147,31 +156,33 @@
             result.synergy = flag(result.synergy, base.synergy);
         }
 
-        const emptySlots = 3 - band.length;
-        const completions = mine && mine.action === 'pick' && emptySlots >= 2
-            ? Draft.suggestBands(state, ctx, options.completionLimit || COMPLETION_LIMIT, { player: state.me }).map(b => bandCard(b, band))
+        const picking = step && step.action === 'pick';
+        const completions = picking && bands[acting].length < 3
+            ? Draft.suggestBands(state, ctx, options.completionLimit || COMPLETION_LIMIT, { player: acting }).map(b => bandCard(b, bands[acting]))
             : null;
-        const swaps = solo && band.length >= 3
+        const swaps = solo && bands[1].length >= 3
             ? Draft.suggestSwaps(state, ctx).map(s => ({ ...s, display: { out: titleCase(s.out), in: titleCase(s.in) }, percentLabel: percentLabel(s.topPercent) }))
             : null;
+        const banLists = Draft.bans(state);
 
         return {
             mode: solo ? 'solo' : 'two-player',
             format: state.format,
-            me: state.me,
             complete: Draft.isComplete(state),
-            step: { ...(Draft.currentStep(state) || { player: null, action: null }), mine: Boolean(mine), label: stepLabel(state) },
+            step: { ...(step || { player: null, action: null }), label: stepLabel(state) },
             sequence: sequence(state),
-            intro: mine && mine.action === 'pick' && band.length === 0 ? INTRO : null,
+            intro: picking && bands[acting].length === 0 ? INTRO : null,
             pool: poolEntries,
             counts: { available, unavailable: poolEntries.length - available },
-            slots: [0, 1, 2].map(index => ({
-                index, hero: shown[index] || null, preview: index >= band.length && Boolean(shown[index]), startsOnCastle: index === 0
+            focus,
+            slots: solo ? slotsFor(bands[1], added[1]) : null,
+            against: solo ? [...state.enemies] : null,
+            players: solo ? null : [1, 2].map(player => ({
+                player, label: `Player ${player}`, acting: player === acting,
+                slots: slotsFor(bands[player], added[player]), bans: banLists[player]
             })),
-            against: opponents,
             excluded: solo ? [...state.excluded] : [...state.carryOverBans],
-            bans: solo ? null : (b => ({ mine: b[state.me], theirs: b[state.me === 1 ? 2 : 1] }))(Draft.bans(state)),
-            suggestions: suggestions(state, ctx, options),
+            suggestions: ranked,
             completions,
             swaps,
             analysis: result

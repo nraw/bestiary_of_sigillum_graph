@@ -44,7 +44,7 @@ test('slots: 3 in pick order, the first starts on the Castle', () => {
 });
 
 test('every chip comes from an engine reason, positives first, at least one warning kept', () => {
-    const v = V.draftView(soloState(), ctx, { limit: 36 });
+    const v = V.draftView(soloState(), ctx);
     assert.ok(v.suggestions.items.length > 0);
     v.suggestions.items.forEach(item => {
         const ids = new Set(item.reasons.map(r => r.id));
@@ -72,13 +72,15 @@ test('percent labels: "Top N%" rounded up, never below 1%; the weaker half reads
     assert.strictEqual(V.percentLabel(100), 'Bottom 1%');
 });
 
-test('completions only when 2 or more slots are empty; swaps only when the band is full', () => {
+test('completions while any slot is empty (including the last pick); swaps only when the band is full', () => {
     const empty = V.draftView(D.createDraft('solo'), ctx);
     assert.ok(Array.isArray(empty.completions) && empty.completions.length > 0);
     assert.strictEqual(empty.swaps, null);
     const one = V.draftView(D.applyAction(D.createDraft('solo'), 'FERRARIUS'), ctx);
     assert.ok(one.completions.every(c => c.heroes[0] === 'FERRARIUS'));
-    assert.strictEqual(V.draftView(soloState(), ctx).completions, null);
+    const last = V.draftView(soloState(), ctx).completions;
+    assert.ok(Array.isArray(last) && last.length > 0, 'the last pick still shows complete bands');
+    last.forEach(card => assert.deepStrictEqual(card.heroes.slice(0, 2), ['FERRARIUS', 'BALLISTARIUS']));
     const full = V.draftView(pickAll(D.createDraft('solo'), ['FIDEA', 'GOETIUM', 'MESSUM']), ctx);
     assert.strictEqual(full.completions, null);
     assert.ok(Array.isArray(full.swaps) && full.swaps.length > 0);
@@ -153,44 +155,84 @@ test('step and intro text', () => {
     assert.strictEqual(V.draftView(soloState(), ctx).intro, null);
 });
 
-test('two-player: sequence, opponent row, bans and the action for the current step', () => {
-    let s = D.createDraft('interleaved', { me: 1 });
-    let v = V.draftView(s, ctx);
-    assert.strictEqual(v.mode, 'two-player');
-    assert.strictEqual(v.sequence.length, 12);
-    assert.deepStrictEqual(v.sequence[0], { index: 0, player: 1, action: 'ban', mine: true, hero: null, status: 'current' });
-    assert.strictEqual(v.step.label, 'Your ban 1 of 3');
-    assert.strictEqual(v.suggestions.action, 'ban');
-    assert.ok(v.suggestions.items.length > 0);
 
-    s = D.applyAction(s, 'SAXUM');
-    v = V.draftView(s, ctx);
-    assert.strictEqual(v.step.label, 'Opponent ban 1 of 3');
-    assert.strictEqual(v.suggestions.action, 'record');
-    assert.strictEqual(v.suggestions.items.length, 0, 'no suggestions on opponent steps by default');
-    assert.ok(V.draftView(s, ctx, { showOpponent: true }).suggestions.items.length > 0);
-    assert.strictEqual(v.sequence[0].status, 'done');
-    assert.strictEqual(v.sequence[0].hero, 'SAXUM');
-
-    s = pickAll(s, ['TEMPUS', 'FERRARIUS', 'FIDEA']);
-    v = V.draftView(s, ctx);
-    assert.deepStrictEqual(v.bans, { mine: ['SAXUM'], theirs: ['TEMPUS'] });
-    assert.deepStrictEqual(v.slots.map(x => x.hero), ['FERRARIUS', null, null]);
-    assert.deepStrictEqual(v.against, ['FIDEA']);
-    assert.strictEqual(v.pool.find(p => p.name === 'TEMPUS').unavailableReason, 'banned');
-    assert.strictEqual(v.pool.find(p => p.name === 'FIDEA').unavailableReason, 'facing');
-    assert.strictEqual(v.completions, null, 'two-player shows no completions on ban steps');
-});
-
-test('two-player completions appear on your own pick steps', () => {
-    const v = V.draftView(D.createDraft('standard'), ctx);
-    assert.strictEqual(v.suggestions.action, 'add');
-    assert.ok(Array.isArray(v.completions));
-    const opp = V.draftView(D.applyAction(D.createDraft('standard'), 'SAXUM'), ctx);
-    assert.strictEqual(opp.completions, null);
-});
 
 test('two-player: a finished band gets no swap suggestions', () => {
     const s = pickAll(D.createDraft('standard'), ['FIDEA', 'SAXUM', 'GOETIUM', 'ARMUS', 'MESSUM', 'TEMPUS']);
     assert.strictEqual(V.draftView(s, ctx).swaps, null);
 });
+
+test('every available hero is ranked, and the pool carries each rank', () => {
+    const v = V.draftView(soloState(), ctx);
+    assert.strictEqual(v.suggestions.items.length, v.counts.available, 'all candidates, not a top-N');
+    v.suggestions.items.forEach((item, i) => {
+        const entry = v.pool.find(p => p.name === item.name);
+        assert.strictEqual(entry.suggestion.rank, i + 1, item.name);
+        assert.strictEqual(entry.suggestion.percentLabel, item.percentLabel);
+        assert.deepStrictEqual(entry.suggestion.reasons, item.reasons);
+    });
+    v.pool.filter(p => !p.available).forEach(p => assert.strictEqual(p.suggestion, null, p.name));
+});
+
+// ---- Two-player: a neutral helper for Player 1 and Player 2 -------------------------------
+
+test('two-player: both players by number, sequence and bans, Player 1 first', () => {
+    let s = D.createDraft('interleaved');
+    let v = V.draftView(s, ctx);
+    assert.strictEqual(v.mode, 'two-player');
+    assert.strictEqual(v.sequence.length, 12);
+    assert.deepStrictEqual(v.sequence[0], { index: 0, player: 1, action: 'ban', hero: null, status: 'current' });
+    assert.strictEqual(v.step.label, 'Player 1 ban 1 of 3');
+    assert.deepStrictEqual(v.players.map(p => [p.player, p.label, p.acting]), [[1, 'Player 1', true], [2, 'Player 2', false]]);
+
+    s = D.applyAction(s, 'SAXUM');
+    v = V.draftView(s, ctx);
+    assert.strictEqual(v.step.label, 'Player 2 ban 1 of 3');
+    assert.deepStrictEqual(v.sequence[0], { index: 0, player: 1, action: 'ban', hero: 'SAXUM', status: 'done' });
+
+    s = pickAll(s, ['TEMPUS', 'FERRARIUS', 'FIDEA']);
+    v = V.draftView(s, ctx);
+    assert.deepStrictEqual(v.players[0].bans, ['SAXUM']);
+    assert.deepStrictEqual(v.players[1].bans, ['TEMPUS']);
+    assert.deepStrictEqual(v.players[0].slots.map(x => x.hero), ['FERRARIUS', null, null]);
+    assert.deepStrictEqual(v.players[1].slots.map(x => x.hero), ['FIDEA', null, null]);
+    const reason = n => v.pool.find(p => p.name === n).unavailableReason;
+    assert.deepStrictEqual([reason('FERRARIUS'), reason('FIDEA'), reason('TEMPUS')], ['player1', 'player2', 'banned']);
+    assert.strictEqual(v.completions, null, 'no completions on ban steps');
+});
+
+test('two-player: suggestions are always ranked for whoever acts, with select / ban', () => {
+    const s0 = D.createDraft('standard');
+    const v0 = V.draftView(s0, ctx);
+    assert.deepStrictEqual([v0.suggestions.action, v0.suggestions.player], ['select', 1]);
+    const s1 = D.applyAction(s0, 'SAXUM');
+    const v1 = V.draftView(s1, ctx);
+    assert.deepStrictEqual([v1.suggestions.action, v1.suggestions.player], ['select', 2]);
+    assert.strictEqual(v1.suggestions.items.length, v1.counts.available, 'Player 2 is ranked without asking');
+    assert.deepStrictEqual(v1.suggestions.items.map(i => i.name), D.suggestPick(s1, ctx, Infinity, { player: 2 }).map(i => i.name));
+    const ban = V.draftView(D.createDraft('ban-first'), ctx).suggestions;
+    assert.deepStrictEqual([ban.action, ban.player], ['ban', 1]);
+});
+
+test('two-player: completions, intro and preview belong to the acting player', () => {
+    const s = D.applyAction(D.createDraft('standard'), 'SAXUM');
+    const v = V.draftView(s, ctx);
+    assert.ok(v.completions.every(c => !c.heroes.includes('SAXUM')), "Player 2's completions");
+    assert.ok(v.intro, 'Player 2 has no hero yet');
+    const p = V.draftView(s, ctx, { preview: 'FIDEA' });
+    assert.deepStrictEqual(p.players[1].slots[0], { index: 0, hero: 'FIDEA', preview: true, startsOnCastle: true });
+    assert.ok(p.players[0].slots.every(x => !x.preview));
+});
+
+test('two-player: analysis follows the acting player unless another is chosen', () => {
+    const s = pickAll(D.createDraft('standard'), ['SAXUM', 'TEMPUS']);
+    const v = V.draftView(s, ctx);
+    assert.strictEqual(v.focus, 1, 'Player 1 acts');
+    assert.strictEqual(v.analysis.roles.filter(r => r.coveredBy).map(r => r.coveredBy)[0], 'SAXUM');
+    const p2 = V.draftView(s, ctx, { player: 2 });
+    assert.strictEqual(p2.focus, 2);
+    assert.ok(p2.analysis.roles.some(r => r.coveredBy === 'TEMPUS'));
+    const done = pickAll(s, ['FIDEA', 'GOETIUM', 'MESSUM', 'ARMUS']);
+    assert.strictEqual(V.draftView(done, ctx).focus, 1, 'a finished draft shows Player 1 first');
+});
+

@@ -566,7 +566,7 @@
         return suggestPick(state, ctx, limit, { player: other(player) }).map(s => ({
             ...s,
             reasons: [{ id: 'ban:opponent-wants', factor: 'ban', kind: 'positive', delta: s.score,
-                text: 'Strong pick for the other side', heroes: [s.name] }, ...s.reasons]
+                text: `Strong pick for Player ${other(player)}`, heroes: [s.name] }, ...s.reasons]
         }));
     }
 

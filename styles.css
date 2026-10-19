@@ -1244,13 +1244,14 @@ kbd {
     --ink: #2A1D14;
     position: relative;
     display: grid;
-    grid-template-columns: 300px minmax(0, 1fr) 290px;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 5fr) minmax(240px, 2fr);
     gap: var(--gap);
     padding: 0 var(--gap) var(--gap);
     height: calc(100vh - var(--header-h) - var(--gap));
     min-height: 560px;
 }
 .draft-layout > .panel { overflow-y: auto; min-height: 0; }
+.draft-layout > .panel > * { flex-shrink: 0; } /* scroll the panel instead of squashing its sections */
 
 .draft-heading {
     font-family: 'Cinzel', serif;
@@ -1316,8 +1317,40 @@ kbd {
 .ex-chip.is-banned { padding-right: 10px; }
 .ex-chip button { background: none; border: none; color: var(--text-muted); padding: 0 4px; text-decoration: none; }
 .ex-chip button:hover { color: var(--gold-bright); }
+.pool-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.step-badge {
+    padding: 4px 12px;
+    border-radius: 14px;
+    border: 1px solid var(--gold);
+    background: rgba(217, 168, 78, 0.1);
+    color: var(--gold-bright);
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+.step-badge--p2 { border-color: var(--crimson-bright); background: rgba(184, 50, 74, 0.16); color: #FF9DAE; }
+.step-badge--done { border-color: var(--border-strong); background: none; color: var(--text-muted); }
+.pool-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .pool-count { color: var(--text-faint); font-size: 0.88rem; }
-.pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.sort-switch { margin-left: auto; display: inline-flex; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; }
+.sort-switch button { padding: 3px 10px; border: none; background: none; color: var(--text-muted); font-size: 0.9rem; }
+.sort-switch button + button { border-left: 1px solid var(--border); }
+.sort-switch [aria-checked="true"] { background: rgba(217, 168, 78, 0.16); color: var(--gold-bright); }
+.pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 10px; }
+.tile-rank {
+    margin-top: 2px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: rgba(42, 29, 20, 0.12);
+    color: var(--ink);
+    font-family: 'Cinzel', serif;
+    font-size: 0.76rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.tile-rank.is-top { background: var(--ink); color: var(--gold-bright); }
+.hero-tile.is-top .tile-main { box-shadow: inset 0 0 22px rgba(110, 72, 30, 0.35), 0 0 0 2px rgba(217, 168, 78, 0.75); }
 
 /* Parchment hero tile */
 .hero-tile { position: relative; }
@@ -1344,7 +1377,7 @@ kbd {
     transform: translateY(-1px);
 }
 .tile-main[aria-disabled="true"] { cursor: default; }
-.tile-portrait, .slot-portrait, .enemy-portrait, .sugg-portrait, .face-portrait, .picker-portrait {
+.tile-portrait, .slot-portrait, .enemy-portrait, .face-portrait, .picker-portrait {
     object-fit: cover;
     object-position: center 15%;
     border-radius: 50%;
@@ -1389,7 +1422,7 @@ kbd {
     font-weight: 700;
     pointer-events: none;
 }
-.tile-corner--record { color: var(--chip-warning); font-size: 0.8rem; }
+.tile-corner--p2 { background: var(--crimson); color: #FFE1E6; }
 .tile-menu-btn {
     position: absolute;
     top: 30px; right: 6px;
@@ -1430,7 +1463,7 @@ kbd {
 }
 .role-pill .ico { width: 13px; height: 13px; stroke-width: 2.2; }
 .tile-main .role-pill, .slot .role-pill { color: #57412E; }
-.sugg .role-pill, .enemy-card .role-pill { color: var(--bronze); }
+.enemy-card .role-pill { color: var(--bronze); }
 
 /* Mode switch */
 .draft-main { display: flex; flex-direction: column; gap: 16px; }
@@ -1483,9 +1516,17 @@ kbd {
     line-height: 1.15;
 }
 .seq-action { font-family: 'Cinzel', serif; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; font-size: 0.72rem; }
-.seq--mine .seq-action { color: var(--gold); }
-.seq--theirs .seq-action { color: var(--chip-warning); }
+.seq--p1 .seq-action { color: var(--gold); }
+.seq--p2 .seq-action { color: #FF9DAE; }
+.seq--p2.seq--current { border-color: var(--crimson-bright); box-shadow: 0 0 12px rgba(184, 50, 74, 0.35); }
 .seq--ban { border-style: dashed; }
+.seq--extra { border-style: dashed; border-color: var(--border-strong); color: var(--text-muted); }
+.seq--extra .seq-action { color: var(--text-muted); }
+.seq-remove { margin-left: 2px; padding: 0 2px; border: none; background: none; color: var(--text-muted); font-size: 0.75rem; }
+.seq-remove:hover { color: var(--gold-bright); }
+.seq-add-item { display: flex; align-items: center; }
+.seq-add { padding: 4px 10px; border-radius: 8px; border: 1px dashed var(--border-strong); background: none; color: var(--gold); font-family: 'Cinzel', serif; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; }
+.seq-add:hover { border-color: var(--gold); color: var(--gold-bright); }
 .seq--done { opacity: 0.6; }
 .seq--current { border-color: var(--gold); box-shadow: 0 0 12px rgba(242, 199, 107, 0.3); opacity: 1; }
 
@@ -1493,6 +1534,15 @@ kbd {
 .draft-section { display: flex; flex-direction: column; gap: 10px; }
 .section-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
 .head-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+/* Two-player: the band whose turn it is */
+.draft-section.is-acting > .slots, .draft-section.is-acting > .against { padding: 8px; margin: -8px; border-radius: 12px; box-shadow: 0 0 0 1px var(--gold), 0 0 22px rgba(242, 199, 107, 0.14); }
+.draft-section.is-acting.is-p2 > .slots { box-shadow: 0 0 0 1px var(--crimson-bright), 0 0 22px rgba(184, 50, 74, 0.2); }
+.turn-tag { padding: 1px 10px; border-radius: 10px; background: var(--gold); color: var(--ink); font-family: 'Cinzel', serif; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.is-p2 .turn-tag { background: var(--crimson-bright); color: #fff; }
+.player-switch { display: inline-flex; align-self: flex-start; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; }
+.player-switch button { padding: 4px 12px; border: none; background: none; color: var(--text-muted); font-family: 'Cinzel', serif; font-size: 0.82rem; }
+.player-switch button + button { border-left: 1px solid var(--border); }
+.player-switch [aria-checked="true"] { background: rgba(217, 168, 78, 0.16); color: var(--gold-bright); }
 .intro { color: var(--text); font-style: italic; }
 
 /* Band slots */
@@ -1555,6 +1605,7 @@ kbd {
 
 /* Against row */
 .against { display: flex; flex-wrap: wrap; gap: 10px; border-radius: 8px; min-height: 40px; }
+.against.slots { display: grid; gap: 12px; }
 .enemy-card {
     position: relative;
     width: 128px;
@@ -1570,65 +1621,12 @@ kbd {
 }
 .enemy-card .attr-banner { left: 6px; }
 .enemy-card .slot-num { left: auto; right: 10px; color: var(--text-muted); }
-.enemy-mark { color: var(--chip-warning); }
+.enemy-mark { color: var(--chip-warning); width: 13px; height: 13px; vertical-align: -1px; }
 .enemy-portrait { width: 56px; height: 56px; border-color: #7A2A20; }
 .enemy-name { font-family: 'Cinzel', serif; font-weight: 600; font-size: 0.86rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .enemy-card .slot-remove { background: var(--surface-3); color: var(--text); }
-.bans-row { display: flex; flex-wrap: wrap; gap: 14px 24px; }
-.bans-row > div { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 
-/* Suggestions */
-.suggestions-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
-.sugg {
-    display: grid;
-    grid-template-columns: 28px 52px minmax(110px, 1fr) 130px minmax(0, 2fr) auto auto;
-    grid-template-areas: "rank face who score chips add expand" "detail detail detail detail detail detail detail";
-    align-items: center;
-    column-gap: 12px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--surface-2);
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-.sugg:first-child { border-color: var(--gold); box-shadow: 0 0 16px rgba(242, 199, 107, 0.12); }
-.sugg:hover, .sugg:focus-within { border-color: var(--gold-bright); }
-.sugg-rank {
-    grid-area: rank;
-    width: 26px; height: 26px;
-    display: grid; place-items: center;
-    border-radius: 50%;
-    border: 1px solid var(--border-strong);
-    font-family: 'Cinzel', serif;
-    color: var(--gold);
-}
-.sugg-portrait { grid-area: face; width: 50px; height: 50px; }
-.sugg-who { grid-area: who; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.sugg-name { font-family: 'Cinzel', serif; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
-.sugg-score { grid-area: score; display: flex; flex-direction: column; gap: 5px; }
-.sugg-pct { font-family: 'Cinzel', serif; font-weight: 700; color: var(--gold-bright); }
-.meter, .score-bar { display: block; height: 6px; border-radius: 3px; background: rgba(201, 163, 106, 0.18); overflow: hidden; }
-.meter > span, .score-bar > span { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--bronze), var(--gold-bright)); transition: width 0.3s; }
-.sugg-chips { grid-area: chips; list-style: none; display: flex; flex-wrap: wrap; gap: 5px; cursor: pointer; }
-.chip-r {
-    padding: 2px 10px;
-    border-radius: 12px;
-    border: 1px solid;
-    font-size: 0.9rem;
-    line-height: 1.35;
-}
-.chip-r--synergy { color: var(--gold-bright); border-color: rgba(217, 168, 78, 0.6); background: rgba(217, 168, 78, 0.08); }
-.chip-r--synergy::before { content: '✦ '; }
-.chip-r--counter { color: #58D0C5; border-color: rgba(43, 163, 154, 0.7); background: rgba(43, 163, 154, 0.1); }
-.chip-r--counter::before { content: '⚔ '; }
-.chip-r--warning { color: #FF8A73; border-color: rgba(226, 83, 58, 0.7); background: rgba(226, 83, 58, 0.1); }
-.chip-r--warning::before { content: '⚠ '; }
-.chip-r--more { color: var(--text-muted); border-color: var(--border); }
-.sugg-add { grid-area: add; }
-.sugg-expand { grid-area: expand; border-radius: 50%; font-size: 1.3rem; transition: transform 0.2s; }
-.sugg-expand[aria-expanded="true"] { transform: rotate(90deg); }
-.sugg-detail { grid-area: detail; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
-.best-band { margin-top: 6px; color: var(--text-muted); font-style: italic; }
+/* Reasons (Why block, threats, synergy) */
 .reason-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
 .reason { padding-left: 20px; position: relative; }
 .reason::before { position: absolute; left: 0; }
@@ -1636,10 +1634,9 @@ kbd {
 .reason--counter::before { content: '⚔'; color: var(--chip-counter); }
 .reason--warning::before { content: '⚠'; color: var(--chip-warning); }
 .reason--info::before { content: '✓'; color: var(--text-muted); }
-.reason.is-highlight { background: rgba(217, 168, 78, 0.14); border-radius: 4px; }
 
 /* Completion cards */
-.completions { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.completions { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
 .band-card {
     display: flex;
     align-items: center;
@@ -1652,13 +1649,28 @@ kbd {
     text-align: left;
 }
 .band-card:hover, .band-card:focus-visible { border-color: var(--gold-bright); }
-.band-faces { display: flex; gap: 8px; }
-.band-face { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 58px; }
+.band-faces { display: flex; gap: 4px; min-width: 0; }
+.band-face { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 64px; min-width: 0; }
 .face-portrait { width: 40px; height: 40px; }
 .band-face.is-in-band .face-portrait { border-color: var(--gold-bright); box-shadow: 0 0 0 2px rgba(242, 199, 107, 0.35); }
 .face-name { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .band-pct { font-family: 'Cinzel', serif; font-weight: 700; color: var(--gold-bright); white-space: nowrap; }
 .summary-card { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--gold); display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.swap-list { list-style: none; display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.swap-btn {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    text-align: left;
+}
+.swap-btn:hover, .swap-btn:focus-visible { border-color: var(--gold-bright); }
+.why-block { border-top-color: var(--gold); }
 
 /* Analysis */
 .draft-analysis { display: flex; flex-direction: column; gap: 18px; }
@@ -1737,21 +1749,13 @@ kbd {
 }
 
 @media (max-width: 1279px) {
-    .draft-layout { grid-template-columns: minmax(0, 1fr) 280px; }
-    .draft-pool { grid-column: 1 / -1; order: 3; max-height: none; }
-    .draft-layout { height: auto; }
+    .draft-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); height: auto; }
     .draft-layout > .panel { overflow: visible; }
-    .sugg {
-        grid-template-columns: 28px 52px minmax(0, 1fr) auto auto;
-        grid-template-areas: "rank face who add expand" "rank face score score score" "chips chips chips chips chips" "detail detail detail detail detail";
-        row-gap: 6px;
-    }
+    .draft-analysis { grid-column: 1 / -1; }
 }
 
 @media (max-width: 900px) {
     .draft-layout { grid-template-columns: 1fr; }
-    .draft-main { order: 1; }
-    .draft-analysis { order: 2; }
     .slots { gap: 8px; }
     .slot { min-height: 170px; }
     .slot-portrait { width: 64px; height: 64px; }
