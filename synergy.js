@@ -17,6 +17,11 @@
         'Attack increase': 'Attack decrease', 'Defense increase': 'Defense decrease',
         'Control increase': 'Control decrease', Swiftness: 'Slowness'
     };
+    // Formation a hero needs -> the opponent need that works against it, and how
+    const FORMATIONS = {
+        'Adjacent allies': { by: 'Clustered enemies', verb: 'punishes' },
+        'Isolated enemies': { by: 'Adjacent allies', verb: 'denies' }
+    };
     const SUPPLY_ROLES = ['inflicts', 'grants', 'gains', 'places'];
 
     // Who a supply link lands on: null = anyone (e.g. "any enemy or ally")
@@ -101,6 +106,16 @@
                     rule: need.role === 'hindered_by' ? 'hindrance' : 'opposite'
                 }));
         }));
+
+        // Formation counters: the opponent's own positioning works against the hero's
+        heroes.forEach(h => h.trait_links.forEach(need => {
+            if (need.role !== 'benefits_from' || !FORMATIONS[need.label]) return;
+            heroes.forEach(o => o.name !== h.name && o.trait_links
+                .filter(l => l.role === 'benefits_from' && l.label === FORMATIONS[need.label].by)
+                .forEach(link => out.push({
+                    type: 'counter', needer: h.name, supplier: o.name, need, supply: link, rule: 'formation'
+                })));
+        }));
         return out;
     }
 
@@ -161,7 +176,7 @@
     const titleCase = text => text.toLowerCase().split(' ')
         .map((w, i) => (i && SMALL_WORDS.includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(' ');
     const abilityList = sources => sources.map(titleCase).join(' / ');
-    const VERB = { inflicts: 'inflicts', grants: 'grants', gains: 'gains', places: 'places' };
+    const VERB = { inflicts: 'inflicts', grants: 'grants', gains: 'gains', places: 'places', benefits_from: 'benefits from' };
 
     // One sentence for a partner / conflict / counter relation (arc tooltips)
     function describeRelation(r) {
@@ -169,6 +184,7 @@
         const target = `${titleCase(r.needer)}'s ${abilityList(r.need.sources)}`;
         if (r.type === 'partner') return `${supplier} for ${target}`;
         if (r.type === 'counter' && r.rule === 'opposite') return `${supplier}, which undoes ${r.need.label} for ${target}`;
+        if (r.type === 'counter' && r.rule === 'formation') return `${supplier}, which ${FORMATIONS[r.need.label].verb} the ${r.need.label} of ${target}`;
         return `${supplier}, which hinders ${target}`;
     }
 
@@ -191,7 +207,7 @@
         return [...arcs.values()];
     }
 
-    const api = { computeSynergies, heroSynergies, synergySummary, synergyArcs, describeRelation, titleCase, abilityList, POSITIVE, NEGATIVE };
+    const api = { computeSynergies, heroSynergies, synergySummary, synergyArcs, describeRelation, titleCase, abilityList, POSITIVE, NEGATIVE, FORMATIONS };
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;

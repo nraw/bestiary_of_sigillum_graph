@@ -109,7 +109,7 @@
 
     const slotsFor = (band, added) => [0, 1, 2].map(index => {
         const shown = [...band, ...added];
-        return { index, hero: shown[index] || null, preview: index >= band.length && Boolean(shown[index]), startsOnCastle: index === 0 };
+        return { index, hero: shown[index] || null, preview: index >= band.length && Boolean(shown[index]) };
     });
 
     // In two-player mode a taken hero belongs to Player 1 or Player 2 (there is no "you")

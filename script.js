@@ -4,9 +4,10 @@
 const {
     buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, arcPath,
     filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
-    ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment
+    ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment,
+    vitalityTokens, TOKEN_RADIUS
 } = window.GraphLogic;
-const { computeSynergies, heroSynergies, synergySummary, synergyArcs, describeRelation, titleCase, abilityList } = window.Synergy;
+const { computeSynergies, heroSynergies, synergySummary, synergyArcs, describeRelation, titleCase, abilityList, FORMATIONS } = window.Synergy;
 
 let heroesData = [];
 let synergyRelations = [];
@@ -240,6 +241,17 @@ function setupGraph() {
         .attr('transform', d => `translate(${d.radius * 0.72},${d.radius * 0.72})`);
     badge.append('circle').attr('r', 7).attr('fill', d => HERO_ATTRIBUTES[d.attribute].color);
     badge.append('path').attr('d', d => symbolPath(HERO_ATTRIBUTES[d.attribute].symbol, 40));
+    const tokens = heroes.append('g').attr('class', 'vitality-tokens')
+        .selectAll('g')
+        .data(d => vitalityTokens(d.vitality, d.radius))
+        .join('g')
+        .attr('class', 'vitality-token')
+        .attr('transform', t => `translate(${t.x},${t.y})`);
+    tokens.append('circle').attr('class', 'token-rim').attr('r', TOKEN_RADIUS);
+    tokens.append('circle').attr('class', 'token-face').attr('r', TOKEN_RADIUS - 1.3);
+    const heart = TOKEN_RADIUS * 1.55;
+    tokens.append('use').attr('class', 'token-heart').attr('href', '#heart-glyph')
+        .attr('x', -heart / 2).attr('y', -heart / 2).attr('width', heart).attr('height', heart);
 
     const labels = nodeElements.filter(d => d.type === 'label');
     labels.append('circle').attr('class', 'halo').attr('r', d => d.radius + 6);
@@ -730,8 +742,8 @@ function synergySection(node) {
         reasons.forEach(r => {
             const key = `${r.supply.label}|${r.supply.sources}`;
             if (!bySupply.has(key)) bySupply.set(key, { supply: r.supply, effects: [] });
-            bySupply.get(key).effects.push(r.rule === 'hindrance'
-                ? `hinders ${abilityList(r.need.sources)}`
+            bySupply.get(key).effects.push(r.rule === 'hindrance' ? `hinders ${abilityList(r.need.sources)}`
+                : r.rule === 'formation' ? `${FORMATIONS[r.need.label].verb} the ${r.need.label} ${abilityList(r.need.sources)} needs`
                 : `undoes ${r.need.label} for ${abilityList(r.need.sources)}`);
         });
         return [...bySupply.values()].map(({ supply, effects }) =>
@@ -827,7 +839,7 @@ function renderDetails() {
                     <h3 class="card-name">${escapeHtml(node.name)}</h3>
                     <div class="card-title">
                         <div class="card-vitality" title="Vitality">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.6 9.6C4.4 11.4 4.4 16.6 7.8 19.4c2.4 2 5 2.4 6.6 1.4 3.4-2.1 5.2-6.4 4.4-9.6-.5-2-2.3-3.1-4-2.7M10.6 9.4V5.2c0-1.9 2.4-3 4.7-2.3 1.7.5 2.4 2 1.9 3.8M8.2 9.4V4.4M13.4 7.8V5.6M7.2 8.4C4.6 7.8 3.4 10.8 5.6 12.4M15.6 11.6c-.8 2.8-2.2 5.2-4.4 7M14.5 14.6l2.4 1.2M13.1 16.7l2.2 1.5M12.5 17.3l-2.4-.9"/></svg>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#heart-glyph"/></svg>
                             <span class="sr-only">Vitality</span> ${node.vitality}
                         </div>
                         <div class="card-type">${escapeHtml(attribute.label)} · ${reach}</div>

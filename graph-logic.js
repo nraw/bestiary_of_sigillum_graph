@@ -149,8 +149,31 @@
         return group || 'Trait';
     }
 
-    // All hero nodes share one size; vitality is shown in the tooltip and card instead
+    // All hero nodes share one size; vitality is shown as a stack of heart tokens instead
     const HERO_RADIUS = 26;
+    const TOKEN_RADIUS = 5.5;
+
+    // Heart token centres along the hero's bottom-left rim, ordered top to bottom so that, drawn in
+    // order, each lower token overlaps the one above it like a stack on the game board
+    function vitalityTokens(vitality, radius, { centre = 145, step = 7.5 } = {}) {
+        const stepAngle = step / radius * 180 / Math.PI;
+        const start = centre + stepAngle * (vitality - 1) / 2;
+        return Array.from({ length: Math.max(0, vitality) }, (_, i) => {
+            const a = (start - i * stepAngle) * Math.PI / 180;
+            return { x: radius * Math.cos(a), y: radius * Math.sin(a) };
+        });
+    }
+
+    // The same stack as SVG markup for HTML portraits (draft cards); heart-glyph and the token
+    // gradients are shared defs in index.html. Overlay it on a portrait and it scales with it.
+    function vitalityTokensSvg(vitality) {
+        const r = HERO_RADIUS, h = TOKEN_RADIUS * 1.55;
+        const tokens = vitalityTokens(vitality, r).map(t =>
+            `<g class="vitality-token" transform="translate(${t.x.toFixed(2)},${t.y.toFixed(2)})">`
+            + `<circle class="token-rim" r="${TOKEN_RADIUS}"/><circle class="token-face" r="${TOKEN_RADIUS - 1.3}"/>`
+            + `<use class="token-heart" href="#heart-glyph" x="${-h / 2}" y="${-h / 2}" width="${h}" height="${h}"/></g>`).join('');
+        return `<svg class="vitality-stack" viewBox="${-r} ${-r} ${r * 2} ${r * 2}" aria-hidden="true">${tokens}</svg>`;
+    }
 
     function labelRadius(degree) {
         return 5 + Math.min(10, Math.sqrt(degree) * 2.5);
@@ -334,7 +357,7 @@
         (root.nodeMatchesSearch || require('./search.js').nodeMatchesSearch)(node, term);
 
     const api = {
-        ATTRIBUTES, getLabelCategory, HERO_RADIUS, labelRadius,
+        ATTRIBUTES, getLabelCategory, HERO_RADIUS, TOKEN_RADIUS, vitalityTokens, vitalityTokensSvg, labelRadius,
         buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, arcPath,
         filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
         ROLES, ROLE_INFO, linkKind, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment

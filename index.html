@@ -75,6 +75,20 @@
     </script>
 </head>
 <body>
+    <!-- Shared SVG art: the vitality heart (from the game's icon) and the heart-token gradients -->
+    <svg class="svg-defs" aria-hidden="true" focusable="false">
+        <defs>
+            <symbol id="heart-glyph" viewBox="0 0 24 24"><path d="M7.6 9.6C4.4 11.4 4.4 16.6 7.8 19.4c2.4 2 5 2.4 6.6 1.4 3.4-2.1 5.2-6.4 4.4-9.6-.5-2-2.3-3.1-4-2.7M10.6 9.4V5.2c0-1.9 2.4-3 4.7-2.3 1.7.5 2.4 2 1.9 3.8M8.2 9.4V4.4M13.4 7.8V5.6M7.2 8.4C4.6 7.8 3.4 10.8 5.6 12.4M15.6 11.6c-.8 2.8-2.2 5.2-4.4 7M14.5 14.6l2.4 1.2M13.1 16.7l2.2 1.5M12.5 17.3l-2.4-.9"/></symbol>
+            <radialGradient id="token-ember" cx="45%" cy="40%" r="60%">
+                <stop offset="0%" stop-color="#FFC46B"/><stop offset="35%" stop-color="#F0661E"/>
+                <stop offset="75%" stop-color="#9A1F0C"/><stop offset="100%" stop-color="#3A0A05"/>
+            </radialGradient>
+            <linearGradient id="token-rim" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#B8B2AA"/><stop offset="45%" stop-color="#4A4642"/>
+                <stop offset="100%" stop-color="#141210"/>
+            </linearGradient>
+        </defs>
+    </svg>
     <a class="skip-link" href="#graph">Skip to network graph</a>
 
     <header class="header">
@@ -197,7 +211,6 @@
                 <div class="section-head">
                     <h2 class="draft-heading" id="bandHeading">Your Band</h2>
                     <span class="turn-tag" id="bandTurn" hidden></span>
-                    <span class="hint" title="The first hero picked starts on the Castle hex; the next enters only when it is empty.">Pick order matters in game ⓘ</span>
                     <div class="head-actions">
                         <button class="btn btn-ghost" type="button" id="undoBtn" title="Undo (Ctrl/⌘+Z)">
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Undo

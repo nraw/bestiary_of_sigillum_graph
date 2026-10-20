@@ -138,7 +138,7 @@ test('traits replaced by roles or condition nodes are gone', () => {
      'Berserker', 'Cooldown-Reduction', 'Ability-Count-Dependent', 'Anti-Large',
      // merged into an existing trait, or redundant / inconsistently applied
      'Anti-Group', 'Positioning', 'Counter-Magic', 'Terrain-Control', 'Line-Attack', 'Scaling-Cooldown',
-     'Structure-Counter', 'Wound'
+     'Structure-Counter', 'Wound', 'Range-Restricted'
     ].forEach(label => assert.ok(!heroes.some(h => h.labels.includes(label)), label));
 });
 
@@ -164,6 +164,9 @@ test('positional conditions say whose position matters', () => {
     assert.deepStrictEqual(heroesWith('Clustered enemies', 'benefits_from', 'enemy'), ['LIGNUM']);
     assert.deepStrictEqual(heroesWith('Adjacent allies', 'benefits_from', 'ally'), ['MANUS']);
     assert.deepStrictEqual(heroesWith('Adjacent enemies', 'benefits_from', 'enemy'), ['IRATUS', 'REDUX']);
+    // Ballista grows with each empty hex between; Ancestral Cannon cannot hit adjacent hexes at all
+    assert.deepStrictEqual(heroesWith('Distance', 'benefits_from', 'enemy'), ['BALLISTARIUS', 'MECHANICUS']);
+    assert.deepStrictEqual(links('MECHANICUS', 'Distance')[0].sources, ['ANCESTRAL CANNON']);
     assert.deepStrictEqual(heroesWith('Tower control', 'benefits_from', 'ally'), ['ARCHITECTUS', 'CORNIBUS', 'MALLEUS']);
     // Siege Tank hits enemies in the control areas of Towers the opponent holds
     assert.deepStrictEqual(links('MECHANICUS', 'Tower control'),

@@ -824,6 +824,13 @@ kbd {
 .halo, .focus-ring { fill: none; stroke: transparent; transition: stroke 0.2s; }
 .type-badge circle { stroke: var(--surface); stroke-width: 1.5; }
 .type-badge path { fill: #1A120C; stroke: #1A120C; stroke-width: 1.6; stroke-linejoin: round; }
+.svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.vitality-tokens, .vitality-stack { pointer-events: none; }
+.token-rim { fill: url(#token-rim); stroke: #0D0B09; stroke-width: 0.8; }
+.token-face { fill: url(#token-ember); }
+.token-heart {
+    fill: none; stroke: #FFE0A3; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+}
 
 .label-shape {
     fill: #4A3A2D;
@@ -1416,6 +1423,8 @@ kbd {
     background: #2A1D14;
 }
 .tile-portrait { width: 64px; height: 64px; }
+.portrait-wrap { position: relative; display: flex; }
+.vitality-stack { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .tile-name {
     font-family: 'Cinzel', serif;
     font-weight: 700;
@@ -1423,7 +1432,6 @@ kbd {
     letter-spacing: 0.03em;
     text-transform: uppercase;
 }
-.tile-size { font-size: 0.82rem; color: #57412E; font-style: italic; }
 .tile-badge {
     position: absolute;
     bottom: 34px;
@@ -1607,12 +1615,12 @@ kbd {
 .slot.is-drop-target, .against.is-drop-target, .excluded-chips.is-drop-target { box-shadow: 0 0 0 2px var(--gold-bright); }
 .slot-num { position: absolute; top: 8px; left: 10px; font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.05rem; }
 .slot.is-empty .slot-num { color: var(--text-muted); }
+.slot-num--id { top: auto; bottom: 8px; }
 .slot-add { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: none; color: var(--text-muted); }
 .slot-add:not(:disabled):hover { color: var(--gold-bright); }
 .slot-plus { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 1px solid currentColor; font-size: 1.5rem; }
 .slot-portrait { width: 84px; height: 84px; }
 .slot-name { font-family: 'Cinzel', serif; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
-.slot-castle { font-size: 0.86rem; font-style: italic; color: #57412E; }
 .slot-ribbon {
     position: absolute; top: 10px; right: -2px;
     padding: 1px 8px;

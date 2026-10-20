@@ -34,10 +34,10 @@ test('pool entries carry display facts', () => {
         { display: 'Fidea', attribute: 'Intelligence', size: 'Small', battleRoles: ['Supporter'], image: 'hero_images/fidea.png' });
 });
 
-test('slots: 3 in pick order, the first starts on the Castle', () => {
+test('slots: 3 in pick order', () => {
     const v = V.draftView(soloState(), ctx);
     assert.deepStrictEqual(v.slots.map(s => s.hero), ['FERRARIUS', 'BALLISTARIUS', null]);
-    assert.deepStrictEqual(v.slots.map(s => s.startsOnCastle), [true, false, false]);
+    assert.ok(v.slots.every(s => !('startsOnCastle' in s)), 'the Castle note is gone from the cards');
     assert.ok(v.slots.every(s => s.preview === false));
     assert.deepStrictEqual(v.against, ['SAXUM', 'ILLESEBRA', 'MAGNUS']);
     assert.deepStrictEqual(v.excluded, ['LIBRORUM', 'TENEBRIS']);
@@ -126,7 +126,7 @@ test('preview marks the previewed slot and the analysis change, without changing
     assert.strictEqual(plain.analysis.score.change, null);
 
     const v = V.draftView(s, ctx, { preview: 'FIDEA' });
-    assert.deepStrictEqual(v.slots[2], { index: 2, hero: 'FIDEA', preview: true, startsOnCastle: false });
+    assert.deepStrictEqual(v.slots[2], { index: 2, hero: 'FIDEA', preview: true });
     const supporter = v.analysis.roles.find(r => r.role === 'Supporter');
     assert.deepStrictEqual([supporter.coveredBy, supporter.change], ['FIDEA', 'added']);
     assert.ok(v.analysis.score.change && typeof v.analysis.score.change.from === 'number');
@@ -220,7 +220,7 @@ test('two-player: completions, intro and preview belong to the acting player', (
     assert.ok(v.completions.every(c => !c.heroes.includes('SAXUM')), "Player 2's completions");
     assert.ok(v.intro, 'Player 2 has no hero yet');
     const p = V.draftView(s, ctx, { preview: 'FIDEA' });
-    assert.deepStrictEqual(p.players[1].slots[0], { index: 0, hero: 'FIDEA', preview: true, startsOnCastle: true });
+    assert.deepStrictEqual(p.players[1].slots[0], { index: 0, hero: 'FIDEA', preview: true });
     assert.ok(p.players[0].slots.every(x => !x.preview));
 });
 

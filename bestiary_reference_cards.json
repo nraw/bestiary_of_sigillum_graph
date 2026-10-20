@@ -2095,7 +2095,7 @@
         "labels": [
           "Ranged",
           "AoE",
-          "Range-Restricted",
+          "Distance",
           "Swiftness",
           "Tower control",
           "Control decrease",
@@ -2123,11 +2123,12 @@
             ]
           },
           {
-            "label": "Range-Restricted",
-            "role": "has",
+            "label": "Distance",
+            "role": "benefits_from",
             "sources": [
               "ANCESTRAL CANNON"
-            ]
+            ],
+            "on": "enemy"
           },
           {
             "label": "Swiftness",
@@ -3162,7 +3163,7 @@
         "text": "Cares how many of an enemy's Support Abilities are on cooldown: more on cooldown makes some attacks stronger, while still-available ones can weaken others."
       },
       "Adjacent allies": {
-        "text": "Gets stronger with allies standing in hexes adjacent to this hero."
+        "text": "Gets stronger with allies standing in hexes adjacent to this hero. Clustered enemies attackers punish that huddle; Isolated enemies attackers find no lone target."
       },
       "Adjacent enemies": {
         "text": "Gets stronger when several enemies crowd the hexes adjacent to this hero."
@@ -3188,7 +3189,7 @@
         "text": "Repairs the allied Castle by removing Damage points from its track."
       },
       "Clustered enemies": {
-        "text": "Stronger when the target's allies stand right next to it."
+        "text": "Stronger when the target's allies stand right next to it, so it punishes bands that huddle for Adjacent allies."
       },
       "Conditional-Mobility": {
         "text": "Grants an extra maneuver, but only while a condition holds (such as an enemy being Injured)."
@@ -3216,7 +3217,7 @@
         "text": "Moves other characters (enemies, allies or both) to new hexes: pushes, pulls, swaps, setting them up for attacks."
       },
       "Distance": {
-        "text": "Stronger the farther away the target is (more unoccupied hexes in between)."
+        "text": "Wants targets kept at range: the attack grows with each unoccupied hex in between, or cannot reach adjacent hexes at all."
       },
       "Effect-Copy": {
         "text": "Copies the most recent positive effect from another character onto itself."
@@ -3244,7 +3245,7 @@
         "text": "A flipped Vitality marker; a character with 1 or more is Injured. Many Abilities care about Injuries: some grow stronger with them, some cost one."
       },
       "Isolated enemies": {
-        "text": "Stronger against enemies left on their own, with no characters (or few) around them."
+        "text": "Stronger against enemies left on their own, with no characters (or few) around them. Bands that huddle for Adjacent allies deny it."
       },
       "Melee": {
         "text": "Core attack only reaches enemies in adjacent hexes (rulebook attack range class)."
@@ -3268,9 +3269,6 @@
       },
       "Positive effect": {
         "text": "Needs a character carrying a positive (green) effect, so it pairs with buffers."
-      },
-      "Range-Restricted": {
-        "text": "Cannot target adjacent enemies: the attack only reaches hexes farther away."
       },
       "Ranged": {
         "text": "Core attack can target enemies from larger distances than adjacent hexes (rulebook attack range class)."

@@ -87,6 +87,22 @@ test('counters: an opponent inflicts what hinders you, or the opposite of what y
     assert.deepStrictEqual(equita.reasons.map(r => r.rule).sort(), ['hindrance', 'opposite']);
 });
 
+test('counters: a formation a hero needs is punished by an opponent who feeds on it', () => {
+    // Manus's Joint Assault wants allies packed around him; Lignum hits harder per adjacent ally
+    assert.deepStrictEqual(names(forHero('MANUS').counteredBy), ['LIGNUM']);
+    assert.deepStrictEqual(names(forHero('LIGNUM').counters), ['MANUS']);
+    const lignum = forHero('MANUS').counteredBy[0];
+    assert.deepStrictEqual(lignum.reasons.map(r => [r.rule, r.need.label, r.supply.label]),
+        [['formation', 'Adjacent allies', 'Clustered enemies']]);
+});
+
+test('counters: a huddled band denies heroes who need isolated enemies', () => {
+    ['GOETIUM', 'MESSUM', 'TENEBRIS'].forEach(name => assert.deepStrictEqual(names(forHero(name).counteredBy), ['MANUS'], name));
+    assert.deepStrictEqual(names(forHero('MANUS').counters).sort(), ['GOETIUM', 'MESSUM', 'TENEBRIS']);
+    assert.deepStrictEqual(forHero('GOETIUM').counteredBy[0].reasons.map(r => [r.rule, r.need.label, r.supply.label]),
+        [['formation', 'Isolated enemies', 'Adjacent allies']]);
+});
+
 test('broad needs report the pool size instead of partners', () => {
     const broad = name => forHero(name).broad.map(b => [b.label, b.count]);
     assert.deepStrictEqual(broad('CARNIFEX'), [['Negative effect', 21]]);
@@ -114,10 +130,10 @@ const arcBetween = (a, b, category) => arcs.find(x => x.category === category
 // Arrow flags read from `from`'s point of view: does the help/harm flow from -> to?
 const flows = (arc, from) => (arc.a === from ? { out: arc.aToB, in: arc.bToA } : { out: arc.bToA, in: arc.aToB });
 
-test('synergyArcs: one arc per hero pair and category, 67 in all', () => {
-    assert.strictEqual(arcs.length, 67);
+test('synergyArcs: one arc per hero pair and category, 71 in all', () => {
+    assert.strictEqual(arcs.length, 71);
     assert.deepStrictEqual(Object.fromEntries(['partner', 'conflict', 'counter']
-        .map(c => [c, arcs.filter(x => x.category === c).length])), { partner: 47, conflict: 14, counter: 6 });
+        .map(c => [c, arcs.filter(x => x.category === c).length])), { partner: 47, conflict: 14, counter: 10 });
     assert.ok(arcs.every(x => x.a < x.b), 'pair ends are sorted so arcs are stable');
 });
 
@@ -134,7 +150,7 @@ test('synergyArcs can focus on one hero', () => {
     const focused = S.synergyArcs(relations, 'GOETIUM');
     assert.ok(focused.every(x => x.a === 'GOETIUM' || x.b === 'GOETIUM'));
     assert.deepStrictEqual(focused.map(x => `${x.category}:${x.a === 'GOETIUM' ? x.b : x.a}`).sort(), [
-        'conflict:MECHANICUS', 'conflict:VINCTUM',
+        'conflict:MECHANICUS', 'conflict:VINCTUM', 'counter:MANUS',
         'partner:IRATUS', 'partner:MAGNUS', 'partner:MORTUM', 'partner:SATURN', 'partner:VINCTUM'
     ]);
 });
@@ -149,6 +165,10 @@ test('describeRelation words each relation for arc tooltips', () => {
         'Messum inflicts Defense decrease (Frailty), which undoes Defense increase for Saxum\'s Rock Blast');
     assert.strictEqual(S.describeRelation(find('partner', 'TEMPUS', 'BREWUS')),
         'Brewus inflicts Cooldown-Manipulation (Fragrant Hop) for Tempus\'s Pendulum');
+    assert.strictEqual(S.describeRelation(find('counter', 'MANUS', 'LIGNUM')),
+        'Lignum benefits from Clustered enemies (Puppet / Limp Hands), which punishes the Adjacent allies of Manus\'s Joint Assault');
+    assert.strictEqual(S.describeRelation(find('counter', 'GOETIUM', 'MANUS')),
+        'Manus benefits from Adjacent allies (Joint Assault), which denies the Isolated enemies of Goetium\'s Lightning');
 });
 
 test('synergySummary lists unique heroes per non-empty group, in display order', () => {

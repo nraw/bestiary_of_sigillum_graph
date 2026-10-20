@@ -4,7 +4,7 @@
 (function () {
     const Draft = window.Draft;
     const { draftView, percentLabel } = window.DraftView;
-    const { escapeHtml } = window.GraphLogic;
+    const { escapeHtml, vitalityTokensSvg } = window.GraphLogic;
     const { titleCase } = window.Synergy;
 
     const STORAGE_KEY = 'bestiary-draft-v1';
@@ -46,6 +46,9 @@
     const portrait = (name, cls = 'portrait') =>
         `<img class="${cls}" src="hero_images/${name.toLowerCase()}.png" alt="" loading="lazy" draggable="false">`;
     const heroOf = name => ctx.byName.get(name);
+    // Portrait with the hero's vitality as a stack of heart tokens, as on the graph
+    const tokenPortrait = (name, cls) =>
+        `<span class="portrait-wrap">${portrait(name, cls)}${vitalityTokensSvg(heroOf(name).vitality)}</span>`;
     const rolePills = roles => `<span class="role-pills">${roles.map(r =>
         `<span class="role-pill role--${r}" title="${r}">${icon(r)}<span class="sr-only">${r}</span></span>`).join('')}</span>`;
     const banner = attribute =>
@@ -406,10 +409,9 @@
                 <button class="tile-main" type="button" data-act="primary" aria-label="${escapeHtml(primaryLabel(e))}"
                         ${e.available && view.step.action ? '' : 'aria-disabled="true"'}>
                     ${banner(e.attribute)}
-                    ${portrait(e.name, 'tile-portrait')}
+                    ${tokenPortrait(e.name, 'tile-portrait')}
                     <span class="tile-name">${escapeHtml(e.display)}</span>
                     ${rolePills(e.battleRoles)}
-                    <span class="tile-size">${e.size}</span>
                     ${tileRank(e)}
                     ${e.available ? '' : `<span class="tile-badge">${REASON_BADGE[e.unavailableReason]}</span>`}
                 </button>
@@ -488,14 +490,13 @@
         return `<div class="slot attr--${hero.attribute}${slot.preview ? ' is-preview' : ''}" data-slot="${slot.index}"
                     data-hero="${slot.hero}" data-drop="slot" ${canEdit ? 'draggable="true" tabindex="0"' : ''}
                     aria-label="${slot.index + 1}. ${escapeHtml(display(slot.hero))}${slot.preview ? ' (preview)' : ''}">
-            <span class="slot-num">${slot.index + 1}</span>
+            <span class="slot-num slot-num--id" title="Card number">#${hero.id}</span>
             ${banner(hero.attribute)}
             ${slot.preview ? '<span class="slot-ribbon">Preview</span>' : ''}
             ${canEdit ? `<button class="slot-remove" type="button" data-act="remove" aria-label="Remove ${escapeHtml(display(slot.hero))}">✕</button>` : ''}
-            ${portrait(slot.hero, 'slot-portrait')}
+            ${tokenPortrait(slot.hero, 'slot-portrait')}
             <span class="slot-name">${escapeHtml(display(slot.hero))}</span>
             ${rolePills(Draft.battleRoles(hero))}
-            ${slot.startsOnCastle ? '<span class="slot-castle">1st pick · Starts on Castle</span>' : ''}
             ${canEdit ? `<span class="slot-move">
                 <button type="button" data-act="left" aria-label="Move ${escapeHtml(display(slot.hero))} earlier" ${slot.index === 0 ? 'disabled' : ''}>◀</button>
                 <button type="button" data-act="right" aria-label="Move ${escapeHtml(display(slot.hero))} later" ${slot.index >= count - 1 ? 'disabled' : ''}>▶</button>

@@ -216,3 +216,36 @@ test('focusIds is the selection plus its direct neighbours', () => {
     assert.deepStrictEqual([...G.focusIds('label_Stun', adjacency)].sort(), ['hero_1', 'hero_2', 'label_Stun']);
     assert.deepStrictEqual([...G.focusIds('missing', adjacency)], ['missing']);
 });
+
+test('vitalityTokens stacks one token per vitality along the bottom-left rim', () => {
+    const R = G.HERO_RADIUS;
+    for (const vitality of [2, 3, 4, 5]) {
+        const tokens = G.vitalityTokens(vitality, R);
+        assert.strictEqual(tokens.length, vitality);
+        tokens.forEach(t => {
+            assert.ok(Math.abs(Math.hypot(t.x, t.y) - R) < 1e-9, 'token centres sit on the rim');
+            assert.ok(t.x < 0, 'tokens stay on the left half, clear of the attribute badge');
+        });
+        const meanAngle = tokens.reduce((s, t) => s + Math.atan2(t.y, t.x), 0) / vitality * 180 / Math.PI;
+        assert.ok(Math.abs(meanAngle - 145) < 1e-6, `stack is centred on the bottom-left (${meanAngle})`);
+        for (let i = 1; i < tokens.length; i++) {
+            const gap = Math.hypot(tokens[i].x - tokens[i - 1].x, tokens[i].y - tokens[i - 1].y);
+            assert.ok(gap < 2 * G.TOKEN_RADIUS, 'neighbouring tokens overlap like a stack');
+            assert.ok(gap > G.TOKEN_RADIUS, 'but each token stays readable');
+            assert.ok(tokens[i].y > tokens[i - 1].y, 'drawn top to bottom so lower tokens lie on top');
+        }
+    }
+    assert.deepStrictEqual(G.vitalityTokens(0, R), []);
+});
+
+test('vitalityTokensSvg draws the same token stack as markup for HTML portraits', () => {
+    const svg = G.vitalityTokensSvg(4);
+    assert.match(svg, /^<svg class="vitality-stack"/);
+    assert.match(svg, new RegExp(`viewBox="-${G.HERO_RADIUS} -${G.HERO_RADIUS} ${G.HERO_RADIUS * 2} ${G.HERO_RADIUS * 2}"`),
+        'one viewBox unit per graph unit, so the stack scales with the portrait');
+    assert.match(svg, /aria-hidden="true"/);
+    assert.strictEqual((svg.match(/class="vitality-token"/g) || []).length, 4);
+    assert.strictEqual((svg.match(/href="#heart-glyph"/g) || []).length, 4);
+    const [first] = G.vitalityTokens(4, G.HERO_RADIUS);
+    assert.ok(svg.includes(`translate(${first.x.toFixed(2)},${first.y.toFixed(2)})`), 'tokens use the graph layout');
+});
