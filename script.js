@@ -39,6 +39,7 @@ const state = {
     showAllNames: false,
     showSynergies: false,
     bandFocus: null, // { mine, theirs } hero names sent from the Draft tab
+    fromDraft: false, // a hero opened from the Draft tab: show Back to draft
     showOpponent: true, // band view: the opposing band and its counters with mine
     // Clicked edge or synergy arc: { key, links } — the selected hero's trait links behind it are marked on its card
     picked: null
@@ -646,7 +647,7 @@ function updateHeaderState(filterSet) {
     else if (selected) title = state.showSynergies && selected.type === 'hero' ? `${selected.name} · Synergies` : selected.name;
     else if (active.length) title = `Filtered: ${active.join(' · ')}`;
     document.getElementById('graphTitle').textContent = title;
-    document.getElementById('backToDraft').hidden = !state.bandFocus;
+    document.getElementById('backToDraft').hidden = !(state.bandFocus || state.fromDraft);
     const opponentToggle = document.getElementById('opponentToggle');
     opponentToggle.hidden = !state.bandFocus?.theirs.length;
     opponentToggle.setAttribute('aria-pressed', String(state.showOpponent));
@@ -1641,8 +1642,11 @@ function refit() {
 // Used by the Draft tab (draft-ui.js); the getters also help debugging
 window.BestiaryGraph = {
     state, showBand, refit, routeUrl,
-    clearBand() { state.bandFocus = null; render(); },
+    // Back to draft: drop the band view and the way back
+    clearBand() { state.bandFocus = null; state.fromDraft = false; render(); },
+    // A hero inspected from the Draft tab keeps the way back to the draft
     selectHero(name) {
+        state.fromDraft = true;
         const node = nodesData.find(n => n.type === 'hero' && n.name === name);
         if (node) selectNode(node.id, { source: 'draft' });
     },

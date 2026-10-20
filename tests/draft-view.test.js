@@ -72,6 +72,21 @@ test('percent labels: "Top N%" rounded up, never below 1%; the weaker half reads
     assert.strictEqual(V.percentLabel(100), 'Bottom 1%');
 });
 
+test('percent explanations say what "Top N%" is a share of, in the same rounded numbers', () => {
+    assert.strictEqual(V.percentExplain(0.01),
+        'Top 1%: at most 1% of all possible 3-hero bands score as well or better.');
+    assert.strictEqual(V.percentExplain(2.3, { facing: true }),
+        'Top 3%: at most 3% of all possible 3-hero bands score as well or better against this opponent.');
+    assert.strictEqual(V.percentExplain(80),
+        'Bottom 21%: only about 21% of all possible 3-hero bands score this low or lower.');
+    assert.strictEqual(V.percentExplain(null), '');
+});
+
+test('every battle role has a plain-language explanation', () => {
+    assert.deepStrictEqual(Object.keys(V.ROLE_INFO), D.BATTLE_ROLES);
+    Object.values(V.ROLE_INFO).forEach(text => assert.ok(text.length > 20 && text.length <= 160, text));
+});
+
 test('a full band is complete and has nothing left to rank', () => {
     const empty = V.draftView(D.createDraft('solo'), ctx);
     assert.ok(!('completions' in empty), 'completions live in the tile popover (Best with) now');
@@ -327,6 +342,11 @@ test('reference cards: one tab per player, or your band and Against in solo', ()
     const band = pickAll(D.createDraft('solo'), ['FIDEA', 'GOETIUM', 'MESSUM']);
     assert.deepStrictEqual(V.referenceSides(band), [{ key: 'mine', label: 'Your band', heroes: ['FIDEA', 'GOETIUM', 'MESSUM'] }]);
     assert.deepStrictEqual(V.referenceSides(D.setEnemies(band, ['SAXUM'])).map(x => x.key), ['mine', 'against']);
+});
+
+test('reference cards for one hero (from the pool): a single side with just that card', () => {
+    const s = pickAll(D.createDraft('standard'), ['TOXICUM']);
+    assert.deepStrictEqual(V.referenceSides(s, { hero: 'TEMPUS' }), [{ key: 'hero', label: 'Tempus', heroes: ['TEMPUS'] }]);
 });
 
 // ---- Random hero roll ------------------------------------------------------------------------

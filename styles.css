@@ -1759,9 +1759,17 @@ kbd {
 .band-score { font-family: 'Cinzel', serif; font-size: 2rem; line-height: 1.1; font-weight: 700; color: var(--gold-bright); }
 .score-bar { height: 8px; }
 .view-graph { justify-content: center; }
-.further-reading { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); }
-.further-reading a { color: var(--gold); }
-.further-reading a:hover { color: var(--gold-bright); }
+/* What the roles mean: a disclosure under Team balance (on phones too, at the top of the sheet) */
+.role-help summary { cursor: pointer; color: var(--gold); font-size: 0.95rem; }
+.role-help summary:hover, .role-help summary:focus-visible { color: var(--gold-bright); }
+.role-help[open] summary { margin-bottom: 8px; }
+.role-defs { display: grid; gap: 4px 0; margin-bottom: 8px; }
+.role-defs dt { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.role-defs dt .role-ico { width: 18px; height: 18px; }
+.role-defs dd { margin: 0 0 6px 24px; color: var(--text-muted); font-size: 0.92rem; }
+.role-help a { color: var(--gold); }
+.role-help a:hover { color: var(--gold-bright); }
+.pop-explain { display: block; margin-top: 2px; font-size: 0.85rem; }
 
 /* Hero picker dialog, card menu, toast */
 .hero-picker {
@@ -2102,3 +2110,50 @@ kbd {
     .ref-card { flex: 0 0 90%; scroll-snap-align: center; }
     .pool-grid { grid-auto-rows: 1fr; }
 }
+
+/* Reference cards: dismissible credit, and a cards-only view (full screen where supported) */
+.cards-credit { position: relative; padding-right: 44px; }
+.credit-hide { position: absolute; top: 6px; right: 10px; width: 28px; height: 28px; font-size: 0.8rem; font-style: normal; }
+.cards-exit { display: none; }
+.cards-dialog.is-cards-only .cards-head,
+.cards-dialog.is-cards-only .cards-credit { display: none; }
+.cards-dialog.is-cards-only { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border: 0; border-radius: 0; }
+.cards-dialog.is-cards-only .cards-exit {
+    display: grid;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    opacity: 0.55;
+    background: var(--surface-3);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+}
+.cards-dialog.is-cards-only .cards-exit:hover, .cards-dialog.is-cards-only .cards-exit:focus-visible { opacity: 1; }
+.card-track:focus { outline: none; }
+
+/* Phones: the random roll flicks through heroes in one place */
+.fate-roll {
+    position: fixed;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%);
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 180px;
+    padding: 14px 16px 16px;
+    border-radius: 14px;
+    border: 1px solid #FFB347;
+    background: var(--surface-3);
+    box-shadow: 0 0 0 2px rgba(255, 179, 71, 0.35), 0 0 30px rgba(255, 140, 40, 0.45), 0 16px 40px rgba(0, 0, 0, 0.7);
+    pointer-events: none;
+}
+.fate-roll[hidden] { display: none; }
+.fate-label { font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.fate-roll .portrait-wrap { width: 110px; }
+.fate-portrait { width: 110px; height: 110px; object-fit: cover; border-radius: 50%; }
+.fate-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.1rem; color: var(--gold-bright); }
+.fate-roll.is-fated { box-shadow: 0 0 0 3px #FFB347, 0 0 44px rgba(255, 140, 40, 0.85), 0 16px 40px rgba(0, 0, 0, 0.7); }

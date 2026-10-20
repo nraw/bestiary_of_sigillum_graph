@@ -3,13 +3,14 @@
 // this file draws (both unit tested). Only DOM, events and persistence live here.
 (function () {
     const Draft = window.Draft;
-    const { draftView, referenceSides, graphAction, rollFrames, reasonGroups, percentLabel, groupText, collapse } = window.DraftView;
+    const { draftView, referenceSides, graphAction, rollFrames, reasonGroups, percentLabel, percentExplain, ROLE_INFO, groupText, collapse } = window.DraftView;
     const { encodeDraft, decodeDraft, isDraftLink } = window.DraftShare;
     const { escapeHtml, vitalityTokensSvg } = window.GraphLogic;
     const { titleCase } = window.Synergy;
     const { isGraphRoute } = window.GraphRoute;
 
     const STORAGE_KEY = 'bestiary-draft-v1';
+    const CREDIT_KEY = 'bestiary-hide-card-credit';
     const ATTRIBUTES = ['Strength', 'Agility', 'Intelligence'];
     const FORMAT_INFO = {
         standard: { label: 'Standard', hint: 'Alternate picks until each player has 3' },
@@ -46,6 +47,7 @@
         expandKey: null,
         shared: null, // { state, code }: a draft opened from a shared link (read-only, shown in the cards modal)
         cardSide: { solo: 'mine', 'two-player': '1' }, // reference cards: whose cards are shown
+        cardHero: null, // reference cards: a single hero's card, opened from the pool
         pop: null // hero shown in the tile popover
     };
 
@@ -62,7 +64,7 @@
     // `fills`: roles this hero would add to the band; the others are dimmed (already covered)
     const rolePills = (roles, fills = roles) => `<span class="role-pills">${roles.map(r => {
         const adds = fills.includes(r);
-        const label = adds ? r : `${r} (already covered in this band)`;
+        const label = `${adds ? r : `${r} (already covered in this band)`}: ${ROLE_INFO[r]}`;
         return `<span class="role-pill role--${r}${adds ? '' : ' is-covered'}" title="${label}">${icon(r)}<span class="sr-only">${label}</span></span>`;
     }).join('')}</span>`;
     const narrow = () => window.matchMedia('(max-width: 600px), (hover: none)').matches;
@@ -186,7 +188,10 @@
             `<button class="chip${a === 'All' ? '' : ` chip--${a}`}" type="button" data-attribute="${a}" aria-pressed="${a === 'All'}">
                 ${a === 'All' ? '' : icon(a)}${a}</button>`).join('');
         $('roleFilter').innerHTML = Draft.BATTLE_ROLES.map(r =>
-            `<button class="chip" type="button" data-role="${r}" aria-pressed="false">${icon(r)}${r}</button>`).join('');
+            `<button class="chip" type="button" data-role="${r}" aria-pressed="false" title="${escapeHtml(ROLE_INFO[r])}">${icon(r)}${r}</button>`).join('');
+
+        $('roleDefs').innerHTML = Draft.BATTLE_ROLES.map(r =>
+            `<dt>${icon(r, 'ico role-ico')}${r}</dt><dd>${escapeHtml(ROLE_INFO[r])}</dd>`).join('');
 
         $('attributeFilter').addEventListener('click', event => {
             const chip = event.target.closest('[data-attribute]');
@@ -396,7 +401,7 @@
         $('draftBar').innerHTML = `<span class="bar-step">${escapeHtml(view.step.label)}</span>
             <span class="bar-faces" aria-hidden="true">${faces}</span>
             <span class="bar-roles">${a.coveredCount}/3 roles</span>
-            <span class="bar-score">${a.score.percent === null ? '—' : percentLabel(a.score.percent)}</span>
+            <span class="bar-score" title="${escapeHtml(percentExplain(a.score.percent))}">${a.score.percent === null ? '—' : percentLabel(a.score.percent)}</span>
             <span class="sr-only">Open band analysis</span>`;
     }
 
@@ -660,7 +665,8 @@
                 <button class="icon-btn pop-close" type="button" data-pop="close" aria-label="Close">✕</button>
             </div>
             <p class="pop-score">${ban ? `Player ${rival}'s best band with ${escapeHtml(entry.display)}` : 'Best band with this hero'}:
-                <strong>${s.percentLabel}</strong></p>
+                <strong>${s.percentLabel}</strong>
+                <small class="pop-explain">${escapeHtml(percentExplain(s.topPercent, { facing: Draft.bands(state())[ban ? p : rival].length > 0 }))}</small></p>
             ${s.bestWith.length ? `<p class="pop-best">Best with: <strong>${s.bestWith.map(display).map(escapeHtml).join(' + ')}</strong></p>` : ''}
             ${reasonGroups(s.reasons).map(g => `<section class="reason-group">
                 <h4 class="mini-heading">${g.label}</h4>
@@ -670,6 +676,7 @@
             <div class="pop-actions">
                 ${entry.available && view.step.action ? `<button class="btn ${ban ? 'btn-crimson' : 'btn-gold'} pop-primary" type="button" data-pop="primary">${verb}${escapeHtml(forWhom)}</button>` : ''}
                 ${canFill ? `<button class="btn btn-ghost" type="button" data-pop="fill">Fill band</button>` : ''}
+                ${sheet ? `<button class="btn btn-ghost" type="button" data-pop="card">View card</button>` : ''}
             </div>`;
         pop.dataset.hero = name;
         pop.hidden = false;
@@ -719,6 +726,7 @@
             hidePopover();
             if (act === 'primary') primaryAction(name);
             else if (act === 'fill') fillBand(name);
+            else if (act === 'card') openCards({ hero: name });
             else tile?.focus();
         });
         document.addEventListener('click', event => {
@@ -830,6 +838,7 @@
         };
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { land(); return; }
         rolling = true;
+        if (narrow()) { rollInPlace(candidates, name, start, land); return; }
         // Hop only across tiles on screen so the roll can be followed; the winner is drawn from all candidates
         const onScreen = candidates.filter(n => {
             const r = tileOf(n)?.getBoundingClientRect();
@@ -848,6 +857,24 @@
             winner?.classList.add('is-fated');
             if (!onScreen.includes(name)) winner?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             setTimeout(land, onScreen.includes(name) ? 520 : 900);
+        })();
+    }
+
+    // Phones: most of the pool is off screen, so the roll flicks through heroes in one place (no scrolling)
+    function rollInPlace(candidates, name, start, land) {
+        const box = $('fateRoll');
+        const frames = rollFrames(candidates, name);
+        const done = () => { box.hidden = true; box.classList.remove('is-fated'); };
+        box.hidden = false;
+        let i = 0;
+        (function next() {
+            if (state() !== start) { rolling = false; done(); return; }
+            const frame = frames[i++];
+            box.innerHTML = `<span class="fate-label">Fate decides…</span>${tokenPortrait(frame.name, 'fate-portrait')}
+                <span class="fate-name">${escapeHtml(display(frame.name))}</span>`;
+            if (i < frames.length) { setTimeout(next, frame.delay); return; }
+            box.classList.add('is-fated');
+            setTimeout(() => { done(); land(); }, 700);
         })();
     }
 
@@ -996,15 +1023,18 @@
         $('balanceSummary').textContent = `${whose} covers ${a.coveredCount} of 3 roles`;
         $('roleList').innerHTML = a.roles.map(r => `
             <li class="role-row${r.coveredBy ? ' is-covered' : ''}${r.change ? ' is-changed' : ''}">
-                ${icon(r.role, 'ico role-ico')}<span class="role-name">${r.role}</span>
+                ${icon(r.role, 'ico role-ico')}<span class="role-name" title="${escapeHtml(ROLE_INFO[r.role])}">${r.role}</span>
                 <span class="role-status">${r.coveredBy ? `✓ ${escapeHtml(display(r.coveredBy))}` : '○ Missing'}</span>
             </li>`).join('');
         $('scoreCaption').textContent = a.score.complete ? whose : 'Best band still reachable';
         $('bandScore').textContent = a.score.percent === null ? '—' : percentLabel(a.score.percent);
         $('scoreBar').style.width = a.score.percent === null ? '0%' : `${Math.max(3, 100 - a.score.percent)}%`;
+        const facing = Draft.bands(state())[v.focus === 1 ? 2 : 1].length > 0;
+        $('scoreExplain').textContent = a.score.percent === null ? ''
+            : `${percentExplain(a.score.percent, { facing })} Scored on roles, synergy, themes, durability and conflicts${facing ? ', plus the matchup' : ''}.`;
+        $('scoreDetail').hidden = !a.score.change;
         $('scoreDetail').textContent = a.score.change
-            ? `Preview: ${a.score.change.from === null ? '—' : percentLabel(a.score.change.from)} → ${percentLabel(a.score.change.to)}`
-            : 'Share of all possible 3-hero bands that score at least as well.';
+            ? `Preview: ${a.score.change.from === null ? '—' : percentLabel(a.score.change.from)} → ${percentLabel(a.score.change.to)}` : '';
         $('scoreDetail').classList.toggle('is-changed', Boolean(a.score.change));
 
         $('threatHeading').textContent = solo() ? 'Threats from Against' : `Threats from Player ${v.focus === 1 ? 2 : 1}`;
@@ -1035,19 +1065,24 @@
     const cardsState = () => (ui.shared ? ui.shared.state : state());
     const cardsMode = () => (cardsState().format === 'solo' ? 'solo' : 'two-player');
 
-    function openCards() {
+    function openCards({ hero = null } = {}) {
+        ui.cardHero = hero;
         renderCards();
         if (!$('cardsDialog').open) $('cardsDialog').showModal();
         $('cardsSwitch').querySelector('[aria-checked="true"]')?.focus();
     }
 
     function renderCards() {
-        const sides = referenceSides(cardsState());
+        const hero = ui.cardHero;
+        const sides = referenceSides(cardsState(), { hero });
         const mode = cardsMode();
-        if (!sides.some(x => x.key === ui.cardSide[mode])) ui.cardSide[mode] = sides[0].key;
-        const side = sides.find(x => x.key === ui.cardSide[mode]);
-        $('cardsTitle').textContent = ui.shared ? 'Shared draft · reference cards' : 'Reference cards';
+        if (!hero && !sides.some(x => x.key === ui.cardSide[mode])) ui.cardSide[mode] = sides[0].key;
+        const side = hero ? sides[0] : sides.find(x => x.key === ui.cardSide[mode]);
+        $('cardsTitle').textContent = hero ? `${display(hero)} · reference card`
+            : ui.shared ? 'Shared draft · reference cards' : 'Reference cards';
         $('cardsSwitch').hidden = sides.length < 2;
+        $('shareLink').hidden = Boolean(hero);
+        $('cardsCredit').hidden = creditHidden();
         $('cardsSwitch').innerHTML = sides.map(x =>
             `<button type="button" role="radio" data-side="${x.key}" aria-checked="${x === side}">${escapeHtml(x.label)}</button>`).join('');
         const ready = window.BestiaryGraph && window.BestiaryGraph.ready;
@@ -1055,6 +1090,23 @@
             <article class="ref-card" aria-label="${escapeHtml(display(name))} reference card">
                 ${ready ? window.BestiaryGraph.heroCard(name) : '<p class="muted">Loading the card…</p>'}
             </article>`).join('');
+    }
+
+    function creditHidden() {
+        try { return localStorage.getItem(CREDIT_KEY) === '1'; } catch (error) { return false; }
+    }
+
+    // Cards only: no header, tabs or note, just the cards (browser full screen where it is supported)
+    function setCardsOnly(on) {
+        const dialog = $('cardsDialog');
+        dialog.classList.toggle('is-cards-only', on);
+        if (on) {
+            dialog.requestFullscreen?.().catch(() => {});
+            $('cardsExit').focus();
+        } else {
+            if (document.fullscreenElement === dialog) document.exitFullscreen().catch(() => {});
+            if (dialog.open) $('cardsOnly').focus();
+        }
     }
 
     function shareUrl(s) {
@@ -1084,8 +1136,21 @@
             else toast(url);
         });
         dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+        $('cardsOnly').addEventListener('click', () => setCardsOnly(true));
+        $('cardsExit').addEventListener('click', () => setCardsOnly(false));
+        // Esc leaves the browser's full screen first: drop the cards-only view with it
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && dialog.classList.contains('is-cards-only')) setCardsOnly(false);
+        });
+        $('creditHide').addEventListener('click', () => {
+            try { localStorage.setItem(CREDIT_KEY, '1'); } catch (error) { /* storage disabled: hidden until reload */ }
+            $('cardsCredit').hidden = true;
+            $('cardTrack').focus();
+        });
         // Closing a shared draft's cards returns to your own draft
         dialog.addEventListener('close', () => {
+            setCardsOnly(false);
+            ui.cardHero = null;
             if (!ui.shared) return;
             ui.shared = null;
             if (ui.tab === 'draft') history.replaceState(history.state, '', '#draft');
@@ -1159,6 +1224,7 @@
         if (solo() && available) items.push(['exclude', 'Exclude']);
         if (solo() && s.enemies.includes(name)) items.push(['unface', 'Stop facing']);
         if (solo() && s.excluded.includes(name)) items.push(['unexclude', 'Make available']);
+        items.push(['card', 'View reference card']);
         items.push(['graph', 'View in graph']);
         const menu = $('cardMenu');
         menu.innerHTML = items.map(([act, label]) => `<button type="button" role="menuitem" data-menu="${act}">${label}</button>`).join('');
@@ -1192,6 +1258,7 @@
             else if (act === 'exclude') attempt(s => Draft.setExcluded(s, [...s.excluded, name]), `Excluded ${display(name)}.`);
             else if (act === 'unface') attempt(s => Draft.setEnemies(s, s.enemies.filter(n => n !== name)), `No longer facing ${display(name)}.`);
             else if (act === 'unexclude') attempt(s => Draft.setExcluded(s, s.excluded.filter(n => n !== name)), `${display(name)} is available again.`);
+            else if (act === 'card') openCards({ hero: name });
             else if (act === 'graph') { setTab('graph'); window.BestiaryGraph?.selectHero(name); }
         });
         menu.addEventListener('keydown', event => {

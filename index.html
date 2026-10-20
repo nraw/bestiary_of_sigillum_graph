@@ -295,13 +295,20 @@
                 <h3 class="mini-heading" id="balanceHeading">Team balance</h3>
                 <p class="analysis-sub" id="balanceSummary"></p>
                 <ul class="role-list" id="roleList"></ul>
+                <details class="role-help" id="roleHelp">
+                    <summary>What do the roles mean?</summary>
+                    <dl class="role-defs" id="roleDefs"></dl>
+                    <p class="analysis-sub">A band wants one of each. From the strategy guide
+                        <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=2353111776" target="_blank" rel="noopener noreferrer">Basic Principles of Army Composition</a>.</p>
+                </details>
             </section>
             <section class="analysis-block" aria-labelledby="scoreHeading">
                 <h3 class="mini-heading" id="scoreHeading">Band score</h3>
                 <p class="analysis-sub" id="scoreCaption"></p>
                 <p class="band-score" id="bandScore"></p>
                 <div class="score-bar" aria-hidden="true"><span id="scoreBar"></span></div>
-                <p class="analysis-sub" id="scoreDetail"></p>
+                <p class="analysis-sub" id="scoreExplain"></p>
+                <p class="analysis-sub" id="scoreDetail" hidden></p>
             </section>
             <section class="analysis-block" id="threatBlock" aria-labelledby="threatHeading" hidden>
                 <h3 class="mini-heading" id="threatHeading">Threats from Against</h3>
@@ -312,15 +319,13 @@
                 <div id="synergyList"></div>
             </section>
             <button class="btn btn-ghost view-graph" type="button" id="viewInGraph">View band in graph →</button>
-            <p class="analysis-sub further-reading">
-                Further reading:
-                <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=2353111776" target="_blank" rel="noopener noreferrer">Basic Principles of Army Composition</a>
-            </p>
         </aside>
 
         <div class="tile-pop" id="tilePopover" role="dialog" aria-labelledby="popHeading" hidden></div>
         <div class="sr-only" id="draftLive" aria-live="polite"></div>
         <div class="card-menu" id="cardMenu" role="menu" hidden></div>
+        <!-- Phones: the random roll flicks through heroes here instead of across the (mostly off-screen) pool -->
+        <div class="fate-roll" id="fateRoll" aria-hidden="true" hidden></div>
     </main>
     <!-- Shared by both tabs -->
     <div class="toast" id="draftToast" role="status" hidden></div>
@@ -330,14 +335,21 @@
         <header class="cards-head">
             <h2 class="draft-heading" id="cardsTitle">Reference cards</h2>
             <div class="player-switch" id="cardsSwitch" role="radiogroup" aria-label="Whose cards"></div>
+            <button class="btn btn-ghost" type="button" id="cardsOnly" title="Hide everything but the cards">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>Cards only
+            </button>
             <button class="btn btn-gold" type="button" id="shareLink">Share link</button>
             <form method="dialog"><button class="icon-btn" value="close" aria-label="Close">✕</button></form>
         </header>
-        <div class="card-track" id="cardTrack"></div>
-        <p class="cards-credit">
+        <button class="icon-btn cards-exit" type="button" id="cardsExit" aria-label="Show the controls again" title="Show the controls again">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg>
+        </button>
+        <div class="card-track" id="cardTrack" tabindex="-1"></div>
+        <p class="cards-credit" id="cardsCredit">
             The card design is heavily inspired by Michael's
             <a href="https://boardgamegeek.com/thread/3571948/character-reference-cards" target="_blank" rel="noopener noreferrer">Character Reference Cards</a>
             on BoardGameGeek. We suggest using those at the table.
+            <button class="icon-btn credit-hide" type="button" id="creditHide" aria-label="Hide this note" title="Hide this note">✕</button>
         </p>
     </dialog>
 

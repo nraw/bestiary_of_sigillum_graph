@@ -11,6 +11,21 @@
     // pct is the share of bands scoring at least as well; past the middle, say how few score worse
     const roundUp = x => Math.min(100, Math.max(1, Math.ceil(x - 1e-9)));
     const percentLabel = pct => (pct <= 50 ? `Top ${roundUp(pct)}%` : `Bottom ${roundUp(100 - pct + 1)}%`);
+    // What "Top N%" is a share of, with the same rounded number as the label
+    function percentExplain(pct, { facing = false } = {}) {
+        if (pct === null || pct === undefined) return '';
+        const against = facing ? ' against this opponent' : '';
+        return pct <= 50
+            ? `${percentLabel(pct)}: at most ${roundUp(pct)}% of all possible 3-hero bands score as well or better${against}.`
+            : `${percentLabel(pct)}: only about ${roundUp(100 - pct + 1)}% of all possible 3-hero bands score this low or lower${against}.`;
+    }
+
+    // Battle roles from the strategy guide (Basic Principles of Army Composition); a band wants one of each
+    const ROLE_INFO = {
+        Controller: 'Holds and shapes the battlefield: pushes or pulls enemies, stuns them or speeds allies. Tough enough (3+ hit points) to stand in front.',
+        Attacker: 'Deals the damage: attacks that grow, hit several enemies at once, or gain attack.',
+        Supporter: 'Helps from range: buffs or heals allies, or weakens enemies with conditions.'
+    };
     const CHIP_KIND = { positive: 'synergy', counter: 'counter', warning: 'warning' };
     const chipKind = reason => CHIP_KIND[reason.kind];
 
@@ -268,7 +283,9 @@
 
     // ---- Reference cards: one tab per side ------------------------------------------------
 
-    function referenceSides(state) {
+    // `hero`: just that hero's card (opened from the pool)
+    function referenceSides(state, { hero = null } = {}) {
+        if (hero) return [{ key: 'hero', label: titleCase(hero), heroes: [hero] }];
         if (state.format === 'solo') {
             return [{ key: 'mine', label: 'Your band', heroes: [...state.band] },
                 ...(state.enemies.length ? [{ key: 'against', label: 'Against', heroes: [...state.enemies] }] : [])];
@@ -305,7 +322,7 @@
     }
 
     const api = { draftView, referenceSides, graphAction, rollFrames, chipsFor, chipKind, shortReason, reasonGroups, REASON_TYPES, synergyGroups, groupText,
-        collapse, percentLabel, MAX_CHIPS };
+        collapse, percentLabel, percentExplain, ROLE_INFO, MAX_CHIPS };
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;
