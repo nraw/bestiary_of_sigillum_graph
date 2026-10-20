@@ -44,7 +44,7 @@
     function ruleFor(label) {
         if (BRIDGES[label]) return BRIDGES[label].rule;
         if (TERRAIN.includes(label)) return 'terrain';
-        if (label === 'Wound') return 'wounds';
+        if (label === 'Injury') return 'injuries';
         return 'direct';
     }
 
@@ -81,9 +81,9 @@
             });
         }));
 
-        // Wound flags come from the hero's own links, whether or not anyone supplies Wounds
+        // Injury flags come from the hero's own links, whether or not anyone supplies Injuries
         heroes.forEach(h => {
-            const own = role => h.trait_links.some(l => l.label === 'Wound' && l.role === role && l.on === 'self');
+            const own = role => h.trait_links.some(l => l.label === 'Injury' && l.role === role && l.on === 'self');
             if (own('benefits_from')) out.push({ type: 'flag', needer: h.name, flag: 'dontFeed' });
             if (own('hindered_by')) out.push({ type: 'flag', needer: h.name, flag: 'punishWithDamage' });
         });

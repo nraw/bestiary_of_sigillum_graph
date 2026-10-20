@@ -29,7 +29,7 @@ const state = {
     term: '',
     category: 'All',
     labelCategory: null,
-    heroType: null,
+    attribute: null,
     role: null,
     showAllNames: false,
     showSynergies: false,
@@ -46,13 +46,13 @@ const SYNERGY_STYLE = {
 
 const CATEGORY_CHIPS = ['All', 'Melee', 'Ranged', 'AoE', 'Displacement'];
 
-// Hero ring colour = primary type (validated for CVD separation on the dark
-// surface); every type also has its own glyph so colour is never the only cue
-const HERO_TYPES = {
-    Melee:   { color: '#E0566B', symbol: 'times',    label: 'Melee' },
-    Ranged:  { color: '#BF8530', symbol: 'triangle', label: 'Ranged' },
-    AoE:     { color: '#9A7BDB', symbol: 'star',     label: 'Area of effect' },
-    Other:   { color: '#8C7A66', symbol: 'circle',   label: 'Other' }
+// Hero ring colour = card attribute: the card banner's red / green / blue, re-stepped so all
+// pairs stay apart under colour-blind simulation on the dark surface (dataviz validator, all pairs
+// ΔE ≥ 11). Every attribute also has its own glyph so colour is never the only cue.
+const HERO_ATTRIBUTES = {
+    Strength:     { color: '#D9483B', symbol: 'plus',     label: 'Strength' },
+    Agility:      { color: '#2CAA95', symbol: 'triangle', label: 'Agility' },
+    Intelligence: { color: '#5B7FE0', symbol: 'star',     label: 'Intelligence' }
 };
 
 // Trait nodes share one neutral colour; shape carries the category
@@ -109,7 +109,7 @@ async function init() {
         heroesData = data.bestiary_of_sigillum.characters;
         synergyRelations = computeSynergies(heroesData);
 
-        ({ nodes: nodesData, links: linksData } = buildGraph(heroesData));
+        ({ nodes: nodesData, links: linksData } = buildGraph(heroesData, data.bestiary_of_sigillum.trait_descriptions));
         nodesById = new Map(nodesData.map(n => [n.id, n]));
         adjacency = buildAdjacency(linksData);
 
@@ -234,12 +234,12 @@ function setupGraph() {
     heroes.append('circle')
         .attr('class', 'hero-ring')
         .attr('r', d => d.radius)
-        .attr('stroke', d => HERO_TYPES[d.primaryType].color);
+        .attr('stroke', d => HERO_ATTRIBUTES[d.attribute].color);
     const badge = heroes.append('g')
         .attr('class', 'type-badge')
         .attr('transform', d => `translate(${d.radius * 0.72},${d.radius * 0.72})`);
-    badge.append('circle').attr('r', 7).attr('fill', d => HERO_TYPES[d.primaryType].color);
-    badge.append('path').attr('d', d => symbolPath(HERO_TYPES[d.primaryType].symbol, 40));
+    badge.append('circle').attr('r', 7).attr('fill', d => HERO_ATTRIBUTES[d.attribute].color);
+    badge.append('path').attr('d', d => symbolPath(HERO_ATTRIBUTES[d.attribute].symbol, 40));
 
     const labels = nodeElements.filter(d => d.type === 'label');
     labels.append('circle').attr('class', 'halo').attr('r', d => d.radius + 6);
@@ -291,7 +291,7 @@ function setupGraph() {
 
 function nodeAriaLabel(d) {
     if (d.type === 'hero') {
-        return `${d.name}, ${HERO_TYPES[d.primaryType].label} hero, vitality ${d.vitality}`;
+        return `${d.name}, ${HERO_ATTRIBUTES[d.attribute].label} hero, vitality ${d.vitality}`;
     }
     return `${d.name} trait, ${LABEL_SHAPES[d.category].label}, ${d.degree} heroes`;
 }
@@ -375,7 +375,7 @@ function fitView(nodes, duration = 450) {
 function currentFilter() {
     if (state.role) return filterByRole(linksData, state.role);
     return {
-        nodeIds: filterNodes(nodesData, { term: state.term, category: state.category, labelCategory: state.labelCategory, heroType: state.heroType }),
+        nodeIds: filterNodes(nodesData, { term: state.term, category: state.category, labelCategory: state.labelCategory, attribute: state.attribute }),
         links: null
     };
 }
@@ -460,7 +460,7 @@ function clearSelection() {
 }
 
 function clearAll() {
-    Object.assign(state, { selectedId: null, term: '', category: 'All', labelCategory: null, heroType: null, role: null, bandFocus: null });
+    Object.assign(state, { selectedId: null, term: '', category: 'All', labelCategory: null, attribute: null, role: null, bandFocus: null });
     document.getElementById('searchInput').value = '';
     closeSuggestions();
     trackEvent('filter_cleared', 'Filter', 'Clear All');
@@ -555,7 +555,7 @@ function updateHeaderState(filterSet) {
         : heroesData.length;
     const active = [];
     if (state.category !== 'All') active.push(state.category);
-    if (state.heroType) active.push(`${HERO_TYPES[state.heroType].label} heroes`);
+    if (state.attribute) active.push(`${HERO_ATTRIBUTES[state.attribute].label} heroes`);
     if (state.labelCategory) active.push(`${LABEL_SHAPES[state.labelCategory].label} traits`);
     if (state.role) active.push(`${ROLE_INFO[state.role].label} edges`);
     if (state.term.trim()) active.push(`“${state.term.trim()}”`);
@@ -593,8 +593,8 @@ function updateHeaderState(filterSet) {
     document.querySelectorAll('.legend-filter[data-label-category]').forEach(item => {
         item.setAttribute('aria-pressed', String(item.dataset.labelCategory === state.labelCategory));
     });
-    document.querySelectorAll('.legend-filter[data-hero-type]').forEach(item => {
-        item.setAttribute('aria-pressed', String(item.dataset.heroType === state.heroType));
+    document.querySelectorAll('.legend-filter[data-attribute]').forEach(item => {
+        item.setAttribute('aria-pressed', String(item.dataset.attribute === state.attribute));
     });
     document.querySelectorAll('.legend-filter[data-role]').forEach(item => {
         item.setAttribute('aria-pressed', String(item.dataset.role === state.role));
@@ -605,8 +605,8 @@ function updateHeaderState(filterSet) {
 // Details panel
 // ---------------------------------------------------------------------------
 
-function heroGlyph(type, size = 16) {
-    const t = HERO_TYPES[type];
+function heroGlyph(attribute, size = 16) {
+    const t = HERO_ATTRIBUTES[attribute];
     return `<svg class="glyph" width="${size}" height="${size}" viewBox="-8 -8 16 16" aria-hidden="true">
         <circle r="7.5" fill="${t.color}"/><path d="${symbolPath(t.symbol, 40)}"/></svg>`;
 }
@@ -626,11 +626,11 @@ function cardIcon(kind, title) {
     return `<svg class="card-icon" viewBox="0 0 24 24" role="img" aria-label="${title}"><title>${title}</title>${CARD_ICONS[kind]}</svg>`;
 }
 
-// White shield with the hero-type symbol, for the red card banner
-function bannerGlyph(type) {
+// White shield with the attribute symbol, for the attribute-coloured card banner
+function bannerGlyph(attribute) {
     return `<svg class="card-banner-glyph" viewBox="-12 -12 24 24" aria-hidden="true">
         <path d="M-9 -10H9V0C9 5.5 4.5 9 0 11C-4.5 9-9 5.5-9 0Z"/>
-        <path class="sym" d="${symbolPath(HERO_TYPES[type].symbol, 46)}"/></svg>`;
+        <path class="sym" d="${symbolPath(HERO_ATTRIBUTES[attribute].symbol, 46)}"/></svg>`;
 }
 
 function labelGlyph(category, size = 16, name = null) {
@@ -638,6 +638,15 @@ function labelGlyph(category, size = 16, name = null) {
     if (icon) return `<img class="glyph glyph-img" src="${icon}" width="${size}" height="${size}" alt="">`;
     return `<svg class="glyph glyph-trait" width="${size}" height="${size}" viewBox="-8 -8 16 16" aria-hidden="true">
         <path d="${symbolPath(LABEL_SHAPES[category].symbol, 70)}"/></svg>`;
+}
+
+// Official effects quote their rule (with its source); other traits get a short gloss
+function traitDescription(node, cls) {
+    const d = node.description;
+    if (!d) return '';
+    return `<div class="${cls}${d.source ? ` ${cls}--rule` : ''}">
+        ${d.source ? `<span class="${cls}-kicker">Official rule · ${escapeHtml(d.source)}</span>` : ''}
+        <p>${escapeHtml(d.text)}</p></div>`;
 }
 
 function heroButton(hero, extra = '') {
@@ -740,8 +749,8 @@ function synergySection(node) {
         blocks.push(`<h5 class="syn-title"><span class="role-dot kind--inflicts"></span>Counters</h5>`
             + counterRows(s.counters, () => node.name));
     }
-    if (s.flags.dontFeed) blocks.push(`<p class="syn-flag">Don't feed: grows stronger from its own Wounds.</p>`);
-    if (s.flags.punishWithDamage) blocks.push(`<p class="syn-flag">Punish with damage: Wounds slow some of its abilities.</p>`);
+    if (s.flags.dontFeed) blocks.push(`<p class="syn-flag">Don't feed: grows stronger from its own Injuries.</p>`);
+    if (s.flags.punishWithDamage) blocks.push(`<p class="syn-flag">Punish with damage: Injuries slow some of its abilities.</p>`);
 
     if (!blocks.length) return '';
     return `
@@ -773,7 +782,8 @@ function renderDetails() {
     }
 
     if (node.type === 'hero') {
-        const type = HERO_TYPES[node.primaryType];
+        const attribute = HERO_ATTRIBUTES[node.attribute];
+        const reach = node.labels.includes('Melee') ? 'Melee' : 'Ranged';
         const groups = abilityTraits(node);
         const roleChip = l => {
             const n = nodesById.get(`label_${l.label}`);
@@ -810,9 +820,9 @@ function renderDetails() {
         panel.innerHTML = `
             <div class="hero-card">
                 <header class="card-top">
-                    <div class="card-banner" title="${escapeHtml(type.label)}">
+                    <div class="card-banner attr--${node.attribute}" title="${escapeHtml(attribute.label)}">
                         <span class="card-number">${node.originalId}</span>
-                        ${bannerGlyph(node.primaryType)}
+                        ${bannerGlyph(node.attribute)}
                     </div>
                     <h3 class="card-name">${escapeHtml(node.name)}</h3>
                     <div class="card-title">
@@ -820,7 +830,7 @@ function renderDetails() {
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.6-9.3-9A5.3 5.3 0 0 1 12 6.3 5.3 5.3 0 0 1 21.3 12C19 16.4 12 21 12 21z"/></svg>
                             <span class="sr-only">Vitality</span> ${node.vitality}
                         </div>
-                        <div class="card-type">${escapeHtml(type.label)}</div>
+                        <div class="card-type">${escapeHtml(attribute.label)} · ${reach}</div>
                     </div>
                     <img class="card-portrait" src="${node.image}" alt="Portrait of ${escapeHtml(node.name)}">
                     ${node.features.length || node.sync_note ? `
@@ -853,6 +863,7 @@ function renderDetails() {
                     <div class="badges"><span class="badge">${heroes.length} hero${heroes.length === 1 ? '' : 'es'}</span></div>
                 </div>
             </header>
+            ${traitDescription(node, 'trait-desc')}
             ${traitHeroesByRole(node.name, nodesData).map(group => `
             <section class="detail-section">
                 <h4 class="section-title"><span class="role-dot kind--${group.role}"></span>${ROLE_INFO[group.role].label}
@@ -881,7 +892,7 @@ function showTooltip(d) {
             <div class="tt-head">
                 <img src="${d.image}" alt="" width="40" height="40">
                 <div><strong>${escapeHtml(d.name)}</strong>
-                <div class="tt-sub">${heroGlyph(d.primaryType, 12)} ${HERO_TYPES[d.primaryType].label} · Vitality ${d.vitality}</div></div>
+                <div class="tt-sub">${heroGlyph(d.attribute, 12)} ${HERO_ATTRIBUTES[d.attribute].label} · Vitality ${d.vitality}</div></div>
             </div>
             ${d.features.length ? `<ul class="tt-features">${d.features.map(f => `<li>${escapeHtml(f)}</li>`).join('')}</ul>` : ''}
             ${tooltipSynergies(d.name)}`;
@@ -891,6 +902,7 @@ function showTooltip(d) {
                 <div><strong>${escapeHtml(d.name)}</strong>
                 <div class="tt-sub">${escapeHtml(LABEL_SHAPES[d.category].label)}</div></div>
             </div>
+            ${traitDescription(d, 'tt-desc')}
             <div class="tt-meta">Shared by ${d.degree} hero${d.degree === 1 ? '' : 'es'}<br>${
                 traitHeroesByRole(d.name, nodesData).map(g => `${g.entries.length} ${ROLE_INFO[g.role].label.toLowerCase()}`).join(' · ')}</div>`;
     }
@@ -964,7 +976,7 @@ function setupSearch() {
     input.addEventListener('input', () => {
         state.term = input.value;
         state.role = null;
-        state.heroType = null;
+        state.attribute = null;
         state.selectedId = null;
         updateSuggestions();
         render();
@@ -1072,7 +1084,7 @@ function setupChips() {
         if (!chip) return;
         state.category = chip.dataset.category;
         state.labelCategory = null;
-        state.heroType = null;
+        state.attribute = null;
         state.role = null;
         state.selectedId = null;
         trackEvent('category_filter', 'Filter', state.category);
@@ -1113,10 +1125,10 @@ function renderLegend() {
     const edgeSwatch = cls => `<svg width="34" height="12" viewBox="0 0 34 12" aria-hidden="true"><line x1="1" y1="6" x2="33" y2="6" class="link ${cls}"/></svg>`;
 
     document.getElementById('legendBody').innerHTML = `
-        <h3 class="legend-title">Hero type <small>ring colour + glyph · click to filter</small></h3>
+        <h3 class="legend-title">Attribute <small>ring colour + glyph · click to filter</small></h3>
         <ul class="legend-list legend-cols">
-            ${Object.entries(HERO_TYPES).map(([key, t]) => `
-                <li><button type="button" class="legend-filter" data-hero-type="${key}" aria-pressed="false">
+            ${Object.entries(HERO_ATTRIBUTES).map(([key, t]) => `
+                <li><button type="button" class="legend-filter" data-attribute="${key}" aria-pressed="false">
                     ${heroGlyph(key, 18)} ${t.label}</button></li>`).join('')}
         </ul>
 
@@ -1172,7 +1184,7 @@ function renderLegend() {
         if (!item) return;
         if (item.dataset.role) {
             state.role = state.role === item.dataset.role ? null : item.dataset.role;
-            Object.assign(state, { labelCategory: null, heroType: null, category: 'All', term: '', selectedId: null, path: null });
+            Object.assign(state, { labelCategory: null, attribute: null, category: 'All', term: '', selectedId: null, path: null });
             document.getElementById('searchInput').value = '';
             trackEvent('legend_filter', 'Filter', `role: ${item.dataset.role}`);
             render();
@@ -1180,17 +1192,17 @@ function renderLegend() {
             return;
         }
         state.role = null;
-        if (item.dataset.heroType) {
-            const type = item.dataset.heroType;
-            Object.assign(state, { heroType: state.heroType === type ? null : type, labelCategory: null,
+        if (item.dataset.attribute) {
+            const attribute = item.dataset.attribute;
+            Object.assign(state, { attribute: state.attribute === attribute ? null : attribute, labelCategory: null,
                 category: 'All', term: '', selectedId: null });
             document.getElementById('searchInput').value = '';
-            trackEvent('legend_filter', 'Filter', `hero type: ${type}`);
+            trackEvent('legend_filter', 'Filter', `attribute: ${attribute}`);
             render();
             fitToFilter();
             return;
         }
-        state.heroType = null;
+        state.attribute = null;
         const category = item.dataset.labelCategory;
         state.labelCategory = state.labelCategory === category ? null : category;
         state.category = 'All';

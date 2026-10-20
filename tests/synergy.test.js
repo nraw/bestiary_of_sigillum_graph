@@ -38,9 +38,9 @@ test('Tempus shortening allied cooldowns does not feed enemy-cooldown heroes', (
     assert.ok(!forHero('BREWUS').helpedBy.some(r => r.hero === 'TEMPUS'));
 });
 
-test('deliberate wounding feeds heroes that benefit from their own Wounds', () => {
+test('deliberate wounding feeds heroes that benefit from their own Injuries', () => {
     ['IRATUS', 'MORTUM', 'VINCTUM', 'MAGNUS', 'SATURN'].forEach(name =>
-        assert.deepStrictEqual(helpedOn(name, 'Wound'), ['GOETIUM'], name));
+        assert.deepStrictEqual(helpedOn(name, 'Injury'), ['GOETIUM'], name));
 });
 
 test('terrain placement feeds terrain needs', () => {
@@ -94,7 +94,7 @@ test('broad needs report the pool size instead of partners', () => {
     assert.deepStrictEqual(forHero('CARNIFEX').helpedBy, []);
 });
 
-test('flags: heroes who grow from their own Wounds, and those slowed by them', () => {
+test('flags: heroes who grow from their own Injuries, and those slowed by them', () => {
     const flagged = flag => heroes.map(h => h.name).filter(n => forHero(n).flags[flag]).sort();
     assert.deepStrictEqual(flagged('dontFeed'), ['IRATUS', 'MAGNUS', 'MORTUM', 'SATURN', 'VINCTUM']);
     assert.deepStrictEqual(flagged('punishWithDamage'), ['MECHANICUS', 'VINCTUM']);

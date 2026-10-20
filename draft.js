@@ -179,8 +179,7 @@
         return hero.core_ability.range === 'adjacent' ? 'Melee' : null;
     }
 
-    const MULTI_TARGET = ['AoE', 'Line-Attack'];
-    // Attacks that grow with a condition: "0+1 per ...", "1 (2 if ...)", "1 (medium), 2 (big)"
+        // Attacks that grow with a condition: "0+1 per ...", "1 (2 if ...)", "1 (medium), 2 (big)"
     const SCALING_ATTACK = /\bper\b|\(\d+ if|\d+ if\b|\d+ \(big\)/i;
 
     // Strategy guide roles: Controller (holds and manipulates position, ≥ 3 Hit Points), Attacker (damage,
@@ -200,8 +199,8 @@
 
         const roles = {
             Controller: hero.vitality >= 3
-                && (has('Displacement') || has('Positioning') || has('Stun', ['inflicts']) || has('Swiftness', ['grants'])),
-            Attacker: SCALING_ATTACK.test(hero.core_ability.effect) || MULTI_TARGET.some(l => has(l))
+                && (has('Displacement') || has('Stun', ['inflicts']) || has('Swiftness', ['grants'])),
+            Attacker: SCALING_ATTACK.test(hero.core_ability.effect) || has('AoE')
                 || has('Attack increase', ['gains']),
             Supporter: links.some(l => supports(l) && l.sources.some(isLong))
         };
@@ -316,9 +315,9 @@
             text: (s, t) => `${s} keeps ${t} alive` },
         { id: 'setup', supplier: movesEnemies, target: wantsPosition,
             text: (s, t) => `${s} moves enemies into position for ${t}` },
-        { id: 'wounds', supplier: h => h.labels.includes('AoE'),
-            target: h => h.trait_links.some(l => l.role === 'benefits_from' && l.label === 'Wound' && l.on === 'enemy'),
-            text: (s, t) => `${s}'s area attacks wound enemies for ${t}` },
+        { id: 'injuries', supplier: h => h.labels.includes('AoE'),
+            target: h => h.trait_links.some(l => l.role === 'benefits_from' && l.label === 'Injury' && l.on === 'enemy'),
+            text: (s, t) => `${s}'s area attacks injure enemies for ${t}` },
         { id: 'terrain', supplier: h => h.trait_links.some(l => l.role === 'places' && TERRAIN.includes(l.label)),
             target: h => h.trait_links.some(l => l.role === 'benefits_from' && l.label === 'Terrain difference'),
             text: (s, t) => `${s}'s terrain creates a terrain difference for ${t}` }

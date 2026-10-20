@@ -225,8 +225,8 @@ def test_real_pdf_known_values(pdf_cards):
     assert ball["features"] == ["Big single-target damage.", "Repositions enemies."]
     assert [a["cooldown"] for a in ball["abilities"][1:]] == ["4 (3 if Ballistarius is in a Mountain hex)", "4"]
     assert by_id[2]["sync_note"] is None
-    assert by_id[15]["abilities"][2]["cooldown"] == "3 - 1 per Wound on Iratus"
-    assert by_id[25]["abilities"][2]["cooldown"] == "2 + 1 per Wound on Vinctum"
+    assert by_id[15]["abilities"][2]["cooldown"] == "3 - 1 per Injury on Iratus"
+    assert by_id[25]["abilities"][2]["cooldown"] == "2 + 1 per Injury on Vinctum"
     assert by_id[23]["abilities"][2]["cooldown"] == "4 - 1 per target's ally in adjacent hexes to target"
     assert by_id[36]["abilities"][1]["cooldown"] == "2 + 1 for each of Clamoris's allies affected by this Ability"
     carnifex = next(c for c in pdf_cards if c["name"] == "CARNIFEX")

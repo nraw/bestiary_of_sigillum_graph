@@ -31,7 +31,6 @@
         "labels": [
           "Ranged",
           "Tower control",
-          "Terrain-Control",
           "Castle-Defender",
           "Place obstacle",
           "Mountain"
@@ -56,13 +55,6 @@
               "TOWER BARRAGE"
             ],
             "on": "ally"
-          },
-          {
-            "label": "Terrain-Control",
-            "role": "has",
-            "sources": [
-              "FORTIFICATION"
-            ]
           },
           {
             "label": "Castle-Defender",
@@ -275,7 +267,6 @@
           "Ranged",
           "Distance",
           "Displacement",
-          "Line-Attack",
           "Attack increase",
           "Mountain"
         ],
@@ -305,13 +296,6 @@
             "role": "has",
             "sources": [
               "WINCH"
-            ]
-          },
-          {
-            "label": "Line-Attack",
-            "role": "has",
-            "sources": [
-              "BALLISTA"
             ]
           },
           {
@@ -359,6 +343,7 @@
           }
         ],
         "labels": [
+          "Ranged",
           "AoE",
           "Forest",
           "Displacement",
@@ -371,6 +356,13 @@
         ],
         "sync_note": null,
         "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "ROOTS"
+            ]
+          },
           {
             "label": "AoE",
             "role": "has",
@@ -532,11 +524,11 @@
           }
         ],
         "labels": [
+          "Ranged",
           "AoE",
           "Slowness",
           "Displacement",
-          "Mobility",
-          "Scaling-Cooldown"
+          "Mobility"
         ],
         "features": [
           "Hits multiple targets.",
@@ -545,6 +537,13 @@
         ],
         "sync_note": "Caballus needs enemies to be affected by Slowness to sync with its core attack.",
         "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "WHIP"
+            ]
+          },
           {
             "label": "AoE",
             "role": "has",
@@ -580,13 +579,6 @@
             "role": "has",
             "sources": [
               "LASSO"
-            ]
-          },
-          {
-            "label": "Scaling-Cooldown",
-            "role": "has",
-            "sources": [
-              "HEAVY HOVES"
             ]
           }
         ]
@@ -698,11 +690,11 @@
           }
         ],
         "labels": [
-          "AoE",
           "Melee",
+          "AoE",
           "Conditional-Mobility",
           "Attack decrease",
-          "Wound",
+          "Injury",
           "Mobility",
           "Mountain",
           "Forest",
@@ -716,17 +708,18 @@
         "sync_note": null,
         "trait_links": [
           {
-            "label": "AoE",
+            "label": "Melee",
             "role": "has",
             "sources": [
               "THREE-HEADED BITE"
             ]
           },
           {
-            "label": "Melee",
+            "label": "AoE",
             "role": "has",
             "sources": [
-              "THREE-HEADED BITE"
+              "THREE-HEADED BITE",
+              "HOWL"
             ]
           },
           {
@@ -744,7 +737,7 @@
             ]
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "benefits_from",
             "sources": [
               "VEHEMENCE"
@@ -812,8 +805,8 @@
           }
         ],
         "labels": [
+          "Ranged",
           "AoE",
-          "Line-Attack",
           "Control increase",
           "Tower control",
           "Mobility"
@@ -826,14 +819,14 @@
         "sync_note": null,
         "trait_links": [
           {
-            "label": "AoE",
+            "label": "Ranged",
             "role": "has",
             "sources": [
               "NOSEDIVE"
             ]
           },
           {
-            "label": "Line-Attack",
+            "label": "AoE",
             "role": "has",
             "sources": [
               "NOSEDIVE"
@@ -891,6 +884,7 @@
           }
         ],
         "labels": [
+          "Ranged",
           "Negative effect",
           "Slowness",
           "Attack decrease",
@@ -902,6 +896,13 @@
         ],
         "sync_note": "Frigus needs Water hexes to make efficient use of its Abilities.",
         "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "RAIN OF ICE"
+            ]
+          },
           {
             "label": "Negative effect",
             "role": "benefits_from",
@@ -928,10 +929,17 @@
             "label": "Water",
             "role": "benefits_from",
             "sources": [
-              "SHACKLING COLD",
+              "SHACKLING COLD"
+            ],
+            "on": "enemy"
+          },
+          {
+            "label": "Water",
+            "role": "benefits_from",
+            "sources": [
               "SPELL OF FROST"
             ],
-            "on": null
+            "on": "self"
           }
         ]
       },
@@ -963,11 +971,12 @@
           }
         ],
         "labels": [
+          "Ranged",
           "Isolated enemies",
           "Healing",
           "Displacement",
           "Self-Sacrifice",
-          "Wound"
+          "Injury"
         ],
         "features": [
           "Repositions allies.",
@@ -975,6 +984,13 @@
         ],
         "sync_note": null,
         "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "LIGHTNING"
+            ]
+          },
           {
             "label": "Isolated enemies",
             "role": "benefits_from",
@@ -1005,7 +1021,7 @@
             ]
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "inflicts",
             "sources": [
               "RITUAL OF VITALITY"
@@ -1116,8 +1132,7 @@
           "Melee",
           "Water",
           "Displacement",
-          "Stun",
-          "Line-Attack"
+          "Stun"
         ],
         "features": [
           "Repositions enemies.",
@@ -1153,15 +1168,14 @@
             "sources": [
               "ANVIL"
             ]
-          },
-          {
-            "label": "Line-Attack",
-            "role": "has",
-            "sources": [
-              "ANVIL"
-            ]
           }
-        ]
+        ],
+        "battle_roles": [
+          "Controller",
+          "Attacker",
+          "Supporter"
+        ],
+        "battle_roles_note": "The strategy guide says Ferrarius can play any role; his plain 'Attack: 1' core attack hides the Attacker role from the derived rules."
       },
       {
         "id": 15,
@@ -1187,7 +1201,7 @@
             "target": "Iratus",
             "effect": "Attack increase",
             "range": "self",
-            "cooldown": "3 - 1 per Wound on Iratus"
+            "cooldown": "3 - 1 per Injury on Iratus"
           }
         ],
         "labels": [
@@ -1195,7 +1209,7 @@
           "Adjacent enemies",
           "Resistance",
           "Attack increase",
-          "Wound"
+          "Injury"
         ],
         "features": [
           "Big single-target damage.",
@@ -1233,7 +1247,7 @@
             ]
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "benefits_from",
             "sources": [
               "FRENZY"
@@ -1259,7 +1273,7 @@
             "target": "Mortum or any ally in an adjacent hex",
             "effect": "Vampirism",
             "range": "adjacent_or_self",
-            "cooldown": "5 - 1 per Wound on Mortum"
+            "cooldown": "5 - 1 per Injury on Mortum"
           },
           {
             "name": "BAT SWARM",
@@ -1271,7 +1285,7 @@
         ],
         "labels": [
           "Melee",
-          "Wound",
+          "Injury",
           "Vampirism",
           "Mobility"
         ],
@@ -1289,7 +1303,7 @@
             ]
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "benefits_from",
             "sources": [
               "BLOODLUST"
@@ -1311,7 +1325,7 @@
             ]
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "benefits_from",
             "sources": [
               "VAMPIRIC DRAIN"
@@ -1348,6 +1362,7 @@
           }
         ],
         "labels": [
+          "Ranged",
           "Allies near enemies",
           "Positive effect",
           "Attack increase",
@@ -1359,6 +1374,13 @@
         ],
         "sync_note": null,
         "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "FLAMING ARTIFACT"
+            ]
+          },
           {
             "label": "Allies near enemies",
             "role": "benefits_from",
@@ -1419,10 +1441,10 @@
           }
         ],
         "labels": [
+          "Ranged",
+          "AoE",
           "Stun",
           "Teleport",
-          "Line-Attack",
-          "AoE",
           "Displacement"
         ],
         "features": [
@@ -1432,6 +1454,20 @@
         ],
         "sync_note": "Illesebra needs enemies to be Stunned to sync with her core attack.",
         "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "HYPNOSIS"
+            ]
+          },
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "HYPNOSIS"
+            ]
+          },
           {
             "label": "Stun",
             "role": "benefits_from",
@@ -1452,20 +1488,6 @@
             "role": "inflicts",
             "sources": [
               "TEMPTATION"
-            ]
-          },
-          {
-            "label": "Line-Attack",
-            "role": "has",
-            "sources": [
-              "TEMPTATION"
-            ]
-          },
-          {
-            "label": "AoE",
-            "role": "has",
-            "sources": [
-              "HYPNOSIS"
             ]
           },
           {
@@ -1509,8 +1531,7 @@
           "AoE",
           "Stun",
           "Tower control",
-          "Control increase",
-          "Scaling-Cooldown"
+          "Control increase"
         ],
         "features": [
           "Mass Stuns.",
@@ -1553,13 +1574,6 @@
             "sources": [
               "DITCH"
             ]
-          },
-          {
-            "label": "Scaling-Cooldown",
-            "role": "has",
-            "sources": [
-              "FISSURE"
-            ]
           }
         ]
       },
@@ -1591,6 +1605,7 @@
           }
         ],
         "labels": [
+          "Melee",
           "AoE",
           "Defense increase",
           "Stun",
@@ -1603,6 +1618,13 @@
         ],
         "sync_note": "Saxum needs to be buffed with Defense points to sync with its core attack.",
         "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "ROCK BLAST"
+            ]
+          },
           {
             "label": "AoE",
             "role": "has",
@@ -1671,6 +1693,7 @@
           }
         ],
         "labels": [
+          "Ranged",
           "AoE",
           "Enemies 1 hex away",
           "Defense increase",
@@ -1685,6 +1708,13 @@
         ],
         "sync_note": null,
         "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "BONE BOOMERANG"
+            ]
+          },
           {
             "label": "AoE",
             "role": "has",
@@ -1834,10 +1864,10 @@
           }
         ],
         "labels": [
+          "Ranged",
           "Clustered enemies",
           "Displacement",
-          "Attack decrease",
-          "Positioning"
+          "Attack decrease"
         ],
         "features": [
           "Repositions enemies.",
@@ -1845,6 +1875,13 @@
         ],
         "sync_note": "Lignum needs enemies to be adjacent to each other to sync with its core attack.",
         "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "PUPPET"
+            ]
+          },
           {
             "label": "Clustered enemies",
             "role": "benefits_from",
@@ -1866,13 +1903,6 @@
             "role": "inflicts",
             "sources": [
               "LIMP HANDS"
-            ]
-          },
-          {
-            "label": "Positioning",
-            "role": "has",
-            "sources": [
-              "DARKSTRINGS"
             ]
           }
         ]
@@ -1973,19 +2003,19 @@
             "target": "Any character in an adjacent hex",
             "effect": "Move the target into an adjacent hex in a straight line away from Vinctum",
             "range": "adjacent",
-            "cooldown": "4 - 1 per Wound on Vinctum"
+            "cooldown": "4 - 1 per Injury on Vinctum"
           },
           {
             "name": "PRISONER'S SHACKLES",
             "target": "Any enemy in an adjacent hex",
             "effect": "Stun",
             "range": "adjacent",
-            "cooldown": "2 + 1 per Wound on Vinctum"
+            "cooldown": "2 + 1 per Injury on Vinctum"
           }
         ],
         "labels": [
           "Melee",
-          "Wound",
+          "Injury",
           "Displacement",
           "Stun"
         ],
@@ -2003,7 +2033,7 @@
             ]
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "benefits_from",
             "sources": [
               "BURDEN OF VENGEANCE",
@@ -2026,7 +2056,7 @@
             ]
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "hindered_by",
             "sources": [
               "PRISONER'S SHACKLES"
@@ -2052,7 +2082,7 @@
             "target": "Mechanicus",
             "effect": "Swiftness",
             "range": "self",
-            "cooldown": "3 + 1 per Wound on Mechanicus"
+            "cooldown": "3 + 1 per Injury on Mechanicus"
           },
           {
             "name": "SIEGE TANK",
@@ -2064,12 +2094,13 @@
         ],
         "labels": [
           "Ranged",
+          "AoE",
           "Range-Restricted",
           "Swiftness",
-          "Structure-Counter",
+          "Tower control",
           "Control decrease",
           "Mobility",
-          "Wound"
+          "Injury"
         ],
         "features": [
           "High mobility.",
@@ -2082,6 +2113,13 @@
             "role": "has",
             "sources": [
               "ANCESTRAL CANNON"
+            ]
+          },
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "SIEGE TANK"
             ]
           },
           {
@@ -2099,11 +2137,12 @@
             ]
           },
           {
-            "label": "Structure-Counter",
-            "role": "has",
+            "label": "Tower control",
+            "role": "benefits_from",
             "sources": [
               "SIEGE TANK"
-            ]
+            ],
+            "on": "enemy"
           },
           {
             "label": "Control decrease",
@@ -2120,7 +2159,7 @@
             ]
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "hindered_by",
             "sources": [
               "SEPARATE THRUST FEED"
@@ -2157,13 +2196,13 @@
           }
         ],
         "labels": [
+          "Ranged",
+          "AoE",
           "Poison",
-          "Wound",
+          "Injury",
           "Displacement",
           "Water",
-          "Scaling-Cooldown",
-          "Cooldown-Manipulation",
-          "AoE"
+          "Cooldown-Manipulation"
         ],
         "features": [
           "Hits multiple targets.",
@@ -2172,6 +2211,21 @@
         ],
         "sync_note": "Toxicum needs enemies to be Poisoned to sync with its core attack.",
         "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "POISONOUS INFLUENCE"
+            ]
+          },
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "POISONOUS INFLUENCE",
+              "POISONER'S KIT"
+            ]
+          },
           {
             "label": "Poison",
             "role": "benefits_from",
@@ -2189,7 +2243,7 @@
             ]
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "benefits_from",
             "sources": [
               "POISONER'S KIT"
@@ -2212,26 +2266,11 @@
             "on": "enemy"
           },
           {
-            "label": "Scaling-Cooldown",
-            "role": "has",
-            "sources": [
-              "POISONER'S KIT"
-            ]
-          },
-          {
             "label": "Cooldown-Manipulation",
             "role": "inflicts",
             "sources": [
               "POISONER'S KIT",
               "VIAL OF VENOM"
-            ]
-          },
-          {
-            "label": "AoE",
-            "role": "has",
-            "sources": [
-              "POISONOUS INFLUENCE",
-              "POISONER'S KIT"
             ]
           }
         ]
@@ -2266,7 +2305,6 @@
         "labels": [
           "Melee",
           "Stun",
-          "Terrain-Control",
           "Displacement",
           "Web",
           "Swiftness"
@@ -2291,13 +2329,6 @@
               "SPIDERLINGS"
             ],
             "on": "enemy"
-          },
-          {
-            "label": "Terrain-Control",
-            "role": "has",
-            "sources": [
-              "WEBBING"
-            ]
           },
           {
             "label": "Displacement",
@@ -2357,10 +2388,10 @@
           }
         ],
         "labels": [
+          "Ranged",
           "Isolated enemies",
           "Defense decrease",
-          "Displacement",
-          "Anti-Group"
+          "Displacement"
         ],
         "features": [
           "Repositions enemies.",
@@ -2368,6 +2399,13 @@
         ],
         "sync_note": "Messum needs enemies spread out and not adjacent to each other to sync with its core attack.",
         "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "HARVEST"
+            ]
+          },
           {
             "label": "Isolated enemies",
             "role": "benefits_from",
@@ -2390,13 +2428,6 @@
             "role": "has",
             "sources": [
               "FACES OF DEATH"
-            ]
-          },
-          {
-            "label": "Anti-Group",
-            "role": "has",
-            "sources": [
-              "HARVEST"
             ]
           }
         ]
@@ -2429,10 +2460,11 @@
           }
         ],
         "labels": [
+          "Ranged",
+          "AoE",
           "Terrain difference",
           "Displacement",
-          "Silence",
-          "AoE"
+          "Silence"
         ],
         "features": [
           "Repositions characters.",
@@ -2440,6 +2472,20 @@
         ],
         "sync_note": null,
         "trait_links": [
+          {
+            "label": "Ranged",
+            "role": "has",
+            "sources": [
+              "KNOWLEDGE IS POWER"
+            ]
+          },
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "COMPLETE SILENCE"
+            ]
+          },
           {
             "label": "Terrain difference",
             "role": "benefits_from",
@@ -2458,13 +2504,6 @@
           {
             "label": "Silence",
             "role": "inflicts",
-            "sources": [
-              "COMPLETE SILENCE"
-            ]
-          },
-          {
-            "label": "AoE",
-            "role": "has",
             "sources": [
               "COMPLETE SILENCE"
             ]
@@ -2500,11 +2539,10 @@
         ],
         "labels": [
           "Melee",
+          "AoE",
           "Abilities on cooldown",
           "Cooldown-Manipulation",
-          "Stun",
-          "Counter-Magic",
-          "Scaling-Cooldown"
+          "Stun"
         ],
         "features": [
           "Affects enemies Ability Cooldowns.",
@@ -2517,6 +2555,13 @@
             "role": "has",
             "sources": [
               "BREWER'S TANKARD"
+            ]
+          },
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "FRAGRANT HOP"
             ]
           },
           {
@@ -2540,20 +2585,6 @@
             "role": "inflicts",
             "sources": [
               "BEER CASK"
-            ]
-          },
-          {
-            "label": "Counter-Magic",
-            "role": "has",
-            "sources": [
-              "FRAGRANT HOP"
-            ]
-          },
-          {
-            "label": "Scaling-Cooldown",
-            "role": "has",
-            "sources": [
-              "FRAGRANT HOP"
             ]
           }
         ]
@@ -2586,9 +2617,10 @@
           }
         ],
         "labels": [
+          "Melee",
           "AoE",
           "High-vitality enemies",
-          "Wound",
+          "Injury",
           "Stun",
           "Healing",
           "Self-Sacrifice"
@@ -2599,6 +2631,13 @@
         ],
         "sync_note": null,
         "trait_links": [
+          {
+            "label": "Melee",
+            "role": "has",
+            "sources": [
+              "COLLISION"
+            ]
+          },
           {
             "label": "AoE",
             "role": "has",
@@ -2616,7 +2655,7 @@
             "on": "enemy"
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "benefits_from",
             "sources": [
               "ASTEROID BELT"
@@ -2645,7 +2684,7 @@
             ]
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "inflicts",
             "sources": [
               "GRAVITY LINK"
@@ -2686,7 +2725,7 @@
           "Isolated enemies",
           "Mobility",
           "Displacement",
-          "Wound"
+          "Injury"
         ],
         "features": [
           "High mobility.",
@@ -2724,7 +2763,7 @@
             ]
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "benefits_from",
             "sources": [
               "EVERPRESENCE"
@@ -2765,7 +2804,8 @@
           "Swiftness",
           "Slowness",
           "Poison",
-          "Cooldown-Manipulation"
+          "Cooldown-Manipulation",
+          "Mobility"
         ],
         "features": [
           "Swiftness.",
@@ -2816,6 +2856,13 @@
             "sources": [
               "POISON-TIPPED LANCE"
             ]
+          },
+          {
+            "label": "Mobility",
+            "role": "has",
+            "sources": [
+              "TWILIGHT MOMENTUM"
+            ]
           }
         ]
       },
@@ -2848,12 +2895,12 @@
         ],
         "labels": [
           "Melee",
+          "AoE",
           "Abilities on cooldown",
           "Mountain",
           "Displacement",
           "Silence",
-          "Wound",
-          "Scaling-Cooldown"
+          "Injury"
         ],
         "features": [
           "Repositions characters.",
@@ -2866,6 +2913,13 @@
             "role": "has",
             "sources": [
               "MAGNETIC HAND"
+            ]
+          },
+          {
+            "label": "AoE",
+            "role": "has",
+            "sources": [
+              "MAGNETISM"
             ]
           },
           {
@@ -2899,19 +2953,12 @@
             ]
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "benefits_from",
             "sources": [
               "MAGNETISM"
             ],
             "on": "self"
-          },
-          {
-            "label": "Scaling-Cooldown",
-            "role": "has",
-            "sources": [
-              "MAGNETISM"
-            ]
           }
         ]
       },
@@ -2944,10 +2991,9 @@
         ],
         "labels": [
           "Ranged",
-          "Wound",
+          "Injury",
           "Swiftness",
-          "Silence",
-          "Scaling-Cooldown"
+          "Silence"
         ],
         "features": [
           "Mass Swiftness.",
@@ -2963,7 +3009,7 @@
             ]
           },
           {
-            "label": "Wound",
+            "label": "Injury",
             "role": "benefits_from",
             "sources": [
               "LIFE-PIERCING CRY"
@@ -2982,13 +3028,6 @@
             "role": "inflicts",
             "sources": [
               "SORROW"
-            ]
-          },
-          {
-            "label": "Scaling-Cooldown",
-            "role": "has",
-            "sources": [
-              "BROKEN HEART"
             ]
           }
         ]
@@ -3117,6 +3156,168 @@
         "source": "guide",
         "note": "Ferrarius repositions and stuns enemies to set up Ballistarius's attacks; Tempus reduces ally cooldowns so Ballistarius can attack big every turn."
       }
-    ]
+    ],
+    "trait_descriptions": {
+      "Abilities on cooldown": {
+        "text": "Cares how many of an enemy's Support Abilities are on cooldown: more on cooldown makes some attacks stronger, while still-available ones can weaken others."
+      },
+      "Adjacent allies": {
+        "text": "Gets stronger with allies standing in hexes adjacent to this hero."
+      },
+      "Adjacent enemies": {
+        "text": "Gets stronger when several enemies crowd the hexes adjacent to this hero."
+      },
+      "Allies near enemies": {
+        "text": "Strikes enemies that stand next to an ally (one carrying a positive effect), so it needs allies in the thick of the fight."
+      },
+      "AoE": {
+        "text": "Area of effect: an Ability that hits all enemies in an area or with a given state (adjacent, in a line, Stunned...)."
+      },
+      "Attack decrease": {
+        "text": "This character's number of Attack points is decreased by 1. A character's Attack points never become negative.",
+        "source": "Rulebook"
+      },
+      "Attack increase": {
+        "text": "This character's number of Attack points is increased by 1. Increase and Decrease effects of the same type are contrary and are summed up.",
+        "source": "Rulebook"
+      },
+      "Big enemies": {
+        "text": "Deals more to bigger enemies. Size comes from max Vitality: Big 5, Medium 3-4, Small 2."
+      },
+      "Castle-Defender": {
+        "text": "Repairs the allied Castle by removing Damage points from its track."
+      },
+      "Clustered enemies": {
+        "text": "Stronger when the target's allies stand right next to it."
+      },
+      "Conditional-Mobility": {
+        "text": "Grants an extra maneuver, but only while a condition holds (such as an enemy being Injured)."
+      },
+      "Control decrease": {
+        "text": "This character's number of Control points is decreased by 1. Control points never become negative. Control Increase/Decrease effects are resolved twice: during the current player's Control phase and then during the opponent's.",
+        "source": "Rulebook"
+      },
+      "Control increase": {
+        "text": "This character's number of Control points is increased by 1. By default, each character has 1 Control point; a Catapult Tower is controlled by the side with the higher Control points sum in its control area.",
+        "source": "Rulebook"
+      },
+      "Cooldown-Manipulation": {
+        "text": "Shifts Ability cooldowns: shortens allies' recharge times or lengthens enemies' (Poison or extra cooldown rounds)."
+      },
+      "Defense decrease": {
+        "text": "This character's number of Defense points is decreased by 1. By default, each character has 0 Defense points, and this number never becomes negative.",
+        "source": "Rulebook"
+      },
+      "Defense increase": {
+        "text": "This character's number of Defense points is increased by 1. Each attack deals Injuries equal to the attacker's Attack points minus the target's Defense points. Increase and Decrease effects of the same type are contrary and are summed up.",
+        "source": "Rulebook"
+      },
+      "Displacement": {
+        "text": "Moves other characters (enemies, allies or both) to new hexes: pushes, pulls, swaps, setting them up for attacks."
+      },
+      "Distance": {
+        "text": "Stronger the farther away the target is (more unoccupied hexes in between)."
+      },
+      "Effect-Copy": {
+        "text": "Copies the most recent positive effect from another character onto itself."
+      },
+      "Effect-Manipulation": {
+        "text": "Rewrites effects already in play, e.g. turns an enemy's positive effects into their contrary negative ones."
+      },
+      "Enemies 1 hex away": {
+        "text": "Targets enemies exactly 1 hex away (a ring around the hero) rather than adjacent ones."
+      },
+      "Flying": {
+        "text": "This character has an increased maneuver distance: they can move into any unoccupied hex in a straight line from their current hex (any occupied hex may be skipped).",
+        "source": "Rulebook"
+      },
+      "Forest": {
+        "text": "Forest terrain hex. Some Abilities only work, get stronger or weaker when a character stands in (or is moved into) a Forest hex."
+      },
+      "Healing": {
+        "text": "Restores Vitality to Injured allies by flipping Injury markers back."
+      },
+      "High-vitality enemies": {
+        "text": "Works against enemies with high current Vitality (more than, or as much as, this hero's own)."
+      },
+      "Injury": {
+        "text": "A flipped Vitality marker; a character with 1 or more is Injured. Many Abilities care about Injuries: some grow stronger with them, some cost one."
+      },
+      "Isolated enemies": {
+        "text": "Stronger against enemies left on their own, with no characters (or few) around them."
+      },
+      "Melee": {
+        "text": "Core attack only reaches enemies in adjacent hexes (rulebook attack range class)."
+      },
+      "Mobility": {
+        "text": "Moves itself (or allies) farther or more freely than a single maneuver, including giving itself Swiftness."
+      },
+      "Mountain": {
+        "text": "Mountain terrain hex. Some Abilities only work, get stronger or weaker when a character stands in (or is moved into) a Mountain hex."
+      },
+      "Negative effect": {
+        "text": "Stronger against enemies that already carry a negative (red) effect, so it pairs with debuffers."
+      },
+      "Place obstacle": {
+        "text": "A hex with an Obstacle marker is considered occupied for all characters. The Obstacle cannot be destroyed. It is placed only on an unoccupied hex (except for Castle hexes).",
+        "source": "Rulebook"
+      },
+      "Poison": {
+        "text": "Whenever this character uses a Support Ability, its cooldown takes 1 round longer for each Poison marker on this character's sheet. An Ability cooldown never exceeds 6 rounds.",
+        "source": "Rulebook"
+      },
+      "Positive effect": {
+        "text": "Needs a character carrying a positive (green) effect, so it pairs with buffers."
+      },
+      "Range-Restricted": {
+        "text": "Cannot target adjacent enemies: the attack only reaches hexes farther away."
+      },
+      "Ranged": {
+        "text": "Core attack can target enemies from larger distances than adjacent hexes (rulebook attack range class)."
+      },
+      "Resistance": {
+        "text": "This character cannot be targeted by an enemy's Support Abilities but can still be attacked by their Core Abilities.",
+        "source": "Rulebook"
+      },
+      "Self-Sacrifice": {
+        "text": "Takes an Injury on itself (or an ally) to heal someone else."
+      },
+      "Silence": {
+        "text": "Cannot use Support Abilities.",
+        "source": "Character Reference V2"
+      },
+      "Slowness": {
+        "text": "This character cannot perform a maneuver. However, they can still perform an attack and use any Support Abilities, even those initiating a move action (except for Cerberus's 'Vehemence', which explicitly grants a bonus maneuver).",
+        "source": "Rulebook"
+      },
+      "Stun": {
+        "text": "This character cannot perform a maneuver or use any Abilities, but can still be moved by other characters' Abilities. During the Control phase, a Stunned character's Control points are counted as usual.",
+        "source": "Rulebook"
+      },
+      "Swiftness": {
+        "text": "This character can use their Core Ability to perform BOTH a maneuver and an attack in the same turn (in any order). Swiftness and Slowness are contrary but do not sum up: whichever has more markers applies.",
+        "source": "Rulebook"
+      },
+      "Teleport": {
+        "text": "Swaps positions with an ally anywhere on the field."
+      },
+      "Terrain difference": {
+        "text": "Targets enemies standing on a different terrain type than this hero's hex."
+      },
+      "Tower control": {
+        "text": "Catapult Towers deal 1 Damage to the enemy Castle each turn for the side with more Control points in their area. These heroes care who holds the Towers."
+      },
+      "Vampirism": {
+        "text": "This character restores 1 Vitality point if they deal at least 1 Injury with their Core Ability. The character can restore only 1 per attack.",
+        "source": "Rulebook"
+      },
+      "Water": {
+        "text": "Water terrain hex. Some Abilities only work, get stronger or weaker when a character stands in (or is moved into) a Water hex."
+      },
+      "Web": {
+        "text": "Placed on an unoccupied hex (except for a Castle hex or a hex with an Obstacle). Enemy gets Stun, ally gains Swiftness.",
+        "source": "Character Reference V2"
+      }
+    }
   }
 }

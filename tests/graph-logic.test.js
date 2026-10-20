@@ -4,13 +4,13 @@ const assert = require('node:assert');
 const G = require('../graph-logic.js');
 
 const heroes = [
-    { id: 1, name: 'ALPHA', vitality: 5, labels: ['Melee', 'Stun'],
+    { id: 1, name: 'ALPHA', vitality: 5, attribute: 'Strength', labels: ['Melee', 'Stun'],
       core_ability: { target: 't', effect: 'e' }, support_abilities: [] },
-    { id: 2, name: 'BETA', vitality: 2, labels: ['Ranged', 'Stun'],
+    { id: 2, name: 'BETA', vitality: 2, attribute: 'Agility', labels: ['Ranged', 'Stun'],
       core_ability: { target: 't', effect: 'e' }, support_abilities: [] },
-    { id: 3, name: 'GAMMA', vitality: 3, labels: ['Ranged', 'Healing'],
+    { id: 3, name: 'GAMMA', vitality: 3, attribute: 'Intelligence', labels: ['Ranged', 'Healing'],
       core_ability: { target: 't', effect: 'e' }, support_abilities: [] },
-    { id: 4, name: 'DELTA', vitality: 3, labels: ['Tank'],
+    { id: 4, name: 'DELTA', vitality: 3, attribute: 'Intelligence', labels: ['Tank'],
       core_ability: { target: 't', effect: 'e' }, support_abilities: [] }
 ];
 
@@ -28,13 +28,13 @@ test('buildGraph creates hero and unique label nodes with links', () => {
     assert.deepStrictEqual([links[0].source, links[0].target], ['hero_1', 'label_Melee']);
 });
 
-test('hero nodes carry primary type, image and a uniform radius', () => {
+test('hero nodes carry attribute, image and a uniform radius', () => {
     const alpha = byId.get('hero_1');
-    assert.strictEqual(alpha.primaryType, 'Melee');
+    assert.strictEqual(alpha.attribute, 'Strength');
+    assert.ok(!('primaryType' in alpha), 'colour comes from the attribute, not the attack type');
     assert.strictEqual(alpha.image, 'hero_images/alpha.png');
     assert.strictEqual(alpha.radius, G.HERO_RADIUS);
     assert.strictEqual(byId.get('hero_2').radius, alpha.radius, 'size does not depend on vitality');
-    assert.strictEqual(byId.get('hero_4').primaryType, 'Other');
 });
 
 test('label nodes record degree and grow with it', () => {
@@ -46,11 +46,16 @@ test('label nodes record degree and grow with it', () => {
     assert.strictEqual(stun.category, 'Effect');
 });
 
-test('getPrimaryType prefers AoE > Ranged > Melee', () => {
-    assert.strictEqual(G.getPrimaryType(['Melee', 'AoE']), 'AoE');
-    assert.strictEqual(G.getPrimaryType(['Healing', 'Ranged', 'Melee']), 'Ranged');
-    assert.strictEqual(G.getPrimaryType(['Support']), 'Other');
-    assert.strictEqual(G.getPrimaryType(['Tank']), 'Other');
+test('label nodes carry their trait description (null when none is given)', () => {
+    const stunRule = { text: 'Cannot maneuver or use Abilities.', source: 'Rulebook' };
+    const described = new Map(G.buildGraph(heroes, { Stun: stunRule }).nodes.map(n => [n.id, n]));
+    assert.deepStrictEqual(described.get('label_Stun').description, stunRule);
+    assert.strictEqual(described.get('label_Tank').description, null);
+    assert.strictEqual(byId.get('label_Stun').description, null, 'descriptions are optional');
+});
+
+test('ATTRIBUTES lists the three card attributes in card order', () => {
+    assert.deepStrictEqual(G.ATTRIBUTES, ['Strength', 'Agility', 'Intelligence']);
 });
 
 
@@ -201,9 +206,9 @@ test('every ability in the data has an icon on disk', () => {
 });
 
 
-test('filterNodes by heroType keeps only heroes of that primary type', () => {
-    assert.deepStrictEqual([...G.filterNodes(nodes, { heroType: 'Ranged' })].sort(), ['hero_2', 'hero_3']);
-    assert.deepStrictEqual([...G.filterNodes(nodes, { heroType: 'Other' })], ['hero_4']);
+test('filterNodes by attribute keeps only heroes of that attribute', () => {
+    assert.deepStrictEqual([...G.filterNodes(nodes, { attribute: 'Intelligence' })].sort(), ['hero_3', 'hero_4']);
+    assert.deepStrictEqual([...G.filterNodes(nodes, { attribute: 'Strength' })], ['hero_1']);
 });
 
 test('focusIds is the selection plus its direct neighbours', () => {

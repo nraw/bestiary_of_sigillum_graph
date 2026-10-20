@@ -23,7 +23,7 @@ LINE_TOLERANCE = 3   # spans within this many points vertically share a line (di
 PARAGRAPH_GAP = 10   # line pitch is ~8pt; a bigger step starts a new paragraph
 ICON_LEAD = 4        # cooldown text starts level with the top of its icon; the line above sits >=7pt higher
 TWO_LINE_LEAD = 12   # a two-line cooldown may start up to one line above its icon
-WOUND_FILL = (0.35, 0.22, 0.55)  # purple Wound marker, drawn inline with no text
+WOUND_FILL = (0.35, 0.22, 0.55)  # purple Wound marker (rulebook: Injury), drawn inline with no text
 BANNER_MAX_WIDTH, BANNER_HEIGHT = 40, (40, 90)  # the coloured number banner at each card's top-left
 
 # Each range symbol is one embedded image, reused across the PDF (image xref -> ability_images name).
@@ -204,7 +204,7 @@ def extract_cards(pdf_path):
             for (wx, wy) in wound_markers(page):
                 for s in quadrants.get((wx >= mid_x, wy >= mid_y), []):
                     if s["x"] < wx < s["x1"] and s["y"] < wy < s["y1"]:
-                        s["text"] = insert_inline_word(s["text"], s["x"], s["x1"], wx, "Wound")
+                        s["text"] = insert_inline_word(s["text"], s["x"], s["x1"], wx, "Injury")
             range_images = [(i["xref"], fitz.Rect(i["bbox"])) for i in page.get_image_info(xrefs=True)
                             if i["xref"] in RANGE_XREFS]
             icons = {}

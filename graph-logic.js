@@ -2,7 +2,8 @@
 // highlight states, filtering and view fitting.
 // Loaded in the browser as window.GraphLogic and in Node via require().
 (function (root) {
-    const PRIMARY_TYPES = ['AoE', 'Ranged', 'Melee'];
+    // Card banner attributes, in card order; hero colour and glyph follow the attribute
+    const ATTRIBUTES = ['Strength', 'Agility', 'Intelligence'];
 
     const OFFICIAL_EFFECTS = [
         'Attack increase', 'Attack decrease', 'Defense increase', 'Defense decrease',
@@ -10,10 +11,10 @@
         'Place obstacle', 'Resistance', 'Vampirism', 'Stun', 'Silence', 'Poison', 'Web'
     ];
     const LABEL_GROUPS = {
-        Combat: ['Melee', 'Ranged', 'AoE', 'Line-Attack', 'Anti-Group'],
+        Combat: ['Melee', 'Ranged', 'AoE'],
         Magic: ['Healing', 'Effect-Copy', 'Effect-Manipulation', 'Teleport'],
-        Movement: ['Mobility', 'Displacement', 'Speed-Buff', 'Speed-Debuff', 'Conditional-Mobility'],
-        Structure: ['Tower control', 'Structure-Counter', 'Terrain-Control', 'Castle-Defender',
+        Movement: ['Mobility', 'Displacement', 'Conditional-Mobility'],
+        Structure: ['Tower control', 'Castle-Defender',
             'Mountain', 'Water', 'Forest']
     };
 
@@ -142,10 +143,6 @@
         };
     }
 
-    function getPrimaryType(labels) {
-        return PRIMARY_TYPES.find(type => labels.includes(type)) || 'Other';
-    }
-
     function getLabelCategory(label) {
         if (OFFICIAL_EFFECTS.includes(label)) return 'Effect';
         const group = Object.keys(LABEL_GROUPS).find(g => LABEL_GROUPS[g].includes(label));
@@ -159,13 +156,15 @@
         return 5 + Math.min(10, Math.sqrt(degree) * 2.5);
     }
 
-    function buildGraph(heroes) {
+    // descriptions: { [label]: { text, source? } } (bestiary_reference_cards.json "trait_descriptions")
+    function buildGraph(heroes, descriptions = {}) {
         const heroNodes = heroes.map(hero => ({
             id: `hero_${hero.id}`,
             originalId: hero.id,
             name: hero.name,
             type: 'hero',
             vitality: hero.vitality,
+            attribute: hero.attribute,
             labels: hero.labels,
             core_ability: hero.core_ability,
             support_abilities: hero.support_abilities,
@@ -173,7 +172,6 @@
             features: hero.features || [],
             sync_note: hero.sync_note || null,
             image: `hero_images/${hero.name.toLowerCase()}.png`,
-            primaryType: getPrimaryType(hero.labels),
             radius: HERO_RADIUS
         }));
 
@@ -192,6 +190,7 @@
             name: label,
             type: 'label',
             category: getLabelCategory(label),
+            description: descriptions[label] || null,
             degree: degree.get(label),
             radius: labelRadius(degree.get(label))
         }));
@@ -252,10 +251,10 @@
 
 
     // Returns a Set of matching node ids, or null when no filter is active
-    function filterNodes(nodes, { term = '', category = null, labelCategory = null, heroType = null } = {}) {
-        if (heroType) {
+    function filterNodes(nodes, { term = '', category = null, labelCategory = null, attribute = null } = {}) {
+        if (attribute) {
             return new Set(nodes
-                .filter(node => node.type === 'hero' && node.primaryType === heroType)
+                .filter(node => node.type === 'hero' && node.attribute === attribute)
                 .map(node => node.id));
         }
         if (labelCategory) {
@@ -335,7 +334,7 @@
         (root.nodeMatchesSearch || require('./search.js').nodeMatchesSearch)(node, term);
 
     const api = {
-        PRIMARY_TYPES, getPrimaryType, getLabelCategory, HERO_RADIUS, labelRadius,
+        ATTRIBUTES, getLabelCategory, HERO_RADIUS, labelRadius,
         buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, arcPath,
         filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
         ROLES, ROLE_INFO, linkKind, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment

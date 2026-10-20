@@ -85,7 +85,7 @@ ideas, or for drafting at the table when you only want help with your own picks.
 
 Derived in code, not stored:
 - `size`: Big (vitality 5), Medium (3–4), Small (2). Rulebook rule.
-- `attackRange`: Melee or Ranged from the `Melee` / `Ranged` labels, otherwise from where the core attack reaches
+- `attackRange`: Melee or Ranged from the `Melee` / `Ranged` labels (every hero has exactly one), otherwise from where the core attack reaches
   (adjacent = Melee; any hex or a line = Ranged; `null` when the card shows no range symbol).
 
 ### 4.2 Battle roles (derived, with manual overrides)
@@ -95,14 +95,15 @@ Derived in code, not stored:
 
 | Battle role | Guide definition | Derivation rule (as implemented in `battleRoles`) |
 |---|---|---|
-| **Controller** | Controls positioning, tanks enough to hold a position, sets up the Attacker. "At least 3 Hit Points" | vitality ≥ 3 **and** (has `Displacement` or `Positioning`, inflicts `Stun`, or grants `Swiftness`, which lets allies move; this is how Tempus qualifies) |
-| **Attacker** | Deals damage fast. "Minimum of 2 damage, ideally multiple targets" | the core attack scales or is conditional (`0+1 per …`, `1 (2 if …)`, `2 (big)`), **or** has `AoE` / `Line-Attack`, **or** gains `Attack increase` |
+| **Controller** | Controls positioning, tanks enough to hold a position, sets up the Attacker. "At least 3 Hit Points" | vitality ≥ 3 **and** (has `Displacement`, inflicts `Stun`, or grants `Swiftness`, which lets allies move; this is how Tempus qualifies) |
+| **Attacker** | Deals damage fast. "Minimum of 2 damage, ideally multiple targets" | the core attack scales or is conditional (`0+1 per …`, `1 (2 if …)`, `2 (big)`), **or** has `AoE`, **or** gains `Attack increase` |
 | **Supporter** | Keeps the Attacker alive and supports from long range. Least mobile | a `grants` link, a `NEGATIVE` effect inflicted on enemies, or `Healing`, coming from an ability whose range is not adjacent / self (a `null` range, such as "all allies", counts as long) |
 
 Almost every card prints its attack as "Attack: 1", so "damage ≥ 2" can't be parsed. A scaling or conditional attack, or
 hitting several targets, is the usable signal instead. If the rules get a hero wrong, the hero takes its battle roles from a
-per-hero override `battle_roles: [...]` in the JSON, with a one-line reason (`battle_roles_note`). The only override is
-**Redux** (Attacker, Supporter): the guide calls him a Supporter, but his buffs land on himself.
+per-hero override `battle_roles: [...]` in the JSON, with a one-line reason (`battle_roles_note`). The overrides are
+**Redux** (Attacker, Supporter): the guide calls him a Supporter, but his buffs land on himself; and **Ferrarius** (all
+three): the guide says he can play any role, but his plain "Attack: 1" core attack hides the Attacker role.
 
 **Ground truth for the classifier** (strategy guide):
 - Controller: Ferrarius, Vinctum, Tempus, Manus
@@ -113,7 +114,7 @@ per-hero override `battle_roles: [...]` in the JSON, with a one-line reason (`ba
 ### 4.3 Versatility
 
 `versatility(hero)` = the number of battle roles the hero can fill (1–3), plus vitality / 10 to break ties: the guide's
-example first pick, Ferrarius, is versatile partly because of his 4 Hit Points. 13 heroes can fill all three roles.
+example first pick, Ferrarius, is versatile partly because of his 4 Hit Points. 12 heroes can fill all three roles.
 
 ### 4.4 Curated bands (stored in JSON, top-level `recommended_bands`)
 
@@ -153,7 +154,7 @@ shown in the UI can be explained.
 | Factor | What it measures | Implementation |
 |---|---|---|
 | **Complementary synergy** | One hero supplies what another needs | Partner relations from `computeSynergies` with both ends in the band: each need met counts once, however many teammates meet it. A broad need (`Positive effect` / `Negative effect`) met by a teammate counts a little. Self-combos are not scored, because they don't depend on the team |
-| **Enablers** | General team effects the sources describe, beyond one need meeting one supply | One bonus per (effect, ally helped): Swiftness or Attack increase granted to an Attacker ("move without sacrificing the attack"), cooldowns shortened for allies (Tempus), protection (Defense / Resistance / Vampirism / Healing) for a fragile Attacker, moving enemies into position for an ally who wants enemies placed a certain way (Ferrarius sets up Ballistarius), area attacks wounding enemies for allies who want wounded enemies, and terrain placed for allies who want a terrain difference |
+| **Enablers** | General team effects the sources describe, beyond one need meeting one supply | One bonus per (effect, ally helped): Swiftness or Attack increase granted to an Attacker ("move without sacrificing the attack"), cooldowns shortened for allies (Tempus), protection (Defense / Resistance / Vampirism / Healing) for a fragile Attacker, moving enemies into position for an ally who wants enemies placed a certain way (Ferrarius sets up Ballistarius), area attacks injuring enemies for allies who want Injured enemies, and terrain placed for allies who want a terrain difference |
 | **Theme** | Several heroes pushing the same plan | ≥ 2 members share a theme: Stun lock, Silence, Debuffs, Buffs, Attack boosts, Tower control, Cooldowns, Mobility, Ranged, Repositioning. Debuffs and Buffs count **distinct effects** ("a wide range of buffs"), the rest count heroes. Each theme is weighted by its **rarity** across the roster, log(36 / members) relative to a theme a quarter of the roster shares, so Silence (3 heroes) counts for more than Repositioning (17) |
 | **Battle-role coverage** | "An army that contains all three roles is the key to success" | Assign each hero **one** battle role so that the number of distinct roles covered is as high as possible (a small matching problem). Score by coverage, 0–3, with a small penalty for each role a full band lacks |
 | **Durability** | Enough Vitality to hold a position | A bonus for a frontline hero (vitality ≥ 4), and a penalty for an all-Small band |
@@ -305,7 +306,7 @@ Tests are written before the code, in `tests/draft.test.js`, and run with `node 
 - The solo editing functions throw an error in two-player formats.
 - `suggestBands` from an empty band returns full bands. From a band of 2, it returns only completions of that band,
   and never includes unavailable heroes.
-- From an empty solo band, every curated band (§4.4) is in the top 25% of `suggestBands`. This is the same fixture
+- From an empty solo band, all but one curated band (§4.4) are in the top 30% of `suggestBands`. This is the same fixture
   check as below, run through the public function.
 - `replacePick` and `fillBand` change the band as a single undo step.
 
@@ -314,9 +315,10 @@ Tests are written before the code, in `tests/draft.test.js`, and run with `node 
 - Ferrarius and Manus have all 3 roles. Fidea has only Supporter.
 
 **Scoring and validation**
-- Every curated band (§4.4) scores in the **top 25%** of all C(36,3) = 7,140 bands, and the **median** curated band in the
-  **top 10%**. The first draft of this spec asked for every band in the top 10%. With today's trait data that is out of
-  reach without overfitting. Current results: 8 of 13 in the top 10% (median top 7.6%), worst top 23.5%. The weakest are
+- All but one curated band (§4.4) score in the **top 30%** of all C(36,3) = 7,140 bands (the outlier is named in the
+  test output), and the **median** curated band in the **top 10%**. The first draft of this spec asked for every band in the top 10%. With today's trait data that is out of
+  reach without overfitting. Current results: 8 of 13 in the top 10% (median top 7.6%); the outlier is Mechanicus / Catapultus / Ballistarius (top
+  37.3%): with every hero tagged Melee or Ranged, half the roster is Ranged, so the Ranged theme is weighted low. The weakest are
   bands whose strength the data doesn't fully describe: Aqus / Ballistarius / Tempus, Cornibus / Mortum / Cerberus,
   Mechanicus / Catapultus / Ballistarius, and the guide's Ballistarius / Ferrarius / Tempus.
 - Pick 1 from an empty draft: the top 10 can all play 2 or more roles, Ferrarius is in the top half, and Fidea is in the
@@ -345,9 +347,9 @@ as a test failure.
 
 1. **Interleaved order:** in each round, is it P1 ban → P2 ban → P1 pick → P2 pick? The rulebook says "ban 1 character each,
    then pick 1 character each", but does the First player go first in every round, or does it alternate?
-2. **Battle-role breadth:** the derived rules are generous: 13 heroes can play all three roles, mostly because ranged Stun
-   counts as support. Only Redux needed an override. Mechanicus comes out as Supporter only, even though he plays as a
-   ranged attacker. Review this with someone who plays the game.
+2. **Battle-role breadth:** the derived rules are generous: 12 heroes can play all three roles, mostly because ranged Stun
+   counts as support. Only Redux and Ferrarius needed an override. Mechanicus now comes out as Attacker and Supporter (Siege
+   Tank counts as AoE). Review this with someone who plays the game.
 3. **Enablers live in the draft engine only:** the Graph's synergy lines come from `synergy.js` partner links, so a band
    held together mainly by enablers (for example Messum setting up Goetium) shows no lines in "View band in graph".
    Moving the enablers into `synergy.js` would show them in both places.
