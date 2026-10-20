@@ -614,7 +614,10 @@ kbd {
     font-weight: 700;
     line-height: 1;
 }
-.card-vitality svg { width: 24px; height: 24px; fill: none; stroke: var(--card-red); stroke-width: 1.8; }
+.card-vitality svg {
+    width: 24px; height: 24px;
+    fill: none; stroke: var(--card-red); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+}
 .card-type { margin-top: 2px; font-style: italic; color: var(--ink-soft); font-size: 0.92rem; }
 
 .card-portrait {

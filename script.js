@@ -827,7 +827,7 @@ function renderDetails() {
                     <h3 class="card-name">${escapeHtml(node.name)}</h3>
                     <div class="card-title">
                         <div class="card-vitality" title="Vitality">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.6-9.3-9A5.3 5.3 0 0 1 12 6.3 5.3 5.3 0 0 1 21.3 12C19 16.4 12 21 12 21z"/></svg>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.6 9.6C4.4 11.4 4.4 16.6 7.8 19.4c2.4 2 5 2.4 6.6 1.4 3.4-2.1 5.2-6.4 4.4-9.6-.5-2-2.3-3.1-4-2.7M10.6 9.4V5.2c0-1.9 2.4-3 4.7-2.3 1.7.5 2.4 2 1.9 3.8M8.2 9.4V4.4M13.4 7.8V5.6M7.2 8.4C4.6 7.8 3.4 10.8 5.6 12.4M15.6 11.6c-.8 2.8-2.2 5.2-4.4 7M14.5 14.6l2.4 1.2M13.1 16.7l2.2 1.5M12.5 17.3l-2.4-.9"/></svg>
                             <span class="sr-only">Vitality</span> ${node.vitality}
                         </div>
                         <div class="card-type">${escapeHtml(attribute.label)} · ${reach}</div>
