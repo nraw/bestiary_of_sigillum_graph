@@ -226,3 +226,25 @@ test('synergySummary caps long hero lists and notes self-combos and flags', () =
     const flagged = heroes.find(h => S.heroSynergies(h.name, relations).flags.dontFeed);
     assert.ok(S.synergySummary(flagged.name, relations).notes.includes("Don't feed"));
 });
+
+test('arcAbilities: each hero on an arc with the abilities it brings, supplier first', () => {
+    const arc = S.synergyArcs(relations, 'SAXUM').find(a => a.category === 'partner' && [a.a, a.b].includes('ARMUS'));
+    const sides = S.arcAbilities(arc, heroes);
+    assert.deepStrictEqual(sides.map(s => s.hero), ['ARMUS', 'SAXUM']);
+    assert.deepStrictEqual(sides[0].abilities.map(g => [g.index, g.ability.name, g.links.map(l => `${l.role}:${l.label}`)]),
+        [[2, 'ANCESTRAL PROTECTION', ['grants:Defense increase']]]);
+    assert.deepStrictEqual(sides[1].abilities.map(g => g.ability.name), ['ROCK BLAST']);
+    assert.deepStrictEqual(sides.map(s => s.cardLevel), [[], []]);
+});
+
+test('arcAbilities: a Small size counter has no ability on the small hero', () => {
+    const arc = S.synergyArcs(relations).find(a => a.relations.some(r => r.rule === 'size'));
+    const small = S.arcAbilities(arc, heroes).find(s => s.cardLevel.length);
+    assert.deepStrictEqual(small.abilities, []);
+    assert.deepStrictEqual(small.cardLevel.map(l => l.label), ['Small']);
+});
+
+test('arcAbilities: every arc side names an ability or a card-level reason', () => {
+    arcs.forEach(arc => S.arcAbilities(arc, heroes).forEach(side =>
+        assert.ok(side.abilities.length || side.cardLevel.length, `${arc.a}-${arc.b} ${side.hero}`)));
+});

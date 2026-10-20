@@ -935,7 +935,7 @@ kbd {
 .arrow--mixed { fill: var(--role-mixed); }
 .arrow--place { fill: var(--role-place); }
 
-.link-hit { stroke: transparent; stroke-width: 10; pointer-events: stroke; cursor: help; }
+.link-hit { stroke: transparent; stroke-width: 10; pointer-events: stroke; cursor: pointer; }
 #graph.synergy-mode .link-hit { pointer-events: none; }
 
 /* Hero-to-hero synergy lines */
@@ -944,7 +944,8 @@ kbd {
 .syn-arc--conflict { stroke: var(--role-harm); stroke-dasharray: 7 4; }
 .syn-arc--counter { stroke: var(--role-harm); }
 .syn-arc--overview { stroke-opacity: 0.55; stroke-width: 1.8; }
-.syn-arc-hit { fill: none; stroke: transparent; stroke-width: 12; pointer-events: stroke; cursor: help; }
+.syn-arc-hit { fill: none; stroke: transparent; stroke-width: 12; pointer-events: stroke; cursor: pointer; }
+.syn-arc.syn-arc--picked { stroke-width: 4.5; stroke-opacity: 1; filter: drop-shadow(0 0 4px var(--gold-bright)); }
 
 /* Tooltip */
 .tooltip {
@@ -1203,6 +1204,29 @@ kbd {
 .role-dot.kind--places { border-color: var(--role-place); border-style: dotted; }
 
 .tt-roles { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 3px; font-size: 0.92rem; }
+
+/* Edge tooltip: the abilities behind the edge, as a slip of the parchment card */
+.tooltip--edge { width: 340px; }
+.tooltip--arc { width: min(600px, calc(100% - 16px)); }
+.tt-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 8px; }
+.tt-side .hero-card.tt-abilities { margin-top: 4px; }
+.tt-side-head { display: flex; align-items: center; gap: 7px; }
+.tt-side-head img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; object-position: top; border: 1.5px solid var(--border-strong); }
+.tt-side-head strong { font-family: 'Cinzel', serif; color: var(--gold-bright); font-size: 0.92rem; }
+.hero-card.tt-abilities { margin-top: 8px; padding: 2px 12px 2px; font-size: 0.9rem; }
+.tt-abilities .card-ability--core { margin-top: 8px; }
+.tt-abilities .card-range { height: 22px; }
+.tt-abilities .card-icon { width: 17px; height: 17px; }
+.card-ability--level p { margin: 2px 0; }
+.tt-ability-roles { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px; font-size: 0.82rem; color: var(--ink-soft); }
+.role-tag-sm { display: inline-flex; align-items: center; gap: 4px; }
+.tt-hint { margin-top: 6px; color: var(--text-faint); font-size: 0.8rem; font-style: italic; }
+
+/* Clicked edge: its line glows and the abilities behind it are marked on the card */
+.link.link--picked { stroke-width: 5; filter: drop-shadow(0 0 4px var(--gold-bright)); }
+.card-ability--focus { box-shadow: inset 4px 0 0 var(--card-red); background: rgba(190, 30, 45, 0.08); padding-left: 10px; }
+.card-ability--core.card-ability--focus { box-shadow: inset 4px 0 0 var(--card-red), 0 0 0 1px var(--card-red); }
+.hero-card .trait-chip.role-chip--focus { outline: 2px solid var(--gold-bright); outline-offset: 1px; }
 
 /* ------------------------------------------------------------------ */
 /* Synergies                                                          */

@@ -87,6 +87,19 @@
         return groups;
     }
 
+    // The abilities behind one hero-trait edge: [{ ability, index, roles }] in card order (index 0 = core),
+    // then { ability: null } for roles no ability on the card causes
+    function linkAbilities(hero, roles) {
+        const abilities = [hero.core_ability, ...hero.support_abilities];
+        const groups = abilities
+            .map((ability, index) => ({ ability, index, roles: roles.filter(r => ability.name && r.sources.includes(ability.name)) }))
+            .filter(g => g.roles.length);
+        const named = new Set(abilities.map(a => a.name).filter(Boolean));
+        const cardLevel = roles.filter(r => !r.sources.some(s => named.has(s)));
+        if (cardLevel.length) groups.push({ ability: null, index: null, roles: cardLevel });
+        return groups;
+    }
+
     function traitHeroesByRole(label, nodes) {
         const heroes = nodes.filter(n => n.type === 'hero');
         return ROLES.map(role => ({
@@ -360,7 +373,7 @@
         ATTRIBUTES, getLabelCategory, HERO_RADIUS, TOKEN_RADIUS, vitalityTokens, vitalityTokensSvg, labelRadius,
         buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, arcPath,
         filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
-        ROLES, ROLE_INFO, linkKind, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment
+        ROLES, ROLE_INFO, linkKind, linkDirection, linkSummary, abilityTraits, linkAbilities, traitHeroesByRole, filterByRole, trimSegment
     };
 
     if (typeof module !== 'undefined' && module.exports) {

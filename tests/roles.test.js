@@ -91,6 +91,31 @@ test('linkSummary words each role for tooltips', () => {
         ['X benefits from Water']);
 });
 
+test('linkAbilities lists the abilities behind an edge in card order, with the roles each causes', () => {
+    const saxum = nodes.find(n => n.id === 'hero_1');
+    const groups = G.linkAbilities(saxum, linkOf(1, 'Defense increase').roles);
+    assert.deepStrictEqual(groups.map(g => [g.index, g.ability.name, g.roles.map(r => r.role)]),
+        [[0, 'ROCK BLAST', ['benefits_from']], [1, 'STONESKIN', ['gains']]]);
+    // One ability causing a role through two sources is listed once per ability
+    assert.deepStrictEqual(G.linkAbilities(saxum, linkOf(1, 'AoE').roles).map(g => g.ability.name), ['ROCK BLAST', 'SHAKING EARTH']);
+});
+
+test('linkAbilities puts card-level roles last with no ability', () => {
+    const saxum = nodes.find(n => n.id === 'hero_1');
+    assert.deepStrictEqual(G.linkAbilities(saxum, linkOf(1, 'Tank').roles), [{ ability: null, index: null, roles: [{ role: 'has', sources: [] }] }]);
+    assert.deepStrictEqual(G.linkAbilities(nodes.find(n => n.id === 'hero_3'), linkOf(3, 'Melee').roles).map(g => g.ability), [null]);
+});
+
+test('real data: every edge names at least one ability from its hero card', () => {
+    const data = require('../bestiary_reference_cards.json').bestiary_of_sigillum.characters;
+    const real = G.buildGraph(data);
+    const heroById = new Map(real.nodes.map(n => [n.id, n]));
+    real.links.forEach(l => {
+        const groups = G.linkAbilities(heroById.get(l.source), l.roles);
+        assert.ok(groups.some(g => g.ability), `${l.source} -> ${l.target}`);
+    });
+});
+
 test('trimSegment pulls both ends back to the node rims', () => {
     const seg = G.trimSegment({ x: 0, y: 0 }, { x: 100, y: 0 }, 10, 5);
     assert.deepStrictEqual(seg, { x1: 10, y1: 0, x2: 95, y2: 0 });

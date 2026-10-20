@@ -4,10 +4,10 @@
 const {
     buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, arcPath,
     filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
-    ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment,
+    ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, linkAbilities, traitHeroesByRole, filterByRole, trimSegment,
     vitalityTokens, TOKEN_RADIUS
 } = window.GraphLogic;
-const { computeSynergies, heroSynergies, synergySummary, synergyArcs, describeRelation, titleCase, abilityList, formationVerb } = window.Synergy;
+const { computeSynergies, heroSynergies, synergySummary, synergyArcs, arcAbilities, describeRelation, titleCase, abilityList, formationVerb } = window.Synergy;
 
 let heroesData = [];
 let synergyRelations = [];
@@ -34,7 +34,9 @@ const state = {
     role: null,
     showAllNames: false,
     showSynergies: false,
-    bandFocus: null // { mine, theirs } hero names sent from the Draft tab
+    bandFocus: null, // { mine, theirs } hero names sent from the Draft tab
+    // Clicked edge or synergy arc: { key, links } — the selected hero's trait links behind it are marked on its card
+    picked: null
 };
 
 // Hero-to-hero synergy lines reuse the role hues: help = partner, harm dashed = careful with
@@ -204,7 +206,11 @@ function setupGraph() {
         .join('line')
         .attr('class', 'link-hit')
         .on('mouseenter', (event, d) => showLinkTooltip(d))
-        .on('mouseleave', hideTooltip);
+        .on('mouseleave', hideTooltip)
+        .on('click', (event, d) => {
+            event.stopPropagation();
+            selectEdge(d);
+        });
 
     synergyLayer = viewport.append('g').attr('class', 'synergy-links');
 
@@ -335,9 +341,14 @@ function drawSynergyArcs(arcs, focused) {
     synergyLayer.selectAll('path.syn-arc-hit').data(synergyArcData, key).join('path')
         .attr('class', 'syn-arc-hit')
         .on('mouseenter', (event, d) => showArcTooltip(d))
-        .on('mouseleave', hideTooltip);
+        .on('mouseleave', hideTooltip)
+        .on('click', (event, d) => {
+            event.stopPropagation();
+            selectArc(event, d);
+        });
     synergyLayer.selectAll('path.syn-arc').data(synergyArcData, key).join('path')
-        .attr('class', d => `syn-arc syn-arc--${d.category}${focused ? '' : ' syn-arc--overview'}`)
+        .attr('class', d => `syn-arc syn-arc--${d.category}${focused ? '' : ' syn-arc--overview'}${
+            state.picked?.key === arcKey(d) ? ' syn-arc--picked' : ''}`)
         .attr('marker-end', d => (d.aToB ? `url(#arrow-${SYNERGY_STYLE[d.category].hue})` : null))
         .attr('marker-start', d => (d.bToA ? `url(#arrow-${SYNERGY_STYLE[d.category].hue})` : null));
     updateSynergyArcs();
@@ -443,15 +454,44 @@ function runAction(action) {
 // State changes
 // ---------------------------------------------------------------------------
 
-function selectNode(id, { source = 'graph', center = true } = {}) {
+function selectNode(id, { source = 'graph', center = true, picked = null } = {}) {
     const node = nodesById.get(id);
     if (!node) return;
     state.selectedId = id;
+    state.picked = picked;
     state.bandFocus = null;
     trackEvent('node_selected', 'Interaction', `${source}: ${node.name}`);
     render();
     if (state.showSynergies && node.type === 'hero') fitToSynergies(node);
     else if (center) fitToFocus(node);
+}
+
+const edgeKey = d => `edge|${d.source.id}|${d.target.id}`;
+const arcKey = d => `arc|${d.category}|${d.a}|${d.b}`;
+const sameLink = (a, b) => a.label === b.label && a.role === b.role && (a.on ?? null) === (b.on ?? null);
+
+// Open a hero's card with the abilities behind `links` marked, scrolled into view
+function selectPicked(heroId, key, links) {
+    hideTooltip();
+    selectNode(heroId, { source: key.split('|')[0], picked: { key, links } });
+    document.querySelector('#heroInfo .card-ability--focus, #heroInfo .role-chip--focus')
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// Clicking an edge opens its hero's card with the abilities behind that trait marked
+function selectEdge(d) {
+    selectPicked(d.source.id, edgeKey(d), d.source.trait_links.filter(l => l.label === d.target.name));
+}
+
+// Clicking a synergy arc opens the card of the hero at the nearer end, with its abilities in the synergy
+// marked. With a hero selected, every arc touches it, so that hero stays open.
+function selectArc(event, d) {
+    const [x, y] = d3.pointer(event, viewport.node());
+    const selected = state.selectedId && [d.source, d.target].find(n => n.id === state.selectedId);
+    const near = selected || (Math.hypot(x - d.source.x, y - d.source.y) <= Math.hypot(x - d.target.x, y - d.target.y)
+        ? d.source : d.target);
+    const side = arcAbilities(d, heroesData).find(s => s.hero === near.name);
+    selectPicked(near.id, arcKey(d), [...side.abilities.flatMap(g => g.links), ...side.cardLevel]);
 }
 
 // Frame the selection together with the nodes it links to directly
@@ -469,11 +509,12 @@ function fitToSynergies(node) {
 
 function clearSelection() {
     state.selectedId = null;
+    state.picked = null;
     render();
 }
 
 function clearAll() {
-    Object.assign(state, { selectedId: null, term: '', category: 'All', labelCategory: null, attribute: null, role: null, bandFocus: null });
+    Object.assign(state, { selectedId: null, picked: null, term: '', category: 'All', labelCategory: null, attribute: null, role: null, bandFocus: null });
     document.getElementById('searchInput').value = '';
     closeSuggestions();
     trackEvent('filter_cleared', 'Filter', 'Clear All');
@@ -553,6 +594,8 @@ function render() {
     nodeElements.filter(d => highlight && highlight.get(d.id) !== 'dim' && d.type === 'hero').raise();
     nodeElements.filter(d => highlight && highlight.get(d.id) !== 'dim' && d.type === 'label').raise();
     linkElements.filter(function () { return /--(direct|role)/.test(this.getAttribute('class')); }).raise();
+    linkElements.classed('link--picked', d => !synergyMode && state.picked?.key === edgeKey(d))
+        .filter('.link--picked').raise();
 
     svg.classed('has-highlight', Boolean(highlight || filterSet));
     svg.classed('synergy-mode', synergyMode);
@@ -771,29 +814,13 @@ function synergySection(node) {
         </section>`;
 }
 
-// The printed reference card (portrait, vitality, features, abilities with range and cooldown).
-// Shared by the details panel and the Draft tab's reference cards; `traits: false` leaves out the
-// trait chips under each ability (they link into the graph, which the reference cards don't need).
-function heroCardParts(node, { traits = true } = {}) {
-    const attribute = HERO_ATTRIBUTES[node.attribute];
-    const reach = node.labels.includes('Melee') ? 'Melee' : 'Ranged';
-    const groups = abilityTraits(node);
-    const roleChip = l => {
-        const n = nodesById.get(`label_${l.label}`);
-        return `<button type="button" class="trait-chip role-chip kind--${l.role}" data-node="${n.id}"
-                    title="${escapeHtml(linkSummary(node.name, l.label, [l])[0])}">
-            ${l.role === 'has' ? '' : `<span class="role-tag">${ROLE_INFO[l.role].label}</span>`}
-            <span class="chip-label">${labelGlyph(n.category, 14, n.name)} ${escapeHtml(l.label)}</span>${
-            SUBJECT_LABEL[l.on] ? ` <span class="role-on">· ${SUBJECT_LABEL[l.on]}</span>` : ''}</button>`;
-    };
-    const chips = links => links.length
-        ? `<div class="trait-chips ability-traits">${links.map(roleChip).join('')}</div>` : '';
-    // Laid out like the printed reference card: core ability boxed, support abilities ruled off below it
-    const ability = (a, i) => {
-        const range = abilityRange(a.range);
-        const name = a.name || (i === 0 ? 'Core ability' : `Support ability ${i}`);
-        return `
-        <article class="card-ability${i === 0 ? ' card-ability--core' : ''}">
+// One ability laid out like the printed reference card. `art: false` drops the artwork (tooltips),
+// `focus` marks it as the source of the clicked edge, `extra` is appended inside the block
+function cardAbilityHtml(node, a, i, { art = true, focus = false, extra = '' } = {}) {
+    const range = abilityRange(a.range);
+    const name = a.name || (i === 0 ? 'Core ability' : `Support ability ${i}`);
+    return `
+        <article class="card-ability${i === 0 ? ' card-ability--core' : ''}${focus ? ' card-ability--focus' : ''}">
             <header class="card-ability-head">
                 <h4>${escapeHtml(name)}:</h4>
                 ${range ? `<img class="card-range" src="${range.src}" alt="${escapeHtml(range.label)}" title="${escapeHtml(range.label)}">` : ''}
@@ -804,11 +831,35 @@ function heroCardParts(node, { traits = true } = {}) {
                     <p class="card-row">${cardIcon('effect', 'Effect')}<span>${escapeHtml(a.effect)}</span></p>
                     ${a.cooldown ? `<p class="card-row">${cardIcon('cooldown', 'Cooldown')}<span>${escapeHtml(a.cooldown)}</span></p>` : ''}
                 </div>
-                <img class="card-art" src="${abilityImage(node.name, i)}" alt="" loading="lazy" onerror="this.remove()">
+                ${art ? `<img class="card-art" src="${abilityImage(node.name, i)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
             </div>
-            ${traits ? chips(groups[i].links) : ''}
+            ${extra}
         </article>`;
+}
+
+// The printed reference card (portrait, vitality, features, abilities with range and cooldown).
+// Shared by the details panel and the Draft tab's reference cards; `traits: false` leaves out the
+// trait chips under each ability (they link into the graph, which the reference cards don't need).
+// `focusLinks` (trait links) marks the abilities and chips behind a clicked edge or synergy arc.
+function heroCardParts(node, { traits = true, focusLinks = [] } = {}) {
+    const isFocus = l => focusLinks.some(f => sameLink(f, l));
+    const attribute = HERO_ATTRIBUTES[node.attribute];
+    const reach = node.labels.includes('Melee') ? 'Melee' : 'Ranged';
+    const groups = abilityTraits(node);
+    const roleChip = l => {
+        const n = nodesById.get(`label_${l.label}`);
+        return `<button type="button" class="trait-chip role-chip kind--${l.role}${isFocus(l) ? ' role-chip--focus' : ''}" data-node="${n.id}"
+                    title="${escapeHtml(linkSummary(node.name, l.label, [l])[0])}">
+            ${l.role === 'has' ? '' : `<span class="role-tag">${ROLE_INFO[l.role].label}</span>`}
+            <span class="chip-label">${labelGlyph(n.category, 14, n.name)} ${escapeHtml(l.label)}</span>${
+            SUBJECT_LABEL[l.on] ? ` <span class="role-on">· ${SUBJECT_LABEL[l.on]}</span>` : ''}</button>`;
     };
+    const chips = links => links.length
+        ? `<div class="trait-chips ability-traits">${links.map(roleChip).join('')}</div>` : '';
+    // Laid out like the printed reference card: core ability boxed, support abilities ruled off below it
+    const focused = new Set(focusLinks.length
+        ? linkAbilities(node, node.trait_links.filter(isFocus)).map(g => g.index) : []);
+    const ability = (a, i) => cardAbilityHtml(node, a, i, { focus: focused.has(i), extra: traits ? chips(groups[i].links) : '' });
 
     const html = `
             <div class="hero-card">
@@ -867,7 +918,7 @@ function renderDetails() {
     }
 
     if (node.type === 'hero') {
-        const { html, groups, chips } = heroCardParts(node);
+        const { html, groups, chips } = heroCardParts(node, { focusLinks: state.picked?.links || [] });
         panel.innerHTML = `
             ${html}
 
@@ -913,6 +964,7 @@ document.addEventListener('click', event => {
 
 function showTooltip(d) {
     const tooltip = document.getElementById('tooltip');
+    setTooltipKind(tooltip, null);
     if (d.type === 'hero') {
         tooltip.innerHTML = `
             <div class="tt-head">
@@ -935,21 +987,66 @@ function showTooltip(d) {
     placeTooltip(d.x, d.y, d.radius);
 }
 
+// The abilities behind an edge or arc as a slip of the parchment card. groups: [{ ability, index, links }],
+// cardLevel: links no ability causes; `tags` lists the links under each block when they need telling apart
+function abilitySlip(hero, groups, cardLevel, { tags = false } = {}) {
+    const linkTags = links => tags ? `<div class="tt-ability-roles">${links.map(l => `<span class="role-tag-sm">
+        <span class="role-dot kind--${l.role}"></span>${ROLE_INFO[l.role].label} ${escapeHtml(l.label)}${
+        SUBJECT_LABEL[l.on] ? ` · ${SUBJECT_LABEL[l.on]}` : ''}</span>`).join('')}</div>` : '';
+    const blocks = groups.map(g => cardAbilityHtml(hero, g.ability, g.index, { art: false, extra: linkTags(g.links) }));
+    if (cardLevel.length) {
+        const small = cardLevel.some(l => l.label === 'Small');
+        blocks.push(`<article class="card-ability card-ability--level"><header class="card-ability-head"><h4>${small ? 'Small:' : 'Card trait:'}</h4></header>
+            ${small ? `<p>Vitality ${hero.vitality}: a Small character (max Vitality 2).</p>`
+                : (hero.features || []).map(f => `<p>${escapeHtml(f)}</p>`).join('') || '<p>Not tied to a single ability.</p>'}
+            ${linkTags(cardLevel)}</article>`);
+    }
+    return `<div class="hero-card tt-abilities">${blocks.join('')}</div>`;
+}
+
+function setTooltipKind(tooltip, kind) {
+    tooltip.classList.toggle('tooltip--edge', kind === 'edge');
+    tooltip.classList.toggle('tooltip--arc', kind === 'arc');
+}
+
+// Edge preview: what the hero does with the trait, and the full card text of the abilities that do it
 function showLinkTooltip(d) {
     const tooltip = document.getElementById('tooltip');
+    const hero = d.source;
+    const groups = linkAbilities(hero, d.roles);
+    const asLinks = g => ({ ...g, links: g.roles.map(r => ({ ...r, label: d.target.name })) });
+    const cardLevel = groups.filter(g => !g.ability).flatMap(g => asLinks(g).links);
+    setTooltipKind(tooltip, 'edge');
     tooltip.innerHTML = `
-        <div class="tt-head"><div><strong>${escapeHtml(d.source.name)}</strong> · ${escapeHtml(d.target.name)}</div></div>
+        <div class="tt-head">
+            <img src="${hero.image}" alt="" width="40" height="40">
+            <div><strong>${escapeHtml(hero.name)}</strong>
+            <div class="tt-sub">${labelGlyph(d.target.category, 14, d.target.name)} ${escapeHtml(d.target.name)}</div></div>
+        </div>
         <ul class="tt-roles">${d.roles.map(r => `<li><span class="role-dot kind--${r.role}"></span>${
-            escapeHtml(linkSummary(d.source.name, d.target.name, [r])[0])}</li>`).join('')}</ul>`;
+            escapeHtml(linkSummary(hero.name, d.target.name, [{ ...r, sources: [] }])[0])}</li>`).join('')}</ul>
+        ${abilitySlip(hero, groups.filter(g => g.ability).map(asLinks), cardLevel, { tags: d.roles.length > 1 })}
+        <div class="tt-hint">Click the edge to open the card</div>`;
     placeTooltip((d.seg.x1 + d.seg.x2) / 2, (d.seg.y1 + d.seg.y2) / 2, 2);
 }
 
+// Arc preview: the relations in words, then each hero's abilities in them side by side (supplier first)
 function showArcTooltip(d) {
     const tooltip = document.getElementById('tooltip');
+    const sides = arcAbilities(d, heroesData).map(side => {
+        const hero = nodesData.find(n => n.type === 'hero' && n.name === side.hero);
+        return `<section class="tt-side">
+            <div class="tt-side-head"><img src="${hero.image}" alt="" width="26" height="26"><strong>${escapeHtml(titleCase(hero.name))}</strong></div>
+            ${abilitySlip(hero, side.abilities, side.cardLevel, { tags: true })}</section>`;
+    });
+    setTooltipKind(tooltip, 'arc');
     tooltip.innerHTML = `
         <div class="tt-head"><div><strong>${escapeHtml(titleCase(d.a))} · ${escapeHtml(titleCase(d.b))}</strong>
             <div class="tt-sub">${SYNERGY_STYLE[d.category].label}</div></div></div>
-        <ul class="tt-roles">${d.relations.map(r => `<li>${escapeHtml(describeRelation(r))}</li>`).join('')}</ul>`;
+        <ul class="tt-roles">${d.relations.map(r => `<li>${escapeHtml(describeRelation(r))}</li>`).join('')}</ul>
+        <div class="tt-sides">${sides.join('')}</div>
+        <div class="tt-hint">${state.selectedId ? 'Click the line to mark these abilities on the card'
+            : 'Click near a hero to open its card'}</div>`;
     placeTooltip(d.geo.mx, d.geo.my, 2);
 }
 
@@ -1186,7 +1283,7 @@ function renderLegend() {
             ${ROLES.filter(r => r !== 'has').map(r => `
                 <li><button type="button" class="legend-filter" data-role="${r}" aria-pressed="false">
                     ${roleSwatch(r)} ${ROLE_INFO[r].label} <small class="legend-hint">${ROLE_STYLE[r].hint}</small></button></li>`).join('')}
-            <li>${roleSwatch('mixed')} Several roles <small class="legend-hint">hover the edge</small></li>
+            <li>${roleSwatch('mixed')} Several roles <small class="legend-hint">hover an edge</small></li>
         </ul>
         </div>
 
