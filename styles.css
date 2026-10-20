@@ -1605,7 +1605,6 @@ kbd {
 .player-switch button { padding: 4px 12px; border: none; background: none; color: var(--text-muted); font-family: 'Cinzel', serif; font-size: 0.82rem; }
 .player-switch button + button { border-left: 1px solid var(--border); }
 .player-switch [aria-checked="true"] { background: rgba(217, 168, 78, 0.16); color: var(--gold-bright); }
-.intro { color: var(--text); font-style: italic; }
 
 /* Band slots */
 .slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -1756,6 +1755,9 @@ kbd {
 .band-score { font-family: 'Cinzel', serif; font-size: 2rem; line-height: 1.1; font-weight: 700; color: var(--gold-bright); }
 .score-bar { height: 8px; }
 .view-graph { justify-content: center; }
+.further-reading { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); }
+.further-reading a { color: var(--gold); }
+.further-reading a:hover { color: var(--gold-bright); }
 
 /* Hero picker dialog, card menu, toast */
 .hero-picker {

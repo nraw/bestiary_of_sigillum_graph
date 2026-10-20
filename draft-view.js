@@ -7,7 +7,6 @@
 
     const MAX_CHIPS = 2;
     const SHORT_MAX = 32;
-    const INTRO = 'Start with a versatile hero — one that can fill several roles.';
 
     // pct is the share of bands scoring at least as well; past the middle, say how few score worse
     const roundUp = x => Math.min(100, Math.max(1, Math.ceil(x - 1e-9)));
@@ -244,7 +243,6 @@
             result = withGroups(result);
         }
 
-        const picking = step && step.action === 'pick';
         const banLists = Draft.bans(state);
 
         return {
@@ -253,7 +251,6 @@
             complete: Draft.isComplete(state),
             step: { ...(step || { player: null, action: null }), label: stepLabel(state) },
             sequence: sequence(state),
-            intro: picking && bands[acting].length === 0 ? INTRO : null,
             pool: poolEntries,
             counts: { available, unavailable: poolEntries.length - available },
             focus,
@@ -295,7 +292,7 @@
     }
 
     const api = { draftView, referenceSides, rollFrames, chipsFor, chipKind, shortReason, reasonGroups, REASON_TYPES, synergyGroups, groupText,
-        collapse, percentLabel, MAX_CHIPS, INTRO };
+        collapse, percentLabel, MAX_CHIPS };
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;

@@ -140,11 +140,11 @@ test('previewing an unavailable hero is ignored', () => {
     assert.ok(v.slots.every(x => !x.preview));
 });
 
-test('step and intro text', () => {
+test('step text, and no intro text', () => {
     const empty = V.draftView(D.createDraft('solo'), ctx);
     assert.strictEqual(empty.step.label, 'Your pick 1 of 3');
-    assert.ok(empty.intro && /versatile/i.test(empty.intro));
-    assert.strictEqual(V.draftView(soloState(), ctx).intro, null);
+    assert.ok(!('intro' in empty));
+    assert.ok(!('INTRO' in V));
 });
 
 
@@ -200,11 +200,10 @@ test('two-player: suggestions are always ranked for whoever acts, with select / 
     assert.deepStrictEqual([ban.action, ban.player], ['ban', 1]);
 });
 
-test('two-player: best partners, intro and preview belong to the acting player', () => {
+test('two-player: best partners and preview belong to the acting player', () => {
     const s = D.applyAction(D.createDraft('standard'), 'SAXUM');
     const v = V.draftView(s, ctx);
     assert.ok(v.suggestions.items.every(i => !i.bestWith.includes('SAXUM')), "Player 2's bands");
-    assert.ok(v.intro, 'Player 2 has no hero yet');
     const p = V.draftView(s, ctx, { preview: 'FIDEA' });
     assert.deepStrictEqual(p.players[1].slots[0], { index: 0, hero: 'FIDEA', preview: true });
     assert.ok(p.players[0].slots.every(x => !x.preview));

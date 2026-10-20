@@ -939,8 +939,6 @@
         const { action } = view.suggestions;
         $('stepLabel').textContent = action ? `${view.step.label} · ${action} a hero` : view.step.label;
         $('stepLabel').className = `step-badge${p2Turn() ? ' step-badge--p2' : ''}${action ? '' : ' step-badge--done'}`;
-        $('draftIntro').hidden = !view.intro;
-        $('draftIntro').textContent = view.intro || '';
         const hasRanks = view.suggestions.items.length > 0;
         document.querySelector('.sort-switch').hidden = !hasRanks;
         const counters = anyCounters();
