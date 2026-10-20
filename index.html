@@ -185,7 +185,10 @@
     </main>
 
     <main class="draft-layout" id="draftView" role="tabpanel" aria-labelledby="tabDraft" hidden>
-        <section class="panel draft-main" aria-label="Draft">
+        <!-- Phones: the band at a glance; tapping it opens Band Analysis as a bottom sheet -->
+        <button class="draft-bar" id="draftBar" type="button" aria-controls="analysisPanel" aria-expanded="false"></button>
+
+        <section class="panel draft-main" id="draftMain" aria-label="Draft">
             <div class="mode-switch" role="radiogroup" aria-label="Draft mode">
                 <button class="mode-btn" type="button" role="radio" data-mode="two-player" aria-checked="true">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3.5"/><circle cx="16.5" cy="9" r="3"/><path d="M2 20c0-3.6 2.7-6.5 6-6.5s6 2.9 6 6.5M14 14.2c3.6-.6 7 1.9 7 5.8"/></svg>
@@ -233,13 +236,10 @@
                 <div class="against" id="againstRow" data-drop="enemies"></div>
             </section>
 
-            <section class="draft-section" id="completionSection" aria-labelledby="completionHeading" hidden>
-                <div class="section-head">
-                    <h2 class="draft-heading" id="completionHeading">Complete Your Band</h2>
-                    <span class="hint" id="completionHint"></span>
-                </div>
-                <div class="completions" id="completionList"></div>
-            </section>
+            <p class="complete-note" id="completeNote" hidden>
+                <span id="completeText">Draft complete.</span>
+                <button class="btn btn-gold" type="button" id="openMatch">Open reference cards</button>
+            </p>
         </section>
 
         <aside class="panel draft-pool" aria-labelledby="poolHeading">
@@ -253,33 +253,35 @@
                 <input type="search" id="poolSearch" placeholder="Search heroes, traits or roles…" autocomplete="off"
                        aria-label="Search the hero pool">
             </div>
-            <div class="chips" id="attributeFilter" role="group" aria-label="Filter by attribute"></div>
-            <div class="chips" id="roleFilter" role="group" aria-label="Filter by battle role"></div>
-            <div class="pool-toggles">
-                <label class="toggle"><input type="checkbox" id="fillsToggle"> Fills a missing role</label>
-                <label class="toggle"><input type="checkbox" id="unavailableToggle"> Show unavailable</label>
+            <div class="pool-filters" id="poolFilters">
+                <div class="chips" id="attributeFilter" role="group" aria-label="Filter by attribute"></div>
+                <div class="chips" id="roleFilter" role="group" aria-label="Filter by battle role"></div>
+                <div class="pool-toggles">
+                    <label class="toggle"><input type="checkbox" id="fillsToggle"> Fills a missing role</label>
+                    <label class="toggle"><input type="checkbox" id="unavailableToggle"> Show unavailable</label>
+                </div>
             </div>
             <div class="pool-bar">
+                <button class="btn btn-ghost filters-toggle" type="button" id="filtersToggle" aria-controls="poolFilters" aria-expanded="false">Filters</button>
                 <span class="pool-count" id="poolCount" aria-live="polite"></span>
                 <div class="sort-switch" role="radiogroup" aria-label="Sort heroes">
                     <button type="button" role="radio" data-sort="recommended" aria-checked="true">Recommended</button>
+                    <button type="button" role="radio" data-sort="counters" aria-checked="false" hidden>Counters</button>
                     <button type="button" role="radio" data-sort="name" aria-checked="false">A–Z</button>
                 </div>
             </div>
             <div class="pool-grid" id="poolGrid" role="list"></div>
         </aside>
 
-        <aside class="panel draft-analysis" aria-labelledby="analysisHeading">
-            <h2 class="draft-heading" id="analysisHeading">Band Analysis</h2>
+        <aside class="panel draft-analysis" id="analysisPanel" aria-labelledby="analysisHeading">
+            <div class="analysis-head">
+                <h2 class="draft-heading" id="analysisHeading">Band Analysis</h2>
+                <button class="icon-btn sheet-close" type="button" id="analysisClose" aria-label="Close band analysis">✕</button>
+            </div>
             <div class="player-switch" id="focusSwitch" role="radiogroup" aria-label="Analyse the band of" hidden>
                 <button type="button" role="radio" data-focus="1" aria-checked="true">Player 1</button>
                 <button type="button" role="radio" data-focus="2" aria-checked="false">Player 2</button>
             </div>
-            <section class="analysis-block why-block" id="whyBlock" aria-labelledby="whyHeading" hidden>
-                <h3 class="mini-heading" id="whyHeading"></h3>
-                <p class="analysis-sub" id="whySummary"></p>
-                <ul class="reason-list" id="whyList"></ul>
-            </section>
             <section class="analysis-block" aria-labelledby="balanceHeading">
                 <h3 class="mini-heading" id="balanceHeading">Team balance</h3>
                 <p class="analysis-sub" id="balanceSummary"></p>
@@ -294,19 +296,31 @@
             </section>
             <section class="analysis-block" id="threatBlock" aria-labelledby="threatHeading" hidden>
                 <h3 class="mini-heading" id="threatHeading">Threats from Against</h3>
-                <ul class="reason-list" id="threatList"></ul>
+                <div id="threatList"></div>
             </section>
             <section class="analysis-block" id="synergyBlock" aria-labelledby="synergyHeading" hidden>
                 <h3 class="mini-heading" id="synergyHeading">Synergy in band</h3>
-                <ul class="reason-list" id="synergyList"></ul>
+                <div id="synergyList"></div>
             </section>
             <button class="btn btn-ghost view-graph" type="button" id="viewInGraph">View band in graph →</button>
         </aside>
 
+        <div class="tile-pop" id="tilePopover" role="dialog" aria-labelledby="popHeading" hidden></div>
         <div class="sr-only" id="draftLive" aria-live="polite"></div>
         <div class="card-menu" id="cardMenu" role="menu" hidden></div>
         <div class="toast" id="draftToast" role="status" hidden></div>
     </main>
+
+    <!-- Reference cards for a finished draft (or a shared link): the cards of one side at a time -->
+    <dialog class="cards-dialog" id="cardsDialog" aria-labelledby="cardsTitle">
+        <header class="cards-head">
+            <h2 class="draft-heading" id="cardsTitle">Reference cards</h2>
+            <div class="player-switch" id="cardsSwitch" role="radiogroup" aria-label="Whose cards"></div>
+            <button class="btn btn-gold" type="button" id="shareLink">Share link</button>
+            <form method="dialog"><button class="icon-btn" value="close" aria-label="Close">✕</button></form>
+        </header>
+        <div class="card-track" id="cardTrack"></div>
+    </dialog>
 
     <dialog class="hero-picker" id="heroPicker" aria-labelledby="pickerTitle">
         <form method="dialog" class="picker-head">
@@ -328,6 +342,7 @@
     <script src="synergy.js"></script>
     <script src="draft.js"></script>
     <script src="draft-view.js"></script>
+    <script src="draft-share.js"></script>
     <script src="script.js"></script>
     <script src="draft-ui.js"></script>
 </body>

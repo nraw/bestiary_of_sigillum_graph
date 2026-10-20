@@ -278,13 +278,16 @@ test('second pick after a Controller+Attacker first pick: the top suggestion can
 test('a suggestion that fills a missing role says which role', () => {
     const s = pickAll(D.createDraft('solo'), ['FERRARIUS', 'BALLISTARIUS']);
     const fidea = D.suggestPick(s, ctx, Infinity).find(p => p.name === 'FIDEA');
-    const fills = fidea.reasons.find(r => r.id === 'fills:Supporter');
-    assert.ok(fills && fills.kind === 'positive' && fills.delta > 0 && /Supporter/.test(fills.text));
-    // Vinctum takes Controller, freeing Ferrarius to support
+    const fills = fidea.reasons.find(r => r.id === 'fills');
+    assert.ok(fills && fills.kind === 'positive' && fills.delta > 0);
+    assert.deepStrictEqual([fills.roles, fills.text], [['Supporter'], 'Fills the Supporter role']);
+    // Vinctum takes Controller, and Ferrarius moves over to support
     const vinctum = D.suggestPick(s, ctx, Infinity).find(p => p.name === 'VINCTUM');
-    assert.strictEqual(vinctum.reasons.find(r => r.id === 'fills:Supporter').text, 'Frees Ferrarius to play Supporter');
+    assert.deepStrictEqual(vinctum.reasons.find(r => r.id === 'fills').roles, ['Controller']);
+    const tempus = D.suggestPick(s, ctx, Infinity).find(p => p.name === 'TEMPUS');
+    assert.strictEqual(tempus.reasons.find(r => r.id === 'fills').text, 'Can fill Controller or Supporter');
     const equita = D.suggestPick(s, ctx, Infinity).find(p => p.name === 'EQUITA');
-    assert.ok(!equita.reasons.some(r => r.id.startsWith('fills:')), 'Equita adds no new role');
+    assert.ok(!equita.reasons.some(r => r.id.startsWith('fills')), 'Equita adds no new role');
 });
 
 test('suggestions never include unavailable heroes', () => {
@@ -385,4 +388,64 @@ test('suggestion reasons name the role filled instead of a generic coverage coun
     first.forEach(p => assert.ok(!p.reasons.some(r => r.factor === 'coverage'), `${p.name}: versatility explains a first pick`));
     const s = pickAll(D.createDraft('solo'), ['FERRARIUS', 'BALLISTARIUS']);
     D.suggestPick(s, ctx, Infinity).forEach(p => assert.ok(!p.reasons.some(r => r.id === 'coverage'), p.name));
+});
+
+test('fillable roles: every role the hero could take that adds one the band lacks', () => {
+    // A flexible band leaves every role open to a flexible hero, not one arbitrary role
+    assert.deepStrictEqual(D.fillableRoles(['TOXICUM'], 'MALLEUS', ctx), ['Controller', 'Attacker', 'Supporter']);
+    // Ferrarius covers Controller or Supporter, Ballistarius covers Attacker
+    assert.deepStrictEqual(D.fillableRoles(['FERRARIUS', 'BALLISTARIUS'], 'VINCTUM', ctx), ['Controller']);
+    assert.deepStrictEqual(D.fillableRoles(['FERRARIUS', 'BALLISTARIUS'], 'TEMPUS', ctx), ['Controller', 'Supporter']);
+    assert.deepStrictEqual(D.fillableRoles(['FERRARIUS', 'BALLISTARIUS'], 'EQUITA', ctx), []);
+    assert.deepStrictEqual(D.fillableRoles([], 'TEMPUS', ctx), ['Controller', 'Supporter']);
+});
+
+// ---- UX support: reset as an undo step, ban wording, structured reasons ----------------------
+
+test('reset is an undoable step in both modes', () => {
+    const two = pickAll(D.createDraft('ban-first', { carryOverBans: ['MAGNUS'] }), ['SAXUM', 'TEMPUS']);
+    const fresh = D.reset(two);
+    assert.deepStrictEqual([fresh.format, fresh.history, fresh.carryOverBans], ['ban-first', [], ['MAGNUS']]);
+    assert.deepStrictEqual(D.undo(fresh), two);
+    const picked = D.applyAction(fresh, 'FIDEA');
+    assert.deepStrictEqual(D.undo(D.undo(picked)), two, 'undo walks back through the reset');
+
+    const solo = pickAll(D.setEnemies(D.createDraft('solo'), ['SAXUM']), ['FERRARIUS', 'TEMPUS']);
+    const cleared = D.reset(solo);
+    assert.deepStrictEqual([cleared.band, cleared.enemies, cleared.excluded], [[], [], []]);
+    assert.deepStrictEqual(D.undo(cleared), solo);
+    const blank = D.createDraft('solo');
+    assert.strictEqual(D.undo(blank), blank, 'nothing to undo without a reset');
+});
+
+test('ban reasons say what the ban denies instead of repeating "strong pick"', () => {
+    const s = D.applyAction(D.createDraft('interleaved'), 'SAXUM');
+    D.suggestBan(s, ctx, 5).forEach(b => {
+        assert.ok(!b.reasons.some(r => /Strong pick/.test(r.text)), b.name);
+        const denies = b.reasons.find(r => r.id === 'ban:denies');
+        assert.ok(denies, b.name);
+        assert.match(denies.text, /^Denies Player 1: /);
+        b.bestBand.forEach(n => assert.ok(denies.text.includes(n.charAt(0) + n.slice(1).toLowerCase()), `${b.name} names ${n}`));
+    });
+});
+
+test('synergy reasons name who benefits, who supplies and a short detail', () => {
+    const reasons = D.scoreTeam(['TOXICUM', 'TEMPUS', 'EQUITA'], ctx).reasons.filter(r => r.factor === 'synergy');
+    assert.ok(reasons.length > 0);
+    reasons.forEach(r => {
+        assert.ok(r.beneficiary && r.heroes.includes(r.beneficiary), r.id);
+        assert.ok(r.suppliers.length > 0 && r.suppliers.every(s => s !== r.beneficiary), r.id);
+        assert.ok(typeof r.detail === 'string' && r.detail.length > 0, r.id);
+    });
+    const poison = reasons.find(r => r.id.startsWith('synergy:TOXICUM:Poison'));
+    assert.deepStrictEqual([poison.beneficiary, poison.suppliers, poison.detail], ['TOXICUM', ['EQUITA'], 'Poison']);
+    const cooldowns = reasons.find(r => r.id === 'enabler:cooldowns:TOXICUM');
+    assert.deepStrictEqual([cooldowns.suppliers, cooldowns.detail], [['TEMPUS'], 'cooldowns']);
+});
+
+test('matchup reasons carry the relation behind them', () => {
+    const counter = ctx.relations.find(r => r.type === 'counter' && r.supply.sources.length);
+    const lost = D.scoreMatchup([counter.needer], [counter.supplier], ctx).reasons.find(r => r.kind === 'warning');
+    assert.deepStrictEqual([lost.attacker, lost.victim], [counter.supplier, counter.needer]);
+    assert.ok(lost.supply.label && Array.isArray(lost.supply.sources) && lost.rule);
 });

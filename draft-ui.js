@@ -3,7 +3,8 @@
 // this file draws (both unit tested). Only DOM, events and persistence live here.
 (function () {
     const Draft = window.Draft;
-    const { draftView, percentLabel } = window.DraftView;
+    const { draftView, referenceSides, reasonGroups, percentLabel, groupText, collapse } = window.DraftView;
+    const { encodeDraft, decodeDraft, isDraftLink } = window.DraftShare;
     const { escapeHtml, vitalityTokensSvg } = window.GraphLogic;
     const { titleCase } = window.Synergy;
 
@@ -14,6 +15,8 @@
         'ban-first': { label: 'Ban phase first', hint: 'Each player bans 3, alternating, then picks' },
         interleaved: { label: 'Interleaved', hint: 'Ban 1 each, pick 1 each, three times' }
     };
+    const LIST_LIMIT = 3; // grouped lists show this many before "Show N more"
+    const CHIP_ICON = { synergy: '✦', counter: '⚔', warning: '⚠' };
     const REASON_BADGE = { picked: 'Picked', facing: 'Facing', excluded: 'Excluded', banned: 'Banned', player1: 'Player 1', player2: 'Player 2' };
 
     const ICON = {
@@ -28,7 +31,7 @@
 
     let ctx = null;
     let view = null;
-    let lastReset = null;
+    let shown = null; // the view on screen (a hover preview or `view`)
     const ui = {
         tab: 'graph',
         mode: 'two-player',
@@ -36,7 +39,12 @@
         filters: { term: '', attribute: 'All', roles: [], fills: false, showUnavailable: false }, // roles combine with OR
         sort: 'recommended',
         focus: null, // two-player analysis: null follows whoever acts, or a chosen player
-        picker: null
+        picker: null,
+        expanded: {}, // "Show N more" lists that are open; reset when the band changes
+        expandKey: null,
+        shared: null, // { state, code }: a draft opened from a shared link (read-only, shown in the cards modal)
+        cardSide: { solo: 'mine', 'two-player': '1' }, // reference cards: whose cards are shown
+        pop: null // hero shown in the tile popover
     };
 
     const $ = id => document.getElementById(id);
@@ -49,8 +57,13 @@
     // Portrait with the hero's vitality as a stack of heart tokens, as on the graph
     const tokenPortrait = (name, cls) =>
         `<span class="portrait-wrap">${portrait(name, cls)}${vitalityTokensSvg(heroOf(name).vitality)}</span>`;
-    const rolePills = roles => `<span class="role-pills">${roles.map(r =>
-        `<span class="role-pill role--${r}" title="${r}">${icon(r)}<span class="sr-only">${r}</span></span>`).join('')}</span>`;
+    // `fills`: roles this hero would add to the band; the others are dimmed (already covered)
+    const rolePills = (roles, fills = roles) => `<span class="role-pills">${roles.map(r => {
+        const adds = fills.includes(r);
+        const label = adds ? r : `${r} (already covered in this band)`;
+        return `<span class="role-pill role--${r}${adds ? '' : ' is-covered'}" title="${label}">${icon(r)}<span class="sr-only">${label}</span></span>`;
+    }).join('')}</span>`;
+    const narrow = () => window.matchMedia('(max-width: 600px), (hover: none)').matches;
     const banner = attribute =>
         `<span class="attr-banner attr--${attribute}" title="${attribute}">${icon(attribute)}<span class="sr-only">${attribute}</span></span>`;
 
@@ -62,10 +75,21 @@
             const data = await response.json();
             ctx = Draft.createContext(data.bestiary_of_sigillum.characters);
             restore();
+            const hash = location.hash;
+            const shared = isDraftLink(hash);
             setupTabs();
             setupStatic();
             render();
-            setTab(location.hash === '#draft' ? 'draft' : 'graph', { focus: false });
+            setTab(shared || hash === '#draft' ? 'draft' : 'graph', { focus: false });
+            if (shared) openSharedLink(hash);
+            window.addEventListener('hashchange', () => {
+                const link = location.hash;
+                if (!isDraftLink(link)) return;
+                setTab('draft', { focus: false });
+                openSharedLink(link);
+            });
+            // Reference cards come from the graph's card renderer once its data has loaded
+            document.addEventListener('bestiary:graph-ready', () => { if ($('cardsDialog').open) renderCards(); });
         } catch (error) {
             console.error('Draft assistant failed to load:', error);
         }
@@ -90,6 +114,20 @@
         } catch (error) { /* storage full or disabled: drafting still works */ }
     }
 
+    // A shared link opens its reference cards read-only and never overwrites the visitor's own draft
+    function openSharedLink(hash) {
+        const { state: shared, error } = decodeDraft(hash, ctx.heroes);
+        const problem = error || (Draft.isComplete(shared) ? null : 'This shared draft is not finished yet.');
+        if (problem) {
+            history.replaceState(null, '', '#draft');
+            toast(`Could not open the shared draft: ${problem}`);
+            return;
+        }
+        ui.shared = { state: shared, code: hash.replace(/^#/, '') };
+        history.replaceState(null, '', `#${ui.shared.code}`);
+        openCards();
+    }
+
     // ---- Tabs ----------------------------------------------------------------------------
 
     function setTab(tab, { focus = true } = {}) {
@@ -104,7 +142,8 @@
         const skip = document.querySelector('.skip-link'); // points at the visible view
         skip.href = tab === 'graph' ? '#graph' : '#bandHeading';
         skip.textContent = tab === 'graph' ? 'Skip to network graph' : 'Skip to your band';
-        history.replaceState(null, '', tab === 'draft' ? '#draft' : location.pathname + location.search);
+        const draftHash = ui.shared ? `#${ui.shared.code}` : '#draft';
+        history.replaceState(null, '', tab === 'draft' ? draftHash : location.pathname + location.search);
         if (tab === 'graph') window.BestiaryGraph?.refit();
         if (focus) $(tab === 'graph' ? 'tabGraph' : 'tabDraft').focus();
     }
@@ -147,6 +186,10 @@
             renderPool();
         });
         $('poolSearch').addEventListener('input', event => { ui.filters.term = event.target.value; renderPool(); });
+        $('filtersToggle').addEventListener('click', () => {
+            const open = $('poolFilters').classList.toggle('is-open');
+            $('filtersToggle').setAttribute('aria-expanded', String(open));
+        });
         $('fillsToggle').addEventListener('change', event => { ui.filters.fills = event.target.checked; renderPool(); });
         $('unavailableToggle').addEventListener('change', event => { ui.filters.showUnavailable = event.target.checked; renderPool(); });
 
@@ -181,10 +224,22 @@
             window.BestiaryGraph?.showBand(bands[view.focus], bands[view.focus === 1 ? 2 : 1]);
         });
 
+        $('draftBar').addEventListener('click', () => setSheet(!$('analysisPanel').classList.contains('is-open')));
+        $('analysisClose').addEventListener('click', () => setSheet(false));
+        $('openMatch').addEventListener('click', () => openCards());
+        $('draftView').addEventListener('click', event => {
+            const more = event.target.closest('[data-more]');
+            if (!more) return;
+            ui.expanded[more.dataset.more] = !ui.expanded[more.dataset.more];
+            renderAnalysis(shown);
+            document.querySelector(`[data-more="${more.dataset.more}"]`)?.focus();
+        });
+
         setupPool();
+        setupPopover();
         setupSlots();
         setupAgainst();
-        setupCompletions();
+        setupCards();
         setupPicker();
         setupMenu();
         setupKeys();
@@ -229,17 +284,12 @@
         commit(after, 'Undone.');
     }
 
+    // No confirmation: reset is an undo step, so Undo and Ctrl/⌘+Z bring the draft back
     function doReset() {
-        // No confirmation: the toast offers Undo instead
-        lastReset = { mode: ui.mode, state: state() };
-        const fresh = solo() ? Draft.createDraft('solo')
-            : Draft.createDraft(state().format, { carryOverBans: state().carryOverBans });
-        commit(fresh, 'Cleared.');
-        toast('Cleared.', { label: 'Undo', run: () => {
-            if (!lastReset) return;
-            ui.mode = lastReset.mode;
-            commit(lastReset.state, 'Restored.');
-            lastReset = null;
+        const cleared = Draft.reset(state());
+        commit(cleared, 'Cleared. Undo restores it.');
+        toast('Cleared. Undo (Ctrl/⌘+Z) restores it.', { label: 'Undo', run: () => {
+            if (state() === cleared) doUndo();
         } });
     }
 
@@ -262,6 +312,12 @@
 
     function render() {
         view = draftView(state(), ctx, { player: ui.focus });
+        shown = view;
+        previewKey = null;
+        const bands = Draft.bands(state());
+        const key = `${ui.mode}:${bands[view.focus].join('|')}:${bands[view.focus === 1 ? 2 : 1].join('|')}`;
+        if (key !== ui.expandKey) { ui.expandKey = key; ui.expanded = {}; }
+        hidePopover();
         renderMode();
         renderSetup();
         renderSequence();
@@ -270,9 +326,8 @@
         renderSlots(view);
         renderAgainst();
         renderStep();
-        showWhy(null);
-        renderCompletions();
         renderAnalysis(view);
+        renderBar();
         $('undoBtn').disabled = Draft.undo(state()) === state();
         persist();
     }
@@ -283,13 +338,34 @@
         const key = heroes ? [].concat(heroes).join('|') : null;
         if (key === previewKey) return;
         previewKey = key;
-        const v = heroes ? draftView(state(), ctx, { preview: heroes, player: ui.focus }) : view;
-        renderSlots(v);
-        renderAnalysis(v);
+        shown = heroes ? draftView(state(), ctx, { preview: heroes, player: ui.focus }) : view;
+        renderSlots(shown);
+        renderAnalysis(shown);
     }
 
     function hasProgress(s) {
         return s.format === 'solo' ? Boolean(s.band.length || s.enemies.length || s.excluded.length) : s.history.length > 0;
+    }
+
+    // Phones: the sticky bar shows the band at a glance and opens Band Analysis as a bottom sheet
+    function renderBar() {
+        const bands = Draft.bands(state());
+        const band = bands[view.focus];
+        const faces = [0, 1, 2].map(i => band[i]
+            ? `<span class="bar-face attr--${heroOf(band[i]).attribute}">${portrait(band[i], 'bar-portrait')}</span>`
+            : '<span class="bar-face is-empty"></span>').join('');
+        const a = view.analysis;
+        $('draftBar').innerHTML = `<span class="bar-step">${escapeHtml(view.step.label)}</span>
+            <span class="bar-faces" aria-hidden="true">${faces}</span>
+            <span class="bar-roles">${a.coveredCount}/3 roles</span>
+            <span class="bar-score">${a.score.percent === null ? '—' : percentLabel(a.score.percent)}</span>
+            <span class="sr-only">Open band analysis</span>`;
+    }
+
+    function setSheet(open) {
+        $('analysisPanel').classList.toggle('is-open', open);
+        $('draftBar').setAttribute('aria-expanded', String(open));
+        if (open) $('analysisClose').focus();
     }
 
     function renderMode() {
@@ -305,6 +381,7 @@
         el.hidden = solo();
         if (solo()) return;
         const s = state();
+        $('draftMain').classList.toggle('is-started', hasProgress(s));
         if (s.history.length) {
             el.innerHTML = `<p class="setup-summary">${FORMAT_INFO[s.format].label} · Player 1 starts${s.carryOverBans.length
                 ? ` · ${s.carryOverBans.length} carried-over ban${s.carryOverBans.length > 1 ? 's' : ''}` : ''}</p>`;
@@ -343,6 +420,9 @@
                 <span class="seq-action">P${s.player} ${s.action === 'ban' ? 'Ban' : 'Pick'}</span>
                 <span class="seq-who">${s.hero ? escapeHtml(display(s.hero)) : '—'}</span>
             </li>`).join('') + add;
+        // One scrolling row: keep the current step in view
+        const current = el.querySelector('[aria-current="step"]');
+        if (current) el.scrollLeft = current.offsetLeft - el.offsetLeft - (el.clientWidth - current.offsetWidth) / 2;
     }
 
     // ---- Pool ----------------------------------------------------------------------------
@@ -352,10 +432,7 @@
         if (!entry.available && !f.showUnavailable) return false;
         if (f.attribute !== 'All' && entry.attribute !== f.attribute) return false;
         if (f.roles.length && !f.roles.some(r => entry.battleRoles.includes(r))) return false;
-        if (f.fills) {
-            const missing = view.analysis.roles.filter(r => !r.coveredBy).map(r => r.role);
-            if (!entry.battleRoles.some(r => missing.includes(r))) return false;
-        }
+        if (f.fills && !entry.fills.length) return false; // adds no role the band lacks
         const term = f.term.trim().toLowerCase();
         if (!term) return true;
         const hero = heroOf(entry.name);
@@ -377,17 +454,22 @@
         return `${verb} ${entry.display}${solo() ? '' : ` for Player ${view.step.player}`}`;
     }
 
+    const ranked = () => ui.sort !== 'name' && view.suggestions.items.length > 0;
+    const anyCounters = () => view.pool.some(e => e.counters > 0);
+
     function sortPool(entries) {
-        if (ui.sort !== 'recommended' || !view.suggestions.items.length) return entries;
+        if (!ranked()) return entries;
         const rank = e => (e.suggestion ? e.suggestion.rank : Infinity);
-        return [...entries].sort((a, b) => rank(a) - rank(b) || a.id - b.id);
+        const counters = ui.sort === 'counters' ? e => -e.counters : () => 0;
+        return [...entries].sort((a, b) => counters(a) - counters(b) || rank(a) - rank(b) || a.id - b.id);
     }
 
-    function tileRank(entry) {
+    function tileChips(entry) {
         const s = entry.suggestion;
-        if (!s || ui.sort !== 'recommended') return '';
-        return `<span class="tile-rank${s.rank <= 3 ? ' is-top' : ''}" title="Rank ${s.rank}; best band with this hero: ${s.percentLabel}">
-            #${s.rank} · ${s.percentLabel}</span>`;
+        if (!s || !s.chips.length) return '';
+        return `<span class="tile-chips">${s.chips.map(c =>
+            `<span class="tile-chip tile-chip--${c.kind}" title="${escapeHtml(c.text)}"><span aria-hidden="true">${CHIP_ICON[c.kind]}</span> ${escapeHtml(c.short)}</span>`).join('')}${
+            s.moreChips ? `<span class="tile-chip tile-chip--more" title="${s.moreChips} more in the details">+${s.moreChips}</span>` : ''}</span>`;
     }
 
     function renderPool() {
@@ -396,6 +478,8 @@
         document.querySelectorAll('#roleFilter .chip').forEach(c =>
             c.setAttribute('aria-pressed', String(ui.filters.roles.includes(c.dataset.role))));
         const entries = sortPool(view.pool.filter(poolFilter));
+        const active = (ui.filters.attribute !== 'All') + ui.filters.roles.length + ui.filters.fills + ui.filters.showUnavailable;
+        $('filtersToggle').textContent = active ? `Filters (${active})` : 'Filters';
         $('poolCount').textContent = `${view.counts.available} available · ${view.counts.unavailable} unavailable`
             + (entries.length < (ui.filters.showUnavailable ? 36 : view.counts.available) ? ` · ${entries.length} shown` : '');
         if (!entries.length) {
@@ -403,16 +487,20 @@
                 <button class="link-btn" type="button" data-act="clear-filters">Clear filters</button></p>`;
             return;
         }
+        // A finished draft greys the whole pool out so attention moves to the band and its cards
+        $('poolGrid').classList.toggle('is-done', view.complete);
         $('poolGrid').innerHTML = entries.map(e => `
-            <div class="hero-tile attr--${e.attribute}${e.available ? '' : ` is-unavailable is-${e.unavailableReason}`}${e.suggestion && e.suggestion.rank <= 3 && ui.sort === 'recommended' ? ' is-top' : ''}"
+            <div class="hero-tile attr--${e.attribute}${e.available ? '' : ` is-unavailable is-${e.unavailableReason}`}${e.suggestion && e.suggestion.rank <= 3 && ranked() ? ' is-top' : ''}"
                  role="listitem" data-hero="${e.name}" ${e.available ? 'draggable="true"' : ''}>
                 <button class="tile-main" type="button" data-act="primary" aria-label="${escapeHtml(primaryLabel(e))}"
+                        ${e.suggestion ? 'aria-describedby="tilePopover"' : ''}
                         ${e.available && view.step.action ? '' : 'aria-disabled="true"'}>
                     ${banner(e.attribute)}
                     ${tokenPortrait(e.name, 'tile-portrait')}
                     <span class="tile-name">${escapeHtml(e.display)}</span>
-                    ${rolePills(e.battleRoles)}
-                    ${tileRank(e)}
+                    ${rolePills(e.battleRoles, e.fills)}
+                    ${tileChips(e)}
+                    ${e.counters && e.available ? `<span class="tile-counter" title="Counters ${e.counters === 1 ? 'an opposing hero' : `${e.counters} times`}">⚔<span class="sr-only">Counters the opponent</span></span>` : ''}
                     ${e.available ? '' : `<span class="tile-badge">${REASON_BADGE[e.unavailableReason]}</span>`}
                 </button>
                 ${poolCorner(e)}
@@ -434,31 +522,165 @@
             const tile = event.target.closest('[data-hero]');
             if (!tile) return;
             const act = event.target.closest('[data-act]')?.dataset.act;
-            if (act === 'menu') openMenu(tile.dataset.hero, event.target.closest('button'));
-            else if (act === 'primary' && Draft.isAvailable(state(), tile.dataset.hero)) primaryAction(tile.dataset.hero);
+            const name = tile.dataset.hero;
+            if (suppressClick) { suppressClick = false; return; }
+            if (act === 'menu') openMenu(name, event.target.closest('button'));
+            else if (act === 'primary' && narrow()) {
+                // Touch / small screens: the first tap explains the hero, the sheet's button acts
+                if (view.pool.find(p => p.name === name)?.suggestion) showPopover(name, tile, { sheet: true });
+                else openMenu(name, tile.querySelector('.tile-menu-btn'));
+            } else if (act === 'primary' && Draft.isAvailable(state(), name)) primaryAction(name);
         });
+        // Long-press opens the ⋯ menu
+        let pressTimer = null;
+        let suppressClick = false;
+        grid.addEventListener('touchstart', event => {
+            const tile = event.target.closest('[data-hero]');
+            if (!tile) return;
+            pressTimer = setTimeout(() => { suppressClick = true; openMenu(tile.dataset.hero, tile.querySelector('.tile-menu-btn')); }, 550);
+        }, { passive: true });
+        ['touchend', 'touchmove', 'touchcancel'].forEach(type => grid.addEventListener(type, () => clearTimeout(pressTimer), { passive: true }));
         grid.addEventListener('contextmenu', event => {
             const tile = event.target.closest('[data-hero]');
             if (!tile) return;
             event.preventDefault();
             openMenu(tile.dataset.hero, tile.querySelector('.tile-menu-btn'));
         });
+        // Hover / focus: the popover explains the hero and only that hero is previewed in the band
+        // The desktop popover is a tooltip the mouse passes through. It opens after a short pause (so
+        // sweeping across the pool stays calm), then follows from tile to tile at once, and sits on the
+        // side the mouse came from so it never covers where the mouse is heading.
+        let popTimer = null;
+        let lastX = null;
+        let heading = 'right';
+        grid.addEventListener('mousemove', event => {
+            if (lastX !== null && Math.abs(event.clientX - lastX) > 2) heading = event.clientX > lastX ? 'right' : 'left';
+            lastX = event.clientX;
+        });
         const hover = event => {
+            if (narrow()) return;
             const tile = event.target.closest('[data-hero]');
-            const pickable = tile && view.step.action === 'pick' && Draft.isAvailable(state(), tile.dataset.hero);
-            preview(pickable ? tile.dataset.hero : null);
-            showWhy(tile ? tile.dataset.hero : null);
+            if (!tile) return;
+            const entry = view.pool.find(p => p.name === tile.dataset.hero);
+            const s = entry && entry.suggestion;
+            preview(s && view.step.action === 'pick' ? entry.name : null);
+            clearTimeout(popTimer);
+            if (!s) { hidePopover(); return; }
+            // Keyboard focus has no direction: show on the right straight away
+            const side = event.type === 'focusin' ? 'right' : heading === 'right' ? 'left' : 'right';
+            const show = () => showPopover(entry.name, tile, { side });
+            if (event.type === 'focusin' || !$('tilePopover').hidden) show();
+            else popTimer = setTimeout(show, 350);
         };
-        const leave = () => { preview(null); showWhy(null); };
         grid.addEventListener('mouseover', hover);
         grid.addEventListener('focusin', hover);
-        grid.addEventListener('mouseleave', leave);
-        grid.addEventListener('focusout', event => { if (!grid.contains(event.relatedTarget)) leave(); });
+        grid.addEventListener('mouseleave', () => { clearTimeout(popTimer); lastX = null; leavePool(); });
+        grid.addEventListener('focusout', event => {
+            if (!grid.contains(event.relatedTarget)) { clearTimeout(popTimer); leavePool(); }
+        });
         grid.addEventListener('dragstart', event => {
             const tile = event.target.closest('[data-hero]');
             if (!tile) return;
             event.dataTransfer.setData('text/hero', tile.dataset.hero);
             event.dataTransfer.effectAllowed = 'copy';
+        });
+    }
+
+    function leavePool() {
+        if ($('tilePopover').classList.contains('is-sheet')) return;
+        preview(null);
+        hidePopover();
+    }
+
+    // ---- Tile popover (desktop: next to the tile; phones: a bottom sheet with the action) ---
+
+    // `side`: where to put the desktop popover beside the tile ('left' | 'right'), if there is room
+    function showPopover(name, tile, { sheet = false, side = 'right' } = {}) {
+        const entry = view.pool.find(p => p.name === name);
+        const s = entry && entry.suggestion;
+        const pop = $('tilePopover');
+        if (!s) return hidePopover();
+        ui.pop = name;
+        const p = view.suggestions.player;
+        const ban = view.suggestions.action === 'ban';
+        const rival = p === 1 ? 2 : 1;
+        const forWhom = solo() ? '' : ` for Player ${p}`;
+        const verb = ban ? 'Ban' : 'Select';
+        // The desktop popover can't be clicked: Fill band lives in the ⋯ menu there, and in the phone sheet
+        const canFill = sheet && solo() && !ban && s.bestWith.length > 0;
+        pop.innerHTML = `
+            <div class="pop-head">
+                <span class="pop-rank">#${s.rank}</span>
+                <h3 class="pop-name" id="popHeading">${escapeHtml(entry.display)}<small>${escapeHtml(forWhom)}</small></h3>
+                <button class="icon-btn pop-close" type="button" data-pop="close" aria-label="Close">✕</button>
+            </div>
+            <p class="pop-score">${ban ? `Player ${rival}'s best band with ${escapeHtml(entry.display)}` : 'Best band with this hero'}:
+                <strong>${s.percentLabel}</strong></p>
+            ${s.bestWith.length ? `<p class="pop-best">Best with: <strong>${s.bestWith.map(display).map(escapeHtml).join(' + ')}</strong></p>` : ''}
+            ${reasonGroups(s.reasons).map(g => `<section class="reason-group">
+                <h4 class="mini-heading">${g.label}</h4>
+                <ul class="reason-list">${g.reasons.map(r =>
+                    `<li class="reason reason--${r.kind} rtype--${g.type}">${escapeHtml(r.text)}</li>`).join('')}</ul>
+            </section>`).join('') || '<p class="muted">No specific reasons.</p>'}
+            <div class="pop-actions">
+                ${entry.available && view.step.action ? `<button class="btn ${ban ? 'btn-crimson' : 'btn-gold'} pop-primary" type="button" data-pop="primary">${verb}${escapeHtml(forWhom)}</button>` : ''}
+                ${canFill ? `<button class="btn btn-ghost" type="button" data-pop="fill">Fill band</button>` : ''}
+            </div>`;
+        pop.dataset.hero = name;
+        pop.hidden = false;
+        pop.classList.toggle('is-sheet', sheet);
+        document.querySelectorAll('#poolGrid .hero-tile').forEach(t => {
+            t.classList.toggle('is-popped', t.dataset.hero === name);
+        });
+        if (sheet) {
+            pop.querySelector('[data-pop="primary"], [data-pop="close"]').focus();
+            return;
+        }
+        // Beside the tile, on whichever side has room, kept inside the draft view
+        const host = $('draftView').getBoundingClientRect();
+        const rect = tile.getBoundingClientRect();
+        const width = pop.offsetWidth;
+        const fitsRight = rect.right + 8 + width <= host.right;
+        const fitsLeft = rect.left - 8 - width >= host.left;
+        const right = side === 'right' ? fitsRight || !fitsLeft : !fitsLeft && fitsRight;
+        pop.style.left = `${(right ? rect.right + 8 : Math.max(host.left, rect.left - 8 - width)) - host.left}px`;
+        const top = Math.min(rect.top, window.innerHeight - pop.offsetHeight - 12);
+        pop.style.top = `${Math.max(top, host.top) - host.top}px`;
+    }
+
+    function hidePopover() {
+        const pop = $('tilePopover');
+        if (pop.hidden) return;
+        pop.hidden = true;
+        pop.classList.remove('is-sheet');
+        ui.pop = null;
+        document.querySelectorAll('#poolGrid .is-popped').forEach(t => t.classList.remove('is-popped'));
+    }
+
+    function fillBand(name) {
+        const s = view.pool.find(p => p.name === name)?.suggestion;
+        if (!s) return;
+        const missing = s.bestBand.filter(n => !state().band.includes(n));
+        attempt(st => Draft.fillBand(st, missing), () => `Band filled: ${s.bestBand.map(display).join(', ')}. ${summary()}`);
+    }
+
+    function setupPopover() {
+        const pop = $('tilePopover');
+        pop.addEventListener('click', event => {
+            const act = event.target.closest('[data-pop]')?.dataset.pop;
+            const name = pop.dataset.hero;
+            if (!act) return;
+            const tile = document.querySelector(`#poolGrid [data-hero="${name}"] .tile-main`);
+            hidePopover();
+            if (act === 'primary') primaryAction(name);
+            else if (act === 'fill') fillBand(name);
+            else tile?.focus();
+        });
+        document.addEventListener('click', event => {
+            if (!pop.hidden && pop.classList.contains('is-sheet') && !pop.contains(event.target) && !event.target.closest('#poolGrid')) {
+                hidePopover();
+                preview(null);
+            }
         });
     }
 
@@ -523,6 +745,19 @@
         });
     }
 
+    // Empty slot: bring the pool into view, light it up and focus the best hero
+    function choosePrompt() {
+        const first = document.querySelector('#poolGrid .hero-tile:not(.is-unavailable) .tile-main');
+        if (!first) { openPicker('pick'); return; }
+        const pool = document.querySelector('.draft-pool');
+        pool.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        pool.classList.remove('is-flash');
+        requestAnimationFrame(() => pool.classList.add('is-flash'));
+        setTimeout(() => pool.classList.remove('is-flash'), 1400);
+        first.focus({ preventScroll: true });
+        announce(`Choose a hero from the pool. ${view.step.label}.`);
+    }
+
     function moveSlot(index, delta) {
         const to = index + delta;
         attempt(s => Draft.movePick(s, index, to), 'Band reordered.');
@@ -539,10 +774,7 @@
             if (act === 'remove') attempt(s => Draft.removePick(s, slot.dataset.hero), `Removed ${display(slot.dataset.hero)}.`);
             else if (act === 'left') moveSlot(index, -1);
             else if (act === 'right') moveSlot(index, 1);
-            else if (act === 'choose') {
-                const first = document.querySelector('#poolGrid .hero-tile:not(.is-unavailable) .tile-main');
-                if (first) first.focus(); else openPicker('pick');
-            }
+            else if (act === 'choose') choosePrompt();
         });
         slots.addEventListener('keydown', event => {
             const slot = event.target.closest('[data-slot][data-hero]');
@@ -616,10 +848,7 @@
 
     function setupAgainst() {
         $('againstRow').addEventListener('click', event => {
-            if (event.target.closest('[data-act="choose"]')) {
-                document.querySelector('#poolGrid .hero-tile:not(.is-unavailable) .tile-main')?.focus();
-                return;
-            }
+            if (event.target.closest('[data-act="choose"]')) { choosePrompt(); return; }
             const name = event.target.closest('[data-remove]')?.dataset.remove;
             if (name) attempt(s => Draft.setEnemies(s, s.enemies.filter(n => n !== name)), `No longer facing ${display(name)}.`);
         });
@@ -652,95 +881,15 @@
         $('stepLabel').className = `step-badge${p2Turn() ? ' step-badge--p2' : ''}${action ? '' : ' step-badge--done'}`;
         $('draftIntro').hidden = !view.intro;
         $('draftIntro').textContent = view.intro || '';
-        const ranked = view.suggestions.items.length > 0;
-        document.querySelector('.sort-switch').hidden = !ranked;
+        const hasRanks = view.suggestions.items.length > 0;
+        document.querySelector('.sort-switch').hidden = !hasRanks;
+        const counters = anyCounters();
+        if (!counters && ui.sort === 'counters') ui.sort = 'recommended';
+        document.querySelector('.sort-switch [data-sort="counters"]').hidden = !counters;
         document.querySelectorAll('.sort-switch [data-sort]').forEach(b =>
             b.setAttribute('aria-checked', String(b.dataset.sort === ui.sort)));
-    }
-
-    // ---- Why a hero (analysis column, on hover / focus) -----------------------------------
-
-    function showWhy(name) {
-        const entry = name && view.pool.find(p => p.name === name);
-        const s = entry && entry.suggestion;
-        $('whyBlock').hidden = !s;
-        if (!s) return;
-        const p = view.suggestions.player;
-        $('whyHeading').textContent = `#${s.rank} ${entry.display}${solo() ? '' : ` for Player ${p}`}`;
-        $('whySummary').textContent = view.suggestions.action === 'ban'
-            ? `Player ${p === 1 ? 2 : 1}'s best band with ${entry.display}: ${s.percentLabel}`
-            : `Best band with ${entry.display}: ${s.percentLabel}${s.bestBand ? ` (${s.bestBand.map(display).join(', ')})` : ''}`;
-        $('whyList').innerHTML = s.reasons.map(r =>
-            `<li class="reason reason--${r.kind}">${escapeHtml(r.text)}</li>`).join('') || '<li class="muted">No specific reasons.</li>';
-    }
-
-    function setupCompletions() {
-        const completions = $('completionList');
-        completions.addEventListener('click', event => {
-            const swap = event.target.closest('[data-swap-in]');
-            if (swap) {
-                const { swapOut, swapIn } = swap.dataset;
-                attempt(s => Draft.replacePick(s, swapOut, swapIn), () => `Swapped ${display(swapOut)} for ${display(swapIn)}. ${summary()}`);
-                return;
-            }
-            const card = event.target.closest('[data-band]');
-            if (card) fillFromBand(card.dataset.band.split(','));
-            if (event.target.closest('[data-act="copy"]')) copyBand();
-        });
-        const hover = event => {
-            const card = event.target.closest('[data-band]');
-            preview(card ? card.dataset.band.split(',') : null);
-        };
-        completions.addEventListener('mouseover', hover);
-        completions.addEventListener('focusin', hover);
-        completions.addEventListener('mouseleave', () => preview(null));
-    }
-
-    function fillFromBand(heroes) {
-        const missing = heroes.filter(n => !Draft.bands(state())[view.step.player].includes(n));
-        if (solo()) attempt(s => Draft.fillBand(s, missing), () => `Band filled: ${heroes.map(display).join(', ')}. ${summary()}`);
-        else if (missing.length) primaryAction(missing[0]); // later picks are future turns
-    }
-
-    function renderCompletions() {
-        const section = $('completionSection');
-        if (view.completions) {
-            section.hidden = false;
-            $('completionHeading').textContent = solo() ? 'Complete Your Band' : `Complete Player ${view.step.player}'s Band`;
-            $('completionHint').textContent = solo() ? 'Full 3-hero bands built on your current picks'
-                : `Full bands built on Player ${view.step.player}'s picks; choosing one selects its next hero`;
-            $('completionList').innerHTML = view.completions.map(c => `
-                <button class="band-card" type="button" data-band="${c.heroes.join(',')}"
-                        aria-label="${solo() ? 'Use' : 'Aim for'} ${c.heroes.map(display).join(', ')}: ${c.percentLabel}">
-                    <span class="band-faces">${c.heroes.map((n, i) => `<span class="band-face${c.inBand[i] ? ' is-in-band' : ''} attr--${heroOf(n).attribute}">
-                        ${portrait(n, 'face-portrait')}<span class="face-name">${escapeHtml(display(n))}</span></span>`).join('')}</span>
-                    <span class="band-pct">${c.percentLabel}</span>
-                </button>`).join('');
-        } else if (view.complete && solo()) {
-            section.hidden = false;
-            $('completionHeading').textContent = 'Band Summary';
-            $('completionHint').textContent = '';
-            const a = view.analysis;
-            const swaps = view.swaps.length
-                ? `<p class="mini-heading">Swaps that improve it</p><ul class="swap-list">${view.swaps.map(sw => `
-                    <li><button class="swap-btn" type="button" data-swap-out="${sw.out}" data-swap-in="${sw.in}">
-                        ${portrait(sw.in, 'face-portrait')}<span>Replace ${escapeHtml(sw.display.out)} with ${escapeHtml(sw.display.in)}</span>
-                        <span class="band-pct">${sw.percentLabel}</span></button></li>`).join('')}</ul>`
-                : '<p class="muted">No single swap improves this band.</p>';
-            $('completionList').innerHTML = `<div class="summary-card">
-                <p><strong>${Draft.myBand(state()).map(display).map(escapeHtml).join(', ')}</strong> · ${a.score.label}</p>
-                <p>Covers ${a.coveredCount} of 3 roles · ${escapeHtml(display(Draft.myBand(state())[0]))} starts on the Castle.</p>
-                <button class="btn btn-ghost" type="button" data-act="copy">Copy band</button>
-                ${swaps}
-            </div>`;
-        } else {
-            section.hidden = true;
-        }
-    }
-
-    function copyBand() {
-        const text = `${Draft.myBand(state()).map(display).join(', ')} (${view.analysis.score.label})`;
-        navigator.clipboard?.writeText(text).then(() => toast('Band copied.'), () => toast(text));
+        $('completeNote').hidden = !view.complete;
+        $('completeText').textContent = solo() ? 'Band complete.' : 'Draft complete.';
     }
 
     // ---- Analysis ------------------------------------------------------------------------
@@ -767,12 +916,87 @@
 
         $('threatHeading').textContent = solo() ? 'Threats from Against' : `Threats from Player ${v.focus === 1 ? 2 : 1}`;
         $('threatBlock').hidden = !a.threats.length;
-        $('threatList').innerHTML = a.threats.map(t =>
-            `<li class="reason reason--warning${t.preview ? ' is-changed' : ''}">${escapeHtml(t.text)}${t.preview ? ' (preview)' : ''}</li>`).join('');
-        $('synergyBlock').hidden = !a.synergy.length;
-        $('synergyList').innerHTML = a.synergy.map(s =>
-            `<li class="reason reason--positive${s.preview ? ' is-changed' : ''}">${escapeHtml(s.text)}${s.preview ? ' (preview)' : ''}</li>`).join('');
+        $('threatList').innerHTML = moreList('threats', a.threats, t =>
+            `<li class="reason reason--warning${t.preview ? ' is-changed' : ''}">${escapeHtml(t.text)}${t.preview ? ' (preview)' : ''}</li>`);
+        $('synergyBlock').hidden = !a.synergyGroups.length;
+        $('synergyList').innerHTML = moreList('synergy', a.synergyGroups, synergyRow);
         $('viewInGraph').disabled = !Draft.bands(state())[v.focus].length;
+    }
+
+    // "Toxicum ← Equita (Poison), Tempus (Swiftness, cooldowns)"
+    const synergyRow = g => `<li class="syn-group${g.preview ? ' is-changed' : ''}">
+        <strong class="syn-hero">${escapeHtml(g.display)}</strong> <span class="syn-arrow" aria-label="helped by">←</span>
+        <span>${escapeHtml(groupText(g))}</span>${g.preview ? ' <span class="syn-new">(preview)</span>' : ''}</li>`;
+
+    // A list showing LIST_LIMIT items, then one "Show N more" button that expands in place
+    function moreList(key, items, row) {
+        const c = collapse(items, LIST_LIMIT, Boolean(ui.expanded[key]));
+        const id = `more-${key}`;
+        return `<ul class="reason-list" id="${id}">${c.items.map(row).join('')}</ul>${c.hidden
+            ? `<button class="link-btn more-btn" type="button" data-more="${key}" aria-controls="${id}" aria-expanded="${c.expanded}">
+                ${c.expanded ? 'Show fewer' : `Show ${c.hidden} more`}</button>` : ''}`;
+    }
+
+    // ---- Reference cards modal (finished draft, or a shared link) ---------------------------
+
+    const cardsState = () => (ui.shared ? ui.shared.state : state());
+    const cardsMode = () => (cardsState().format === 'solo' ? 'solo' : 'two-player');
+
+    function openCards() {
+        renderCards();
+        if (!$('cardsDialog').open) $('cardsDialog').showModal();
+        $('cardsSwitch').querySelector('[aria-checked="true"]')?.focus();
+    }
+
+    function renderCards() {
+        const sides = referenceSides(cardsState());
+        const mode = cardsMode();
+        if (!sides.some(x => x.key === ui.cardSide[mode])) ui.cardSide[mode] = sides[0].key;
+        const side = sides.find(x => x.key === ui.cardSide[mode]);
+        $('cardsTitle').textContent = ui.shared ? 'Shared draft · reference cards' : 'Reference cards';
+        $('cardsSwitch').hidden = sides.length < 2;
+        $('cardsSwitch').innerHTML = sides.map(x =>
+            `<button type="button" role="radio" data-side="${x.key}" aria-checked="${x === side}">${escapeHtml(x.label)}</button>`).join('');
+        const ready = window.BestiaryGraph && window.BestiaryGraph.ready;
+        $('cardTrack').innerHTML = side.heroes.map(name => `
+            <article class="ref-card" aria-label="${escapeHtml(display(name))} reference card">
+                ${ready ? window.BestiaryGraph.heroCard(name) : '<p class="muted">Loading the card…</p>'}
+            </article>`).join('');
+    }
+
+    function shareUrl(s) {
+        return `${location.href.split('#')[0]}#${encodeDraft(s, ctx.heroes)}`;
+    }
+
+    function setupCards() {
+        const dialog = $('cardsDialog');
+        $('cardsSwitch').addEventListener('click', event => {
+            const button = event.target.closest('[data-side]');
+            if (!button) return;
+            ui.cardSide[cardsMode()] = button.dataset.side;
+            renderCards();
+            $('cardsSwitch').querySelector(`[data-side="${button.dataset.side}"]`).focus();
+        });
+        $('cardsSwitch').addEventListener('keydown', event => {
+            if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+            event.preventDefault();
+            const buttons = [...$('cardsSwitch').querySelectorAll('[data-side]')];
+            const i = buttons.findIndex(b => b.getAttribute('aria-checked') === 'true');
+            buttons[(i + (event.key === 'ArrowRight' ? 1 : buttons.length - 1)) % buttons.length].click();
+        });
+        $('shareLink').addEventListener('click', () => {
+            const url = shareUrl(cardsState());
+            if (navigator.share && narrow()) navigator.share({ title: 'Bestiary of Sigillum draft', url }).catch(() => {});
+            else if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => toast('Link copied. Opening it shows these cards.'), () => toast(url));
+            else toast(url);
+        });
+        dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+        // Closing a shared draft's cards returns to your own draft
+        dialog.addEventListener('close', () => {
+            if (!ui.shared) return;
+            ui.shared = null;
+            if (ui.tab === 'draft') history.replaceState(null, '', '#draft');
+        });
     }
 
     // ---- Hero picker dialog (Against, Excluded, carry-over bans) --------------------------
@@ -834,6 +1058,10 @@
             const verb = step.action === 'ban' ? 'Ban' : 'Select';
             items.push(['primary', solo() ? verb : `${verb} for Player ${step.player}`]);
         }
+        const suggestion = view.pool.find(p => p.name === name)?.suggestion;
+        if (solo() && available && step && suggestion && suggestion.bestWith.length) {
+            items.push(['fill', `Fill band: + ${suggestion.bestWith.map(display).join(' + ')}`]);
+        }
         if (solo() && available && s.enemies.length < 3) items.push(['enemy', 'Add to Against']);
         if (solo() && available) items.push(['exclude', 'Exclude']);
         if (solo() && s.enemies.includes(name)) items.push(['unface', 'Stop facing']);
@@ -866,6 +1094,7 @@
             if (!act) return;
             closeMenu(false);
             if (act === 'primary') primaryAction(name);
+            else if (act === 'fill') fillBand(name);
             else if (act === 'enemy') attempt(s => Draft.setEnemies(s, [...s.enemies, name]), `Facing ${display(name)}.`);
             else if (act === 'exclude') attempt(s => Draft.setExcluded(s, [...s.excluded, name]), `Excluded ${display(name)}.`);
             else if (act === 'unface') attempt(s => Draft.setEnemies(s, s.enemies.filter(n => n !== name)), `No longer facing ${display(name)}.`);
@@ -892,8 +1121,11 @@
             const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName);
             if (event.key === 'Escape') {
                 if (!$('cardMenu').hidden) closeMenu();
+                else if (!$('tilePopover').hidden) { hidePopover(); preview(null); }
+                else if ($('analysisPanel').classList.contains('is-open')) setSheet(false);
                 return;
             }
+            if ($('cardsDialog').open || $('heroPicker').open) return;
             if (!typing && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
                 event.preventDefault();
                 doUndo();

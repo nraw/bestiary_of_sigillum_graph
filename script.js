@@ -122,6 +122,7 @@ async function init() {
         setupPanels();
         setupKeyboard();
         render();
+        document.dispatchEvent(new Event('bestiary:graph-ready'));
 
         trackEvent('app_loaded', 'Application', `${heroesData.length} heroes loaded`);
     } catch (error) {
@@ -775,64 +776,46 @@ function synergySection(node) {
         </section>`;
 }
 
-function renderDetails() {
-    const panel = document.getElementById('heroInfo');
-    const node = nodesById.get(state.selectedId);
-
-    if (!node) {
-        panel.innerHTML = `
-            <div class="empty-state">
-                <svg class="empty-sigil" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17"/><path d="M20 3 L24 20 L20 37 L16 20 Z M3 20 L20 16 L37 20 L20 24 Z"/></svg>
-                <p>Select a hero or trait in the network, or search above, to read its card.</p>
-                <dl class="shortcuts">
-                    <dt><kbd>/</kbd></dt><dd>Search</dd>
-                    <dt><kbd>Tab</kbd> <kbd>←↑→↓</kbd></dt><dd>Move between nodes</dd>
-                    <dt><kbd>Enter</kbd></dt><dd>Select node</dd>
-                    <dt><kbd>+</kbd> <kbd>−</kbd> <kbd>F</kbd> <kbd>0</kbd></dt><dd>Zoom, fit, reset</dd>
-                    <dt><kbd>S</kbd></dt><dd>Synergy lines</dd>
-                    <dt><kbd>Esc</kbd></dt><dd>Clear selection</dd>
-                </dl>
-            </div>`;
-        return;
-    }
-
-    if (node.type === 'hero') {
-        const attribute = HERO_ATTRIBUTES[node.attribute];
-        const reach = node.labels.includes('Melee') ? 'Melee' : 'Ranged';
-        const groups = abilityTraits(node);
-        const roleChip = l => {
-            const n = nodesById.get(`label_${l.label}`);
-            return `<button type="button" class="trait-chip role-chip kind--${l.role}" data-node="${n.id}"
-                        title="${escapeHtml(linkSummary(node.name, l.label, [l])[0])}">
-                ${l.role === 'has' ? '' : `<span class="role-tag">${ROLE_INFO[l.role].label}</span>`}
-                <span class="chip-label">${labelGlyph(n.category, 14, n.name)} ${escapeHtml(l.label)}</span>${
-                SUBJECT_LABEL[l.on] ? ` <span class="role-on">· ${SUBJECT_LABEL[l.on]}</span>` : ''}</button>`;
-        };
-        const chips = links => links.length
-            ? `<div class="trait-chips ability-traits">${links.map(roleChip).join('')}</div>` : '';
-        // Laid out like the printed reference card: core ability boxed, support abilities ruled off below it
-        const ability = (a, i) => {
-            const range = abilityRange(a.range);
-            const name = a.name || (i === 0 ? 'Core ability' : `Support ability ${i}`);
-            return `
-            <article class="card-ability${i === 0 ? ' card-ability--core' : ''}">
-                <header class="card-ability-head">
-                    <h4>${escapeHtml(name)}:</h4>
-                    ${range ? `<img class="card-range" src="${range.src}" alt="${escapeHtml(range.label)}" title="${escapeHtml(range.label)}">` : ''}
-                </header>
-                <div class="card-ability-body">
-                    <div class="card-rows">
-                        <p class="card-row">${cardIcon('target', 'Target')}<span>${escapeHtml(tidyTarget(a.target))}</span></p>
-                        <p class="card-row">${cardIcon('effect', 'Effect')}<span>${escapeHtml(a.effect)}</span></p>
-                        ${a.cooldown ? `<p class="card-row">${cardIcon('cooldown', 'Cooldown')}<span>${escapeHtml(a.cooldown)}</span></p>` : ''}
-                    </div>
-                    <img class="card-art" src="${abilityImage(node.name, i)}" alt="" loading="lazy" onerror="this.remove()">
+// The printed reference card (portrait, vitality, features, abilities with range and cooldown).
+// Shared by the details panel and the Draft tab's reference cards; `traits: false` leaves out the
+// trait chips under each ability (they link into the graph, which the reference cards don't need).
+function heroCardParts(node, { traits = true } = {}) {
+    const attribute = HERO_ATTRIBUTES[node.attribute];
+    const reach = node.labels.includes('Melee') ? 'Melee' : 'Ranged';
+    const groups = abilityTraits(node);
+    const roleChip = l => {
+        const n = nodesById.get(`label_${l.label}`);
+        return `<button type="button" class="trait-chip role-chip kind--${l.role}" data-node="${n.id}"
+                    title="${escapeHtml(linkSummary(node.name, l.label, [l])[0])}">
+            ${l.role === 'has' ? '' : `<span class="role-tag">${ROLE_INFO[l.role].label}</span>`}
+            <span class="chip-label">${labelGlyph(n.category, 14, n.name)} ${escapeHtml(l.label)}</span>${
+            SUBJECT_LABEL[l.on] ? ` <span class="role-on">· ${SUBJECT_LABEL[l.on]}</span>` : ''}</button>`;
+    };
+    const chips = links => links.length
+        ? `<div class="trait-chips ability-traits">${links.map(roleChip).join('')}</div>` : '';
+    // Laid out like the printed reference card: core ability boxed, support abilities ruled off below it
+    const ability = (a, i) => {
+        const range = abilityRange(a.range);
+        const name = a.name || (i === 0 ? 'Core ability' : `Support ability ${i}`);
+        return `
+        <article class="card-ability${i === 0 ? ' card-ability--core' : ''}">
+            <header class="card-ability-head">
+                <h4>${escapeHtml(name)}:</h4>
+                ${range ? `<img class="card-range" src="${range.src}" alt="${escapeHtml(range.label)}" title="${escapeHtml(range.label)}">` : ''}
+            </header>
+            <div class="card-ability-body">
+                <div class="card-rows">
+                    <p class="card-row">${cardIcon('target', 'Target')}<span>${escapeHtml(tidyTarget(a.target))}</span></p>
+                    <p class="card-row">${cardIcon('effect', 'Effect')}<span>${escapeHtml(a.effect)}</span></p>
+                    ${a.cooldown ? `<p class="card-row">${cardIcon('cooldown', 'Cooldown')}<span>${escapeHtml(a.cooldown)}</span></p>` : ''}
                 </div>
-                ${chips(groups[i].links)}
-            </article>`;
-        };
+                <img class="card-art" src="${abilityImage(node.name, i)}" alt="" loading="lazy" onerror="this.remove()">
+            </div>
+            ${traits ? chips(groups[i].links) : ''}
+        </article>`;
+    };
 
-        panel.innerHTML = `
+    const html = `
             <div class="hero-card">
                 <header class="card-top">
                     <div class="card-banner attr--${node.attribute}" title="${escapeHtml(attribute.label)}">
@@ -859,6 +842,39 @@ function renderDetails() {
                 ${ability(node.core_ability, 0)}
                 ${node.support_abilities.map((a, i) => ability(a, i + 1)).join('')}
             </div>
+`;
+    return { html, groups, chips };
+}
+
+function heroCardHtml(node, options) {
+    return heroCardParts(node, options).html;
+}
+
+function renderDetails() {
+    const panel = document.getElementById('heroInfo');
+    const node = nodesById.get(state.selectedId);
+
+    if (!node) {
+        panel.innerHTML = `
+            <div class="empty-state">
+                <svg class="empty-sigil" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17"/><path d="M20 3 L24 20 L20 37 L16 20 Z M3 20 L20 16 L37 20 L20 24 Z"/></svg>
+                <p>Select a hero or trait in the network, or search above, to read its card.</p>
+                <dl class="shortcuts">
+                    <dt><kbd>/</kbd></dt><dd>Search</dd>
+                    <dt><kbd>Tab</kbd> <kbd>←↑→↓</kbd></dt><dd>Move between nodes</dd>
+                    <dt><kbd>Enter</kbd></dt><dd>Select node</dd>
+                    <dt><kbd>+</kbd> <kbd>−</kbd> <kbd>F</kbd> <kbd>0</kbd></dt><dd>Zoom, fit, reset</dd>
+                    <dt><kbd>S</kbd></dt><dd>Synergy lines</dd>
+                    <dt><kbd>Esc</kbd></dt><dd>Clear selection</dd>
+                </dl>
+            </div>`;
+        return;
+    }
+
+    if (node.type === 'hero') {
+        const { html, groups, chips } = heroCardParts(node);
+        panel.innerHTML = `
+            ${html}
 
             ${groups.at(-1).links.length ? `
             <section class="detail-section">
@@ -1374,5 +1390,11 @@ window.BestiaryGraph = {
         const node = nodesData.find(n => n.type === 'hero' && n.name === name);
         if (node) selectNode(node.id, { source: 'draft' });
     },
+    // Reference card markup for the Draft tab, without the graph trait chips (null until the data has loaded)
+    heroCard(name) {
+        const node = nodesData.find(n => n.type === 'hero' && n.name === name);
+        return node ? heroCardHtml(node, { traits: false }) : null;
+    },
+    get ready() { return nodesData.length > 0; },
     get nodesData() { return nodesData; }, get linksData() { return linksData; }
 };

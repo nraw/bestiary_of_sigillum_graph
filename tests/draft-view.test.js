@@ -54,7 +54,7 @@ test('every chip comes from an engine reason, positives first, at least one warn
         const firstWarning = kinds.indexOf('warning');
         if (firstWarning >= 0) assert.ok(kinds.slice(firstWarning).every(k => k === 'warning'), item.name);
         if (item.reasons.some(r => r.kind === 'warning')) assert.ok(kinds.includes('warning'), `${item.name} hides its warning`);
-        assert.strictEqual(item.moreChips, item.reasons.filter(r => r.kind !== 'info').length - item.chips.length);
+        assert.strictEqual(item.moreChips, item.reasons.filter(r => r.kind !== 'info' && r.factor !== 'ban').length - item.chips.length);
     });
 });
 
@@ -72,18 +72,10 @@ test('percent labels: "Top N%" rounded up, never below 1%; the weaker half reads
     assert.strictEqual(V.percentLabel(100), 'Bottom 1%');
 });
 
-test('completions while any slot is empty (including the last pick); swaps only when the band is full', () => {
+test('a full band is complete and has nothing left to rank', () => {
     const empty = V.draftView(D.createDraft('solo'), ctx);
-    assert.ok(Array.isArray(empty.completions) && empty.completions.length > 0);
-    assert.strictEqual(empty.swaps, null);
-    const one = V.draftView(D.applyAction(D.createDraft('solo'), 'FERRARIUS'), ctx);
-    assert.ok(one.completions.every(c => c.heroes[0] === 'FERRARIUS'));
-    const last = V.draftView(soloState(), ctx).completions;
-    assert.ok(Array.isArray(last) && last.length > 0, 'the last pick still shows complete bands');
-    last.forEach(card => assert.deepStrictEqual(card.heroes.slice(0, 2), ['FERRARIUS', 'BALLISTARIUS']));
+    assert.ok(!('completions' in empty), 'completions live in the tile popover (Best with) now');
     const full = V.draftView(pickAll(D.createDraft('solo'), ['FIDEA', 'GOETIUM', 'MESSUM']), ctx);
-    assert.strictEqual(full.completions, null);
-    assert.ok(Array.isArray(full.swaps) && full.swaps.length > 0);
     assert.strictEqual(full.suggestions.items.length, 0);
     assert.ok(full.complete);
 });
@@ -157,11 +149,6 @@ test('step and intro text', () => {
 
 
 
-test('two-player: a finished band gets no swap suggestions', () => {
-    const s = pickAll(D.createDraft('standard'), ['FIDEA', 'SAXUM', 'GOETIUM', 'ARMUS', 'MESSUM', 'TEMPUS']);
-    assert.strictEqual(V.draftView(s, ctx).swaps, null);
-});
-
 test('every available hero is ranked, and the pool carries each rank', () => {
     const v = V.draftView(soloState(), ctx);
     assert.strictEqual(v.suggestions.items.length, v.counts.available, 'all candidates, not a top-N');
@@ -198,7 +185,6 @@ test('two-player: both players by number, sequence and bans, Player 1 first', ()
     assert.deepStrictEqual(v.players[1].slots.map(x => x.hero), ['FIDEA', null, null]);
     const reason = n => v.pool.find(p => p.name === n).unavailableReason;
     assert.deepStrictEqual([reason('FERRARIUS'), reason('FIDEA'), reason('TEMPUS')], ['player1', 'player2', 'banned']);
-    assert.strictEqual(v.completions, null, 'no completions on ban steps');
 });
 
 test('two-player: suggestions are always ranked for whoever acts, with select / ban', () => {
@@ -214,10 +200,10 @@ test('two-player: suggestions are always ranked for whoever acts, with select / 
     assert.deepStrictEqual([ban.action, ban.player], ['ban', 1]);
 });
 
-test('two-player: completions, intro and preview belong to the acting player', () => {
+test('two-player: best partners, intro and preview belong to the acting player', () => {
     const s = D.applyAction(D.createDraft('standard'), 'SAXUM');
     const v = V.draftView(s, ctx);
-    assert.ok(v.completions.every(c => !c.heroes.includes('SAXUM')), "Player 2's completions");
+    assert.ok(v.suggestions.items.every(i => !i.bestWith.includes('SAXUM')), "Player 2's bands");
     assert.ok(v.intro, 'Player 2 has no hero yet');
     const p = V.draftView(s, ctx, { preview: 'FIDEA' });
     assert.deepStrictEqual(p.players[1].slots[0], { index: 0, hero: 'FIDEA', preview: true });
@@ -236,3 +222,110 @@ test('two-player: analysis follows the acting player unless another is chosen', 
     assert.strictEqual(V.draftView(done, ctx).focus, 1, 'a finished draft shows Player 1 first');
 });
 
+
+// ---- Tile chips and popover (#2) -----------------------------------------------------------
+
+test('tiles get at most 2 short chips, a warning is never cut', () => {
+    assert.strictEqual(V.MAX_CHIPS, 2);
+    const s = pickAll(D.setEnemies(D.createDraft('solo'), ['SAXUM']), ['FERRARIUS', 'BALLISTARIUS']);
+    const v = V.draftView(s, ctx);
+    v.suggestions.items.forEach(item => {
+        assert.ok(item.chips.length <= 2, item.name);
+        assert.ok(item.chips.every(c => !c.reasonId.startsWith('ban:')), 'the ban line is the same on every tile');
+        item.chips.forEach(c => assert.ok(c.short && c.short.length <= 32, `${item.name}: "${c.short}"`));
+    });
+    const fidea = v.suggestions.items.find(i => i.name === 'FIDEA');
+    assert.ok(fidea.chips.some(c => c.short === 'Fills Supporter'), JSON.stringify(fidea.chips));
+});
+
+test('short chip texts', () => {
+    const r = (id, text, extra = {}) => ({ id, text, kind: 'positive', delta: 1, heroes: [], ...extra });
+    const fills = roles => r('fills', '…', { heroes: ['X'], roles });
+    assert.strictEqual(V.shortReason(fills(['Supporter']), 'X'), 'Fills Supporter');
+    assert.strictEqual(V.shortReason(fills(['Controller', 'Supporter']), 'X'), 'Fills Controller or Supporter');
+    assert.strictEqual(V.shortReason(fills(['Controller', 'Attacker', 'Supporter']), 'X'), 'Fills any role');
+    assert.strictEqual(V.shortReason(r('countered:SAXUM>FERRARIUS:x', 'Weak vs Saxum (Stun)', { kind: 'warning', attacker: 'SAXUM', victim: 'FERRARIUS' }), 'FERRARIUS'), 'Weak vs Saxum');
+    assert.strictEqual(V.shortReason(r('counter:SAXUM>FERRARIUS:x', 'Counters Ferrarius (Stun)', { kind: 'counter', attacker: 'SAXUM', victim: 'FERRARIUS' }), 'SAXUM'), 'Counters Ferrarius');
+    const syn = { beneficiary: 'TOXICUM', suppliers: ['EQUITA'], detail: 'Poison' };
+    assert.strictEqual(V.shortReason(r('synergy:TOXICUM:Poison:X', 'Synergy: …', syn), 'TOXICUM'), 'Helped by Equita (Poison)');
+    assert.strictEqual(V.shortReason(r('synergy:TOXICUM:Poison:X', 'Synergy: …', syn), 'EQUITA'), 'Helps Toxicum (Poison)');
+    assert.strictEqual(V.shortReason(r('theme:Debuffs', 'Theme: Debuffs (Poison)'), 'X'), 'Theme: Debuffs');
+    assert.strictEqual(V.shortReason(r('coverage:missing:Controller', 'No Controller', { kind: 'warning' }), 'X'), 'No Controller');
+    assert.strictEqual(V.shortReason(r('ban:denies', 'Denies Player 2: A + B + C'), 'A'), 'Denies Player 2 this band');
+});
+
+test('suggestions name the partners of their best band (Best with)', () => {
+    const s = D.applyAction(D.createDraft('solo'), 'FERRARIUS');
+    V.draftView(s, ctx).suggestions.items.forEach(item => {
+        assert.deepStrictEqual(item.bestWith, item.bestBand.filter(n => n !== item.name && n !== 'FERRARIUS'), item.name);
+        assert.strictEqual(item.bestWith.length, 1);
+    });
+});
+
+test('pool: the roles a hero would add to this band (the rest are dimmed), and how many enemies it counters', () => {
+    const s = pickAll(D.setEnemies(D.createDraft('solo'), ['SAXUM', 'MAGNUS']), ['FERRARIUS', 'BALLISTARIUS']);
+    const v = V.draftView(s, ctx);
+    const fills = n => v.pool.find(p => p.name === n).fills;
+    assert.deepStrictEqual(fills('FIDEA'), ['Supporter']);
+    assert.deepStrictEqual(fills('TEMPUS'), ['Controller', 'Supporter']);
+    assert.deepStrictEqual(fills('EQUITA'), []);
+    v.pool.forEach(p => {
+        const counters = p.suggestion ? p.suggestion.reasons.filter(r => r.kind === 'counter').length : 0;
+        assert.strictEqual(p.counters, counters, p.name);
+    });
+    assert.ok(v.pool.some(p => p.counters > 0), 'someone counters Saxum or Magnus');
+    const flexible = V.draftView(D.applyAction(D.createDraft('solo'), 'TOXICUM'), ctx);
+    assert.deepStrictEqual(flexible.pool.find(p => p.name === 'MALLEUS').fills, ['Controller', 'Attacker', 'Supporter'],
+        'a flexible band leaves every role open');
+    const empty = V.draftView(D.createDraft('solo'), ctx);
+    empty.pool.forEach(p => assert.deepStrictEqual(p.fills, p.battleRoles, 'no band yet: every role counts'));
+    const ban = V.draftView(D.applyAction(D.createDraft('ban-first'), 'SAXUM'), ctx);
+    ban.pool.forEach(p => assert.deepStrictEqual(p.fills, p.battleRoles, 'ban steps: nothing dimmed'));
+});
+
+test('popover reasons are grouped by type, each reason in exactly one group', () => {
+    const s = pickAll(D.setEnemies(D.createDraft('solo'), ['SAXUM']), ['TOXICUM', 'TEMPUS']);
+    V.draftView(s, ctx).suggestions.items.forEach(item => {
+        const groups = V.reasonGroups(item.reasons);
+        assert.deepStrictEqual(groups.flatMap(g => g.reasons.map(r => r.id)).sort(), item.reasons.map(r => r.id).sort(), item.name);
+        groups.forEach(g => assert.ok(g.type && g.label && g.reasons.length, item.name));
+        assert.strictEqual(new Set(groups.map(g => g.type)).size, groups.length);
+    });
+    const equita = V.draftView(s, ctx).suggestions.items.find(i => i.name === 'EQUITA');
+    const types = Object.fromEntries(V.reasonGroups(equita.reasons).map(g => [g.type, g.reasons.map(r => r.id)]));
+    assert.ok(types.synergy.every(id => id.startsWith('synergy:') || id.startsWith('broad:')));
+    assert.ok((types.support || []).every(id => id.startsWith('enabler:')));
+    assert.ok(Object.keys(types).every(t => V.REASON_TYPES.some(rt => rt.type === t)));
+});
+
+// ---- Grouped synergy and "Show N more" (#5) ------------------------------------------------
+
+test('synergy is grouped by the hero who benefits, merging duplicate wording', () => {
+    const v = V.draftView(pickAll(D.createDraft('solo'), ['TOXICUM', 'TEMPUS', 'EQUITA']), ctx);
+    const groups = Object.fromEntries(v.analysis.synergyGroups.map(g => [g.hero, g.from.map(f => [f.heroes, f.details])]));
+    assert.deepStrictEqual(groups.TOXICUM, [[['EQUITA'], ['Poison']], [['TEMPUS'], ['Swiftness', 'cooldowns']]]);
+    assert.deepStrictEqual(groups.EQUITA, [[['TEMPUS'], ['Swiftness', 'cooldowns']]]);
+    assert.deepStrictEqual(groups.TEMPUS, [[['TOXICUM', 'EQUITA'], ['Abilities on cooldown']]]);
+    const ids = v.analysis.synergyGroups.flatMap(g => g.ids).sort();
+    assert.deepStrictEqual(ids, v.analysis.synergy.map(r => r.id).sort(), 'every synergy reason lands in one group');
+    assert.strictEqual(V.groupText(v.analysis.synergyGroups.find(g => g.hero === 'TOXICUM')),
+        'Equita (Poison), Tempus (Swiftness, cooldowns)');
+});
+
+test('collapse shows the first items and counts the rest exactly', () => {
+    assert.deepStrictEqual(V.collapse([1, 2, 3, 4, 5], 3, false), { items: [1, 2, 3], hidden: 2, expanded: false });
+    assert.deepStrictEqual(V.collapse([1, 2, 3, 4, 5], 3, true), { items: [1, 2, 3, 4, 5], hidden: 2, expanded: true });
+    assert.deepStrictEqual(V.collapse([1, 2], 3, false), { items: [1, 2], hidden: 0, expanded: false });
+});
+
+// ---- Reference cards modal --------------------------------------------------------------
+
+test('reference cards: one tab per player, or your band and Against in solo', () => {
+    const s = pickAll(D.createDraft('standard'), ['TOXICUM', 'SAXUM', 'TEMPUS', 'MALLEUS', 'EQUITA', 'FERRARIUS']);
+    assert.deepStrictEqual(V.referenceSides(s), [
+        { key: '1', label: 'Player 1', heroes: ['TOXICUM', 'TEMPUS', 'EQUITA'] },
+        { key: '2', label: 'Player 2', heroes: ['SAXUM', 'MALLEUS', 'FERRARIUS'] }]);
+    const band = pickAll(D.createDraft('solo'), ['FIDEA', 'GOETIUM', 'MESSUM']);
+    assert.deepStrictEqual(V.referenceSides(band), [{ key: 'mine', label: 'Your band', heroes: ['FIDEA', 'GOETIUM', 'MESSUM'] }]);
+    assert.deepStrictEqual(V.referenceSides(D.setEnemies(band, ['SAXUM'])).map(x => x.key), ['mine', 'against']);
+});

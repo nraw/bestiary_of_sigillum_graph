@@ -97,12 +97,18 @@
         return { ...state, history: [...state.history, { ...current, hero: name }] };
     }
 
+    // Clear the draft (keeping its format and carry-over bans) as a step that undo reverses
+    function reset(state) {
+        const fresh = isSolo(state) ? createDraft('solo') : createDraft(state.format, { me: state.me, carryOverBans: state.carryOverBans });
+        return { ...fresh, resetFrom: state };
+    }
+
     function undo(state) {
+        const empty = isSolo(state) ? !state.past.length : !state.history.length;
+        if (empty) return state.resetFrom || state;
         if (isSolo(state)) {
-            if (!state.past.length) return state;
             return { ...state, ...state.past[state.past.length - 1], past: state.past.slice(0, -1) };
         }
-        if (!state.history.length) return state;
         return { ...state, history: state.history.slice(0, -1) };
     }
 
@@ -237,13 +243,14 @@
 
     // ---- Role coverage ---------------------------------------------------------------------
 
-    // Assign each hero at most one role so that as many distinct roles as possible are covered
-    function roleCoverage(band, ctx) {
+    // Assign each hero at most one role so that as many distinct roles as possible are covered.
+    // `fixed` pins a hero to some of its roles ({ [name]: [roles] }).
+    function roleCoverage(band, ctx, fixed = {}) {
         let best = {};
         const assign = (i, used) => {
             if (Object.keys(used).length > Object.keys(best).length) best = { ...used };
             if (i === band.length) return;
-            ctx.roles.get(band[i]).forEach(role => {
+            (fixed[band[i]] || ctx.roles.get(band[i])).forEach(role => {
                 if (!used[role]) assign(i + 1, { ...used, [role]: band[i] });
             });
             assign(i + 1, used);
@@ -304,21 +311,21 @@
 
     // General team effects from the strategy guide and rulebook, beyond one hero's need meeting another's supply
     const ENABLERS = [
-        { id: 'swiftness', supplier: h => grants(h, ['Swiftness']), target: (h, roles) => roles.includes('Attacker'),
+        { id: 'swiftness', detail: 'Swiftness', supplier: h => grants(h, ['Swiftness']), target: (h, roles) => roles.includes('Attacker'),
             text: (s, t) => `${s}'s Swiftness lets ${t} move and still attack` },
-        { id: 'attack-boost', supplier: h => grants(h, ['Attack increase']), target: (h, roles) => roles.includes('Attacker'),
+        { id: 'attack-boost', detail: 'attack boost', supplier: h => grants(h, ['Attack increase']), target: (h, roles) => roles.includes('Attacker'),
             text: (s, t) => `${s} boosts ${t}'s attack` },
-        { id: 'cooldowns', supplier: h => grants(h, ['Cooldown-Manipulation']), target: () => true,
+        { id: 'cooldowns', detail: 'cooldowns', supplier: h => grants(h, ['Cooldown-Manipulation']), target: () => true,
             text: (s, t) => `${s} shortens ${t}'s cooldowns` },
-        { id: 'protection', supplier: h => grants(h, ['Defense increase', 'Resistance', 'Vampirism']) || h.labels.includes('Healing'),
+        { id: 'protection', detail: 'protection', supplier: h => grants(h, ['Defense increase', 'Resistance', 'Vampirism']) || h.labels.includes('Healing'),
             target: (h, roles) => roles.includes('Attacker') && h.vitality <= 3,
             text: (s, t) => `${s} keeps ${t} alive` },
-        { id: 'setup', supplier: movesEnemies, target: wantsPosition,
+        { id: 'setup', detail: 'positioning', supplier: movesEnemies, target: wantsPosition,
             text: (s, t) => `${s} moves enemies into position for ${t}` },
-        { id: 'injuries', supplier: h => h.labels.includes('AoE'),
+        { id: 'injuries', detail: 'injuries', supplier: h => h.labels.includes('AoE'),
             target: h => h.trait_links.some(l => l.role === 'benefits_from' && l.label === 'Injury' && l.on === 'enemy'),
             text: (s, t) => `${s}'s area attacks injure enemies for ${t}` },
-        { id: 'terrain', supplier: h => h.trait_links.some(l => l.role === 'places' && TERRAIN.includes(l.label)),
+        { id: 'terrain', detail: 'terrain', supplier: h => h.trait_links.some(l => l.role === 'places' && TERRAIN.includes(l.label)),
             target: h => h.trait_links.some(l => l.role === 'benefits_from' && l.label === 'Terrain difference'),
             text: (s, t) => `${s}'s terrain creates a terrain difference for ${t}` }
     ];
@@ -326,7 +333,9 @@
     function computeTeam(band, ctx) {
         const w = ctx.weights;
         const reasons = [];
-        const add = (factor, id, kind, delta, text, heroes) => reasons.push({ id, factor, kind, delta, text, heroes });
+        const add = (factor, id, kind, delta, text, heroes, extra) => reasons.push({ id, factor, kind, delta, text, heroes, ...extra });
+        // Synergy reasons also say who benefits, who supplies it and what (for grouping in the view)
+        const helped = (beneficiary, suppliers, detail) => ({ beneficiary, suppliers, detail });
 
         // Complementary synergy: each need met once, however many teammates meet it
         const partners = new Map();
@@ -338,7 +347,8 @@
         partners.forEach(({ r, suppliers }, key) => {
             const list = [...suppliers];
             add('synergy', `synergy:${key}`, 'positive', w.synergy,
-                `Synergy: ${heroList(list)} → ${display(r.needer)} (${r.need.label})`, [...list, r.needer]);
+                `Synergy: ${heroList(list)} → ${display(r.needer)} (${r.need.label})`, [...list, r.needer],
+                helped(r.needer, list, r.need.label));
         });
 
         ctx.relations.forEach(r => {
@@ -347,7 +357,8 @@
             if (!helpers.length) return;
             const kind = r.need.label === 'Negative effect' ? 'debuffs' : 'buffs';
             add('synergy', `broad:${r.needer}:${r.need.label}`, 'positive', w.broad,
-                `Synergy: ${heroList(helpers)}'s ${kind} power ${display(r.needer)}`, [...helpers, r.needer]);
+                `Synergy: ${heroList(helpers)}'s ${kind} power ${display(r.needer)}`, [...helpers, r.needer],
+                helped(r.needer, helpers, kind));
         });
 
         // Enablers: one bonus per (effect, ally helped), whoever supplies it
@@ -357,7 +368,7 @@
             const suppliers = band.filter(n => n !== target && e.supplier(ctx.byName.get(n)));
             if (!suppliers.length) return;
             add('synergy', `enabler:${e.id}:${target}`, 'positive', w.enabler,
-                e.text(heroList(suppliers), display(target)), [...suppliers, target]);
+                e.text(heroList(suppliers), display(target)), [...suppliers, target], helped(target, suppliers, e.detail));
         }));
 
         // Theme: several heroes pushing the same plan
@@ -428,11 +439,12 @@
             const id = `${ours ? 'counter' : 'countered'}:${r.supplier}>${r.needer}:${r.need.label}`;
             if (seen.has(id)) return;
             seen.add(id);
+            const relation = { attacker: r.supplier, victim: r.needer, supply: r.supply, need: r.need, rule: r.rule };
             reasons.push(ours
                 ? { id, factor: 'matchup', kind: 'counter', delta: w.counter,
-                    text: `Counters ${display(r.needer)} (${r.supply.label})`, heroes: [r.supplier, r.needer] }
+                    text: `Counters ${display(r.needer)} (${r.supply.label})`, heroes: [r.supplier, r.needer], ...relation }
                 : { id, factor: 'matchup', kind: 'warning', delta: -w.counter,
-                    text: `Weak vs ${display(r.supplier)} (${r.supply.label})`, heroes: [r.needer, r.supplier] });
+                    text: `Weak vs ${display(r.supplier)} (${r.supply.label})`, heroes: [r.needer, r.supplier], ...relation });
         });
         return { total: reasons.reduce((t, r) => t + r.delta, 0), reasons };
     }
@@ -522,16 +534,21 @@
             text: `Poor first pick: only a ${roles[0]}`, heroes: [name] }];
     }
 
-    // Roles the band covers only once this hero joins (possibly by freeing a teammate for it)
+    // Every role the hero could take that adds a role the band lacks (teammates may move to make room).
+    // A flexible band leaves several roles open, so this is a set, not one arbitrary assignment.
+    function fillableRoles(band, name, ctx) {
+        const before = roleCoverage(band, ctx).covered.length;
+        const team = [...band.filter(n => n !== name), name];
+        return ctx.roles.get(name).filter(role => roleCoverage(team, ctx, { [name]: [role] }).covered.length > before);
+    }
+
+    const orList = list => (list.length > 1 ? `${list.slice(0, -1).join(', ')} or ${list.at(-1)}` : list[0]);
+
     function fillsReasons(band, name, ctx) {
-        const before = roleCoverage(band, ctx).covered;
-        const after = roleCoverage([...band, name], ctx);
-        return after.covered.filter(role => !before.includes(role)).map(role => {
-            const holder = after.assignment[role];
-            return { id: `fills:${role}`, factor: 'coverage', kind: 'positive', delta: ctx.weights.coverage,
-                text: holder === name ? `Fills ${role} role` : `Frees ${display(holder)} to play ${role}`,
-                heroes: holder === name ? [name] : [name, holder] };
-        });
+        const roles = fillableRoles(band, name, ctx);
+        if (!roles.length) return [];
+        return [{ id: 'fills', factor: 'coverage', kind: 'positive', delta: ctx.weights.coverage, roles,
+            text: roles.length === 1 ? `Fills the ${roles[0]} role` : `Can fill ${orList(roles)}`, heroes: [name] }];
     }
 
     // Rank every available hero for the next pick. Early picks value flexibility (the average of the
@@ -559,13 +576,14 @@
         }).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, limit);
     }
 
-    // Ban what the other side would most like to pick next
+    // Ban what the other side would most like to pick next, saying which band the ban denies them
     function suggestBan(state, ctx, limit = 5, options = {}) {
         const player = options.player || (currentStep(state) || { player: state.me }).player;
-        return suggestPick(state, ctx, limit, { player: other(player) }).map(s => ({
+        const rival = other(player);
+        return suggestPick(state, ctx, limit, { player: rival }).map(s => ({
             ...s,
-            reasons: [{ id: 'ban:opponent-wants', factor: 'ban', kind: 'positive', delta: s.score,
-                text: `Strong pick for Player ${other(player)}`, heroes: [s.name] }, ...s.reasons]
+            reasons: [{ id: 'ban:denies', factor: 'ban', kind: 'positive', delta: s.score,
+                text: `Denies Player ${rival}: ${s.bestBand.map(display).join(' + ')}`, heroes: [s.name] }, ...s.reasons]
         }));
     }
 
@@ -595,11 +613,11 @@
 
     const api = {
         BATTLE_ROLES, DRAFT_FORMATS, DEFAULT_WEIGHTS, THEMES,
-        draftSequence, createDraft, applyAction, undo, currentStep, isComplete,
+        draftSequence, createDraft, applyAction, undo, reset, currentStep, isComplete,
         bands, bans, myBand, opponentBand, unavailableReason, isAvailable, availableHeroes,
         setEnemies, setExcluded, removePick, movePick, replacePick, fillBand,
         size, attackRange, battleRoles, versatility,
-        createContext, roleCoverage, scoreTeam, scoreMatchup, allBands, topPercent, bestBand, bandPercent,
+        createContext, roleCoverage, fillableRoles, scoreTeam, scoreMatchup, allBands, topPercent, bestBand, bandPercent,
         suggestPick, suggestBands, suggestBan, suggestFor, suggestSwaps
     };
 

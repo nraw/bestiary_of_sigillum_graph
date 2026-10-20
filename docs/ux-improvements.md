@@ -1,7 +1,27 @@
 # Draft tab: UX improvements
 
-Status per item: **Agreed** (decided), **Proposal** (needs a decision), **Open** (question for the owner).
+Status per item: **Agreed** (decided), **Proposal** (needs a decision), **Open** (question for the owner),
+**Done** (implemented; notes say where it differs from the proposal).
 Numbers are kept from the first review so comments can refer to them (#1 and #3 were dropped).
+
+## Implementation status
+Done, with these revisions after review:
+- **#2:** up to 2 short chips per tile plus "+N"; the popover beside the tile lists the reasons **grouped by type**
+  (Roles, Synergy, Support, Themes, Matchup, …) with a marker colour per type, "Best with", the score and **Fill band**
+  (solo). Hover previews **only the hovered hero**: no partner outlines, no full-band preview. On desktop the popover is a
+  tooltip the mouse passes through: it appears after a short pause, then follows from tile to tile, and opens on the
+  side the mouse came from so it never covers the next tile (Fill band is in the ⋯ menu there). The rank badge is gone
+  from the tiles (the pool is still sorted by rank) and all tiles are the same height.
+- **#4 (revised):** no separate match page. A finished draft shows the "Draft complete · Open reference cards" note and
+  greys out the pool. The cards open in a **modal** with only the cards, a Player 1 / Player 2 switch (solo: Your band /
+  Against) and **Share link**. A shared link (`draft-share.js`) opens that modal read-only over the visitor's own draft.
+  The matchup panel, threats, watch-out, copy and edit actions were dropped.
+- **#5:** in-band synergy grouped by the hero who benefits (`synergyGroups`), with the shared "Show N more" list.
+- **#6:** phone fixes as proposed; "Complete your band" is removed; compact draft order; an empty slot points at the pool.
+- **#7 (revised role pills):** colour-coded by role. A role stays lit when this hero taking it adds a role the band
+  lacks, **even if a teammate has to switch roles** (`Draft.fillableRoles`); the others are dimmed. A flexible band
+  therefore leaves every role lit for a flexible hero instead of one arbitrary pick. The "Fills a missing role" filter
+  uses the same rule. Ban reasons say what they deny; "Counters" sort and ⚔ marker; Reset is an undo step.
 
 ## 2. Explanations appear far from where you're looking (Agreed)
 - **Problem:** reasons appear only on hover, at the top of the Band Analysis column, about 600 px from the tile. They push
@@ -42,8 +62,7 @@ Numbers are kept from the first review so comments can refer to them (#1 and #3 
     **Edit draft** copies it into their two-player state, and asks first if they have a draft in progress.
   - Encoding and decoding are pure and unit tested (round trip, unknown ids, illegal sequences rejected with a message).
   - Solo bands use the same scheme (`#draft/solo/12.5.33`, with `vs` and `ex` lists).
-- **Open:** in the read-only shared view, should "Opponent" be relative to the sender, or should the viewer choose which
-  side they are?
+- **Resolved:** in the read-only shared view the viewer chooses which side they are (Player 1 by default).
 
 ## 5. Too many repeated synergy lines (Agreed)
 - **Problem:** a complete band lists 8 or more partly repeating lines ("Synergy: Toxicum, Equita → Tempus (Abilities on

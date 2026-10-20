@@ -1375,19 +1375,12 @@ kbd {
 .sort-switch button { padding: 3px 10px; border: none; background: none; color: var(--text-muted); font-size: 0.9rem; }
 .sort-switch button + button { border-left: 1px solid var(--border); }
 .sort-switch [aria-checked="true"] { background: rgba(217, 168, 78, 0.16); color: var(--gold-bright); }
-.pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 10px; }
-.tile-rank {
-    margin-top: 2px;
-    padding: 1px 8px;
-    border-radius: 10px;
-    background: rgba(42, 29, 20, 0.12);
-    color: var(--ink);
-    font-family: 'Cinzel', serif;
-    font-size: 0.76rem;
-    font-weight: 700;
-    white-space: nowrap;
-}
-.tile-rank.is-top { background: var(--ink); color: var(--gold-bright); }
+.pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); grid-auto-rows: 1fr; gap: 10px; }
+.pool-grid > .hero-tile { display: flex; } /* every tile as tall as the tallest */
+.pool-grid > .hero-tile > .tile-main { height: 100%; justify-content: flex-start; }
+.pool-grid > .empty-note { grid-column: 1 / -1; }
+/* Finished draft: the whole pool fades so attention moves to the band */
+.pool-grid.is-done .tile-main { filter: grayscale(0.85) brightness(0.62); }
 .hero-tile.is-top .tile-main { box-shadow: inset 0 0 22px rgba(110, 72, 30, 0.35), 0 0 0 2px rgba(217, 168, 78, 0.75); }
 
 /* Parchment hero tile */
@@ -1794,10 +1787,249 @@ kbd {
 }
 
 @media (max-width: 900px) {
-    .draft-layout { grid-template-columns: 1fr; }
+    .draft-layout { grid-template-columns: minmax(0, 1fr); }
+    .draft-layout > * { min-width: 0; }
     .slots { gap: 8px; }
     .slot { min-height: 170px; }
     .slot-portrait { width: 64px; height: 64px; }
     .mode-btn { font-size: 0.86rem; padding: 8px; }
     .tabs .tab { padding: 6px 8px; font-size: 0.78rem; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Draft UX: tile chips and popover, grouped lists, phone layout       */
+/* ------------------------------------------------------------------ */
+
+/* Role pills: one colour per role; the role a hero would fill for this band is filled in */
+.draft-layout { --role-controller: #3D7BC9; --role-attacker: #C2452D; --role-supporter: #2E9466; }
+.role-pill.role--Controller { color: var(--role-controller) !important; }
+.role-pill.role--Attacker { color: var(--role-attacker) !important; }
+.role-pill.role--Supporter { color: var(--role-supporter) !important; }
+/* Roles that would add nothing to this band (already covered) fade back */
+.role-pill.is-covered { opacity: 0.28; border-style: dashed; }
+
+/* Compact reason chips on every tile that has reasons */
+.tile-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; width: 100%; margin-top: 2px; }
+.tile-chip {
+    max-width: 100%;
+    padding: 0 6px;
+    border-radius: 8px;
+    font-size: 0.74rem;
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: rgba(42, 29, 20, 0.1);
+    color: var(--ink);
+}
+.tile-chip--synergy span { color: #8A5A12; }
+.tile-chip--counter { background: rgba(43, 163, 154, 0.18); }
+.tile-chip--counter span { color: #1D6F69; }
+.tile-chip--warning { background: rgba(226, 83, 58, 0.16); }
+.tile-chip--warning span { color: #A83220; }
+.tile-chip--more { font-weight: 700; }
+.tile-counter {
+    position: absolute;
+    top: 56px; right: 6px;
+    width: 22px; height: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--chip-counter);
+    color: #fff;
+    font-size: 0.8rem;
+}
+/* The hovered hero and the partners of its best band */
+.hero-tile.is-popped .tile-main { box-shadow: inset 0 0 22px rgba(110, 72, 30, 0.35), 0 0 0 2px var(--gold-bright), 0 0 16px rgba(242, 199, 107, 0.4); }
+.draft-pool.is-flash { animation: pool-flash 1.3s ease-out; }
+@keyframes pool-flash {
+    0%, 40% { box-shadow: 0 0 0 2px var(--gold-bright), 0 0 26px rgba(242, 199, 107, 0.45); }
+    100% { box-shadow: none; }
+}
+
+/* Popover beside the hovered / focused tile (a bottom sheet on phones) */
+.tile-pop {
+    position: absolute;
+    z-index: 45;
+    width: 300px;
+    max-height: min(70vh, 520px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--gold);
+    background: var(--surface-3);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.65);
+}
+.pop-head { display: flex; align-items: center; gap: 8px; }
+.pop-rank { padding: 1px 8px; border-radius: 10px; background: var(--gold); color: var(--ink); font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.8rem; }
+.pop-name { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--gold-bright); letter-spacing: 0.04em; }
+.pop-name small { margin-left: 6px; font-family: 'Crimson Text', serif; font-size: 0.9rem; color: var(--text-muted); letter-spacing: 0; }
+.pop-close { margin-left: auto; display: none; }
+.pop-score, .pop-best { color: var(--text-muted); }
+.pop-score strong, .pop-best strong { color: var(--gold-bright); }
+.pop-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pop-actions:empty { display: none; }
+/* Desktop: a tooltip the mouse passes through (clicking the tile acts) */
+.tile-pop:not(.is-sheet) { pointer-events: none; }
+.tile-pop:not(.is-sheet) .pop-actions { display: none; }
+.tile-pop.is-sheet {
+    position: fixed;
+    left: 0; right: 0; bottom: 0; top: auto !important;
+    width: auto;
+    max-height: 75vh;
+    border-radius: 14px 14px 0 0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+}
+.tile-pop.is-sheet .pop-close { display: inline-flex; }
+.tile-pop.is-sheet .pop-actions .btn { flex: 1; justify-content: center; padding: 12px; font-size: 1rem; }
+
+/* Grouped synergy and "Show N more" */
+.syn-group { line-height: 1.35; }
+.syn-hero { font-family: 'Cinzel', serif; color: var(--gold-bright); letter-spacing: 0.03em; }
+.syn-arrow { color: var(--gold); padding: 0 2px; }
+.syn-new { color: var(--gold-bright); font-weight: 600; }
+.more-btn { align-self: flex-start; margin-top: 4px; }
+.analysis-head { display: flex; align-items: center; justify-content: space-between; }
+.sheet-close { display: none; }
+
+/* Finished draft note (when editing it in the columns) */
+.complete-note { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--gold); background: rgba(217, 168, 78, 0.08); }
+
+/* Draft bar: phones only */
+.draft-bar { display: none; }
+.filters-toggle { display: none; }
+
+/* Desktop: one compact row for the draft order; slimmer empty slots in two-player mode */
+.sequence { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+.seq-step { flex: none; min-width: 56px; padding: 3px 6px; }
+#againstRow.slots .slot.is-empty, .draft-section.is-p2 .slot.is-empty,
+.draft-main.is-started .slot.is-empty { min-height: 120px; }
+
+
+@media (max-width: 900px) {
+    /* Sticky draft bar: step, the band, roles and score; opens Band Analysis as a bottom sheet */
+    .draft-bar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 calc(var(--gap) * -1);
+        padding: 8px var(--gap);
+        border: none;
+        border-bottom: 1px solid var(--border-strong);
+        background: rgba(21, 17, 14, 0.96);
+        color: var(--text);
+        text-align: left;
+        backdrop-filter: blur(4px);
+    }
+    .bar-step { font-family: 'Cinzel', serif; font-size: 0.8rem; font-weight: 600; color: var(--gold-bright); flex: 1; min-width: 0; }
+    .bar-faces { display: flex; gap: 3px; }
+    .bar-face { width: 30px; height: 30px; border-radius: 50%; border: 1px dashed var(--border-strong); overflow: hidden; }
+    .bar-face:not(.is-empty) { border: none; }
+    .bar-portrait { width: 30px; height: 30px; object-fit: cover; object-position: center 15%; border-radius: 50%; border: 2px solid #8A6A43; }
+    .bar-roles { color: var(--text-muted); font-size: 0.85rem; white-space: nowrap; }
+    .bar-score { font-family: 'Cinzel', serif; font-weight: 700; color: var(--gold-bright); font-size: 0.85rem; white-space: nowrap; }
+
+    /* Band Analysis becomes a bottom sheet */
+    .draft-analysis {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: 55;
+        max-height: 78vh;
+        overflow-y: auto !important;
+        border-radius: 14px 14px 0 0;
+        background: var(--surface-2);
+        box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.6);
+        transform: translateY(105%);
+        visibility: hidden;
+        transition: transform 0.25s ease, visibility 0.25s;
+    }
+    .draft-analysis.is-open { transform: none; visibility: visible; }
+    .sheet-close { display: inline-flex; }
+
+    /* Once started, the mode switch shrinks to a single compact row */
+    .draft-main.is-started .mode-btn { padding: 5px 8px; font-size: 0.8rem; gap: 6px; }
+    .draft-main.is-started .mode-btn svg { width: 16px; height: 16px; }
+
+    /* Filters collapse behind one button; the sort switch stays visible */
+    .filters-toggle { display: inline-flex; padding: 4px 12px; font-size: 0.8rem; }
+    .pool-filters { display: none; flex-direction: column; gap: 8px; }
+    .pool-filters.is-open { display: flex; }
+
+    /* Compact 3-column pool: portrait, name, rank and one chip */
+    .pool-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .tile-main { padding: 8px 3px 6px; }
+    .tile-portrait { width: 48px; height: 48px; }
+    .tile-name { font-size: 0.72rem; }
+    .tile-main .role-pills { display: none; }
+    .tile-chip:not(:first-child) { display: none; }
+    .tile-counter { top: 32px; left: 6px; right: auto; width: 18px; height: 18px; font-size: 0.68rem; }
+    .tile-badge { bottom: 26px; }
+
+}
+
+/* Header: title and Graph | Draft tabs on separate rows, the tabs as a segmented control */
+@media (max-width: 600px) {
+    .header { height: auto; grid-template-columns: auto 1fr; row-gap: 6px; padding: 8px var(--gap); }
+    .header-titles { min-width: 0; }
+    .title { overflow: hidden; text-overflow: ellipsis; }
+    .tabs { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; }
+    .tabs .tab { padding: 7px 8px; font-size: 0.8rem; }
+    .tab + .tab { border-left: 1px solid var(--border-strong); }
+    .tab[aria-selected="true"] { background: rgba(217, 168, 78, 0.16); }
+    .tab[aria-selected="true"]::after { display: none; }
+    .draft-layout { min-height: 0; }
+    .mode-btn { max-width: none; }
+}
+
+/* Popover reasons grouped by type; each type's marker has its own colour */
+.reason-group { display: flex; flex-direction: column; gap: 3px; }
+.reason-group + .reason-group { padding-top: 6px; border-top: 1px solid var(--border); }
+.reason--positive.rtype--roles::before { color: #6FA8E8; }
+.reason--positive.rtype--synergy::before { color: var(--gold-bright); }
+.reason--positive.rtype--support::before { color: #4CC38A; }
+.reason--positive.rtype--theme::before { color: #B79BE8; }
+.reason--positive.rtype--durability::before { color: var(--bronze); }
+.reason--positive.rtype--ban::before { color: #FF7D93; }
+.reason--positive.rtype--other::before { color: var(--text-muted); }
+
+/* Reference cards modal */
+.cards-dialog {
+    margin: auto;
+    width: min(1240px, 94vw);
+    height: min(92vh, 1000px);
+    padding: 0;
+    border-radius: 14px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+.cards-dialog[open] { display: flex; flex-direction: column; }
+.cards-dialog::backdrop { background: rgba(0, 0, 0, 0.72); }
+.cards-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.cards-head form { margin-left: auto; }
+.cards-head .icon-btn { border: 1px solid var(--border-strong); border-radius: 8px; }
+.card-track {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+    align-items: start;
+    gap: 16px;
+    padding: 16px 18px 20px;
+}
+
+@media (max-width: 900px) {
+    /* Phones: one card at a time, swipe between them */
+    .cards-dialog { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+    .card-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding: 12px; }
+    .ref-card { flex: 0 0 90%; scroll-snap-align: center; }
+    .pool-grid { grid-auto-rows: 1fr; }
 }
