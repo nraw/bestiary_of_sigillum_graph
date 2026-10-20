@@ -10,7 +10,6 @@
     const { isGraphRoute } = window.GraphRoute;
 
     const STORAGE_KEY = 'bestiary-draft-v1';
-    const CREDIT_KEY = 'bestiary-hide-card-credit';
     const ATTRIBUTES = ['Strength', 'Agility', 'Intelligence'];
     const FORMAT_INFO = {
         standard: { label: 'Standard', hint: 'Alternate picks until each player has 3' },
@@ -248,8 +247,25 @@
             window.BestiaryGraph?.showBand(bands[view.focus], bands[view.focus === 1 ? 2 : 1]);
         });
 
+        // A hero in a band (or Against) opens its reference card; its own buttons keep their actions
+        $('draftMain').addEventListener('click', event => {
+            const card = event.target.closest('[data-card]');
+            if (card && !event.target.closest('button')) openCards({ hero: card.dataset.card });
+        });
+        $('draftMain').addEventListener('keydown', event => {
+            if ((event.key === 'Enter' || event.key === ' ') && event.target.dataset.card) {
+                event.preventDefault();
+                openCards({ hero: event.target.dataset.card });
+            }
+        });
+
         $('draftBar').addEventListener('click', () => setSheet(!$('analysisPanel').classList.contains('is-open')));
         $('analysisClose').addEventListener('click', () => setSheet(false));
+        // A tap outside the sheet (and its bar) closes it
+        document.addEventListener('click', event => {
+            if ($('analysisPanel').classList.contains('is-open')
+                && !event.target.closest('#analysisPanel, #draftBar')) setSheet(false);
+        });
         $('openMatch').addEventListener('click', () => openCards());
         $('draftView').addEventListener('click', event => {
             const more = event.target.closest('[data-more]');
@@ -402,6 +418,7 @@
             <span class="bar-faces" aria-hidden="true">${faces}</span>
             <span class="bar-roles">${a.coveredCount}/3 roles</span>
             <span class="bar-score" title="${escapeHtml(percentExplain(a.score.percent))}">${a.score.percent === null ? '—' : percentLabel(a.score.percent)}</span>
+            <span class="bar-open" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></span>
             <span class="sr-only">Open band analysis</span>`;
     }
 
@@ -765,8 +782,9 @@
         const hero = heroOf(slot.hero);
         const canEdit = editable && !slot.preview;
         return `<div class="slot attr--${hero.attribute}${slot.preview ? ' is-preview' : ''}" data-slot="${slot.index}"
-                    data-hero="${slot.hero}" data-drop="slot" ${canEdit ? 'draggable="true" tabindex="0"' : ''}
-                    aria-label="${slot.index + 1}. ${escapeHtml(display(slot.hero))}${slot.preview ? ' (preview)' : ''}">
+                    data-hero="${slot.hero}" data-drop="slot" ${canEdit ? 'draggable="true"' : ''}
+                    ${slot.preview ? '' : `data-card="${slot.hero}" tabindex="0" title="View reference card"`}
+                    aria-label="${slot.index + 1}. ${escapeHtml(display(slot.hero))}${slot.preview ? ' (preview)' : ', open reference card'}">
             <span class="slot-num slot-num--id" title="Card number">#${hero.id}</span>
             ${banner(hero.attribute)}
             ${slot.preview ? '<span class="slot-ribbon">Preview</span>' : ''}
@@ -956,7 +974,8 @@
         $('againstRow').innerHTML = view.against.length
             ? view.against.map(n => {
                 const hero = heroOf(n);
-                return `<div class="enemy-card attr--${hero.attribute}">
+                return `<div class="enemy-card attr--${hero.attribute}" data-card="${n}" tabindex="0" title="View reference card"
+                    aria-label="${escapeHtml(display(n))}, open reference card">
                     ${banner(hero.attribute)}
                     <button class="slot-remove" type="button" data-remove="${n}" aria-label="Stop facing ${escapeHtml(display(n))}">✕</button>
                     ${portrait(n, 'enemy-portrait')}
@@ -1082,7 +1101,8 @@
             : ui.shared ? 'Shared draft · reference cards' : 'Reference cards';
         $('cardsSwitch').hidden = sides.length < 2;
         $('shareLink').hidden = Boolean(hero);
-        $('cardsCredit').hidden = creditHidden();
+        $('cardInGraph').hidden = !hero;
+        $('cardsDialog').classList.toggle('is-single', Boolean(hero));
         $('cardsSwitch').innerHTML = sides.map(x =>
             `<button type="button" role="radio" data-side="${x.key}" aria-checked="${x === side}">${escapeHtml(x.label)}</button>`).join('');
         const ready = window.BestiaryGraph && window.BestiaryGraph.ready;
@@ -1090,10 +1110,6 @@
             <article class="ref-card" aria-label="${escapeHtml(display(name))} reference card">
                 ${ready ? window.BestiaryGraph.heroCard(name) : '<p class="muted">Loading the card…</p>'}
             </article>`).join('');
-    }
-
-    function creditHidden() {
-        try { return localStorage.getItem(CREDIT_KEY) === '1'; } catch (error) { return false; }
     }
 
     // Cards only: no header, tabs or note, just the cards (browser full screen where it is supported)
@@ -1137,15 +1153,16 @@
         });
         dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
         $('cardsOnly').addEventListener('click', () => setCardsOnly(true));
+        $('cardInGraph').addEventListener('click', () => {
+            const name = ui.cardHero; // closing the dialog forgets it
+            dialog.close();
+            setTab('graph');
+            window.BestiaryGraph?.selectHero(name);
+        });
         $('cardsExit').addEventListener('click', () => setCardsOnly(false));
         // Esc leaves the browser's full screen first: drop the cards-only view with it
         document.addEventListener('fullscreenchange', () => {
             if (!document.fullscreenElement && dialog.classList.contains('is-cards-only')) setCardsOnly(false);
-        });
-        $('creditHide').addEventListener('click', () => {
-            try { localStorage.setItem(CREDIT_KEY, '1'); } catch (error) { /* storage disabled: hidden until reload */ }
-            $('cardsCredit').hidden = true;
-            $('cardTrack').focus();
         });
         // Closing a shared draft's cards returns to your own draft
         dialog.addEventListener('close', () => {

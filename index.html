@@ -338,18 +338,18 @@
             <button class="btn btn-ghost" type="button" id="cardsOnly" title="Hide everything but the cards">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>Cards only
             </button>
+            <button class="btn btn-ghost" type="button" id="cardInGraph" hidden>View in graph →</button>
             <button class="btn btn-gold" type="button" id="shareLink">Share link</button>
             <form method="dialog"><button class="icon-btn" value="close" aria-label="Close">✕</button></form>
         </header>
         <button class="icon-btn cards-exit" type="button" id="cardsExit" aria-label="Show the controls again" title="Show the controls again">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg>
         </button>
-        <div class="card-track" id="cardTrack" tabindex="-1"></div>
-        <p class="cards-credit" id="cardsCredit">
+        <div class="card-track" id="cardTrack"></div>
+        <p class="cards-credit">
             The card design is heavily inspired by Michael's
             <a href="https://boardgamegeek.com/thread/3571948/character-reference-cards" target="_blank" rel="noopener noreferrer">Character Reference Cards</a>
             on BoardGameGeek. We suggest using those at the table.
-            <button class="icon-btn credit-hide" type="button" id="creditHide" aria-label="Hide this note" title="Hide this note">✕</button>
         </p>
     </dialog>
 

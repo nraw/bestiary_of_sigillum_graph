@@ -1638,6 +1638,8 @@ kbd {
     color: var(--text-muted);
 }
 .slot.is-preview { opacity: 0.6; border-style: dashed; }
+[data-card] { cursor: pointer; }
+.slot[data-card]:hover, .enemy-card[data-card]:hover { box-shadow: 0 0 0 1px var(--gold), 0 0 16px rgba(242, 199, 107, 0.3); }
 .slot.is-drop-target, .against.is-drop-target, .excluded-chips.is-drop-target { box-shadow: 0 0 0 2px var(--gold-bright); }
 .slot-num { position: absolute; top: 8px; left: 10px; font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.05rem; }
 .slot.is-empty .slot-num { color: var(--text-muted); }
@@ -1994,7 +1996,23 @@ kbd {
         text-align: left;
         backdrop-filter: blur(4px);
     }
-    .bar-step { font-family: 'Cinzel', serif; font-size: 0.8rem; font-weight: 600; color: var(--gold-bright); flex: 1; min-width: 0; }
+    .bar-step { font-family: 'Cinzel', serif; font-size: 0.8rem; font-weight: 600; color: var(--gold-bright); flex: 1; min-width: 0;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* The bar opens a sheet: a chevron in a gold ring says so */
+    .bar-open {
+        flex: none;
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid var(--gold);
+        background: rgba(217, 168, 78, 0.12);
+        color: var(--gold-bright);
+    }
+    .bar-open svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    .draft-bar:active .bar-open { background: rgba(217, 168, 78, 0.3); }
+    .draft-bar[aria-expanded="true"] .bar-open svg { transform: rotate(180deg); }
     .bar-faces { display: flex; gap: 3px; }
     .bar-face { width: 30px; height: 30px; border-radius: 50%; border: 1px dashed var(--border-strong); overflow: hidden; }
     .bar-face:not(.is-empty) { border: none; }
@@ -2111,9 +2129,16 @@ kbd {
     .pool-grid { grid-auto-rows: 1fr; }
 }
 
-/* Reference cards: dismissible credit, and a cards-only view (full screen where supported) */
-.cards-credit { position: relative; padding-right: 44px; }
-.credit-hide { position: absolute; top: 6px; right: 10px; width: 28px; height: 28px; font-size: 0.8rem; font-style: normal; }
+/* One hero's card (from the pool): as wide as a card in a band, not the whole dialog */
+@media (min-width: 901px) {
+    .cards-dialog.is-single { width: 460px; height: auto; max-height: 92vh; }
+    .cards-dialog.is-single .card-track { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+    .cards-dialog.is-single .ref-card { flex-basis: 100%; }
+}
+
+/* Reference cards: a cards-only view (full screen where supported) */
 .cards-exit { display: none; }
 .cards-dialog.is-cards-only .cards-head,
 .cards-dialog.is-cards-only .cards-credit { display: none; }
@@ -2130,7 +2155,6 @@ kbd {
     border-radius: 8px;
 }
 .cards-dialog.is-cards-only .cards-exit:hover, .cards-dialog.is-cards-only .cards-exit:focus-visible { opacity: 1; }
-.card-track:focus { outline: none; }
 
 /* Phones: the random roll flicks through heroes in one place */
 .fate-roll {
@@ -2157,3 +2181,4 @@ kbd {
 .fate-portrait { width: 110px; height: 110px; object-fit: cover; border-radius: 50%; }
 .fate-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.1rem; color: var(--gold-bright); }
 .fate-roll.is-fated { box-shadow: 0 0 0 3px #FFB347, 0 0 44px rgba(255, 140, 40, 0.85), 0 16px 40px rgba(0, 0, 0, 0.7); }
+.cards-dialog.is-single.is-cards-only .card-track { width: min(460px, 100%); margin: 0 auto; }
