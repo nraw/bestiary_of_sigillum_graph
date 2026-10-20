@@ -124,11 +124,25 @@ test('counters: Small heroes (max Vitality 2) are immune to Catapult', () => {
     assert.deepStrictEqual(counterReasons('CATAPULTUS', 'LIGNUM'), [['size', 'Big enemies', 'Small']]);
 });
 
-test('broad needs report the pool size instead of partners', () => {
-    const broad = name => forHero(name).broad.map(b => [b.label, b.count]);
-    assert.deepStrictEqual(broad('CARNIFEX'), [['Negative effect', 21]]);
-    assert.deepStrictEqual(broad('AQUS'), [['Positive effect', 18]]);
-    assert.deepStrictEqual(forHero('CARNIFEX').helpedBy, []);
+test('effect needs: every hero supplying the effect is a partner, nobody else is', () => {
+    const helpers = name => [...new Set(forHero(name).helpedBy.map(e => e.hero))].sort();
+    const carnifex = helpers('CARNIFEX');
+    assert.strictEqual(carnifex.length, 21);
+    assert.ok(carnifex.includes('TOXICUM') && carnifex.includes('FRIGUS'));
+    assert.ok(!carnifex.includes('ARCHITECTUS') && !carnifex.includes('TEMPUS'));
+    assert.ok(forHero('CARNIFEX').helpedBy.every(e => e.label === 'Negative effect' ? e.rule === 'effects' : true));
+    const ignifer = helpers('IGNIFER');
+    assert.ok(ignifer.includes('TEMPUS') && ignifer.includes('IRATUS'));
+    assert.ok(!ignifer.includes('TOXICUM'));
+    assert.ok(forHero('TOXICUM').helps.some(e => e.hero === 'CARNIFEX' && e.label === 'Negative effect'));
+});
+
+test('effect needs: own debuffs combo, but Aqus cannot copy his own buff', () => {
+    const combos = name => forHero(name).selfCombos.map(c => [c.label, c.supply.label]);
+    assert.deepStrictEqual(combos('FRIGUS'), [['Negative effect', 'Slowness'], ['Negative effect', 'Attack decrease']]);
+    assert.deepStrictEqual(combos('CARNIFEX'), [['Negative effect', 'Control decrease']]);
+    assert.deepStrictEqual(combos('AQUS'), []);
+    assert.ok(forHero('AQUS').helpedBy.some(e => e.hero === 'IRATUS'));
 });
 
 test('flags: heroes who grow from their own Injuries, and those slowed by them', () => {
@@ -151,10 +165,10 @@ const arcBetween = (a, b, category) => arcs.find(x => x.category === category
 // Arrow flags read from `from`'s point of view: does the help/harm flow from -> to?
 const flows = (arc, from) => (arc.a === from ? { out: arc.aToB, in: arc.bToA } : { out: arc.bToA, in: arc.aToB });
 
-test('synergyArcs: one arc per hero pair and category, 84 in all', () => {
-    assert.strictEqual(arcs.length, 84);
+test('synergyArcs: one arc per hero pair and category, 157 in all', () => {
+    assert.strictEqual(arcs.length, 157);
     assert.deepStrictEqual(Object.fromEntries(['partner', 'conflict', 'counter']
-        .map(c => [c, arcs.filter(x => x.category === c).length])), { partner: 47, conflict: 14, counter: 23 });
+        .map(c => [c, arcs.filter(x => x.category === c).length])), { partner: 120, conflict: 14, counter: 23 });
     assert.ok(arcs.every(x => x.a < x.b), 'pair ends are sorted so arcs are stable');
 });
 
@@ -204,13 +218,11 @@ test('synergySummary lists unique heroes per non-empty group, in display order',
     assert.deepStrictEqual(tempus.notes, []);
 });
 
-test('synergySummary caps long hero lists and notes self-combos, broad needs and flags', () => {
+test('synergySummary caps long hero lists and notes self-combos and flags', () => {
     const ill = S.synergySummary('ILLESEBRA', relations, 4);
     assert.deepStrictEqual(ill.groups[0].heroes, ['ARMUS', 'CATAPULTUS', 'FERRARIUS', 'MALLEUS']);
     assert.strictEqual(ill.groups[0].more, 5);
     assert.ok(ill.notes.includes('Self-combo'));
     const flagged = heroes.find(h => S.heroSynergies(h.name, relations).flags.dontFeed);
     assert.ok(S.synergySummary(flagged.name, relations).notes.includes("Don't feed"));
-    const broad = heroes.find(h => S.heroSynergies(h.name, relations).broad.length);
-    assert.ok(S.synergySummary(broad.name, relations).notes.some(n => n.startsWith('Works with any ')));
 });

@@ -1220,7 +1220,6 @@ kbd {
 .syn-rule { color: var(--text-faint); font-style: italic; font-size: 0.88em; }
 .syn-chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .syn-line { margin: 2px 0 6px; }
-.syn-broad { color: var(--text-muted); font-style: italic; }
 .syn-flag {
     margin-top: 8px;
     padding: 5px 10px;

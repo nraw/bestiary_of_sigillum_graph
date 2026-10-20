@@ -293,7 +293,7 @@ test('popover reasons are grouped by type, each reason in exactly one group', ()
     });
     const equita = V.draftView(s, ctx).suggestions.items.find(i => i.name === 'EQUITA');
     const types = Object.fromEntries(V.reasonGroups(equita.reasons).map(g => [g.type, g.reasons.map(r => r.id)]));
-    assert.ok(types.synergy.every(id => id.startsWith('synergy:') || id.startsWith('broad:')));
+    assert.ok(types.synergy.every(id => id.startsWith('synergy:')));
     assert.ok((types.support || []).every(id => id.startsWith('enabler:')));
     assert.ok(Object.keys(types).every(t => V.REASON_TYPES.some(rt => rt.type === t)));
 });

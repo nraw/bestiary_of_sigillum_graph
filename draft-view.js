@@ -118,7 +118,7 @@
     const REASON_TYPES = [
         { type: 'ban', label: 'Ban', test: r => r.factor === 'ban' },
         { type: 'roles', label: 'Roles', test: r => r.factor === 'coverage' || r.factor === 'versatility' },
-        { type: 'synergy', label: 'Synergy', test: r => /^(synergy|broad):/.test(r.id) },
+        { type: 'synergy', label: 'Synergy', test: r => r.id.startsWith('synergy:') },
         { type: 'support', label: 'Support', test: r => r.id.startsWith('enabler:') },
         { type: 'theme', label: 'Themes', test: r => r.factor === 'theme' },
         { type: 'matchup', label: 'Matchup', test: r => r.factor === 'matchup' },

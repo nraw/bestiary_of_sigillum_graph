@@ -220,7 +220,7 @@
 
     // Hand-tuned against the curated bands (tests/draft.test.js), keeping partner synergy the main signal
     const DEFAULT_WEIGHTS = {
-        synergy: 3, broad: 0.5, enabler: 1.5, theme: 3,
+        synergy: 3, effect: 1, enabler: 1.5, theme: 3,
         coverage: 1.5, missingRole: 0.5, frontline: 0.5, fragile: 3, conflict: 4, counter: 2,
         versatility: [5, 1, 0],   // by number of heroes already in the band
         lookahead: 10             // completions averaged when judging an early pick
@@ -337,28 +337,20 @@
         // Synergy reasons also say who benefits, who supplies it and what (for grouping in the view)
         const helped = (beneficiary, suppliers, detail) => ({ beneficiary, suppliers, detail });
 
-        // Complementary synergy: each need met once, however many teammates meet it
+        // Complementary synergy: each need met once, however many teammates meet it,
+        // except effect needs (Carnifex, Frigus, Ignifer, Aqus), where every supplier adds up
         const partners = new Map();
         ctx.relations.forEach(r => {
             if (r.type !== 'partner' || r.supplier === r.needer || !inBand(band, r.supplier, r.needer)) return;
-            if (!partners.has(needKey(r))) partners.set(needKey(r), { r, suppliers: new Set() });
-            partners.get(needKey(r)).suppliers.add(r.supplier);
+            const key = r.rule === 'effects' ? `${needKey(r)}:${r.supplier}` : needKey(r);
+            if (!partners.has(key)) partners.set(key, { r, suppliers: new Set() });
+            partners.get(key).suppliers.add(r.supplier);
         });
         partners.forEach(({ r, suppliers }, key) => {
             const list = [...suppliers];
-            add('synergy', `synergy:${key}`, 'positive', w.synergy,
+            add('synergy', `synergy:${key}`, 'positive', r.rule === 'effects' ? w.effect : w.synergy,
                 `Synergy: ${heroList(list)} → ${display(r.needer)} (${r.need.label})`, [...list, r.needer],
                 helped(r.needer, list, r.need.label));
-        });
-
-        ctx.relations.forEach(r => {
-            if (r.type !== 'broad' || !band.includes(r.needer)) return;
-            const helpers = r.suppliers.filter(s => s !== r.needer && band.includes(s));
-            if (!helpers.length) return;
-            const kind = r.need.label === 'Negative effect' ? 'debuffs' : 'buffs';
-            add('synergy', `broad:${r.needer}:${r.need.label}`, 'positive', w.broad,
-                `Synergy: ${heroList(helpers)}'s ${kind} power ${display(r.needer)}`, [...helpers, r.needer],
-                helped(r.needer, helpers, kind));
         });
 
         // Enablers: one bonus per (effect, ally helped), whoever supplies it

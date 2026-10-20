@@ -466,3 +466,15 @@ test('randomHero returns null when no candidate is available or the draft is com
     assert.ok(D.isComplete(done));
     assert.strictEqual(D.randomHero(done, ['MAGNUS'], () => 0), null);
 });
+
+test('effect needs score once per teammate supplying the effect, and not for others', () => {
+    const effectReasons = band => D.scoreTeam(band, ctx).reasons
+        .filter(r => r.factor === 'synergy' && r.beneficiary === 'CARNIFEX' && r.detail === 'Negative effect');
+    const two = effectReasons(['CARNIFEX', 'TOXICUM', 'LIBRORUM']);
+    const one = effectReasons(['CARNIFEX', 'TOXICUM', 'ARCHITECTUS']);
+    assert.deepStrictEqual(two.map(r => r.suppliers).sort(), [['LIBRORUM'], ['TOXICUM']]);
+    assert.deepStrictEqual(one.map(r => r.suppliers), [['TOXICUM']]);
+    assert.deepStrictEqual(effectReasons(['CARNIFEX', 'ARCHITECTUS', 'TEMPUS']), []);
+    two.forEach(r => assert.strictEqual(r.delta, ctx.weights.effect));
+    assert.match(two[0].text, /^Synergy: (Toxicum|Librorum) → Carnifex \(Negative effect\)$/);
+});

@@ -11,8 +11,8 @@
         'Abilities on cooldown': { labels: ['Cooldown-Manipulation'], rule: 'cooldowns' },
         'Tower control': { labels: ['Control increase'], rule: 'tower control' }
     };
-    // Needs so widely supplied that we report the pool size rather than partners
-    const BROAD = { 'Positive effect': POSITIVE, 'Negative effect': NEGATIVE };
+    // Needs met by any effect of a kind: every hero supplying one is a partner
+    const EFFECTS = { 'Positive effect': POSITIVE, 'Negative effect': NEGATIVE };
     const OPPOSITE = {
         'Attack increase': 'Attack decrease', 'Defense increase': 'Defense decrease',
         'Control increase': 'Control decrease', Swiftness: 'Slowness'
@@ -40,20 +40,23 @@
 
     // Can a supply landing on `subject` meet a need on `needOn` (self/ally/enemy/null)?
     // "ally" means the needer's own side, so a teammate's self-buff counts.
+    // A null need means any other character (Aqus cannot copy his own effect).
     function reaches(needOn, subject, sameHero) {
-        if (needOn === null || subject === null) return true;
+        if (needOn === null) return !(sameHero && subject === 'self');
+        if (subject === null) return true;
         if (needOn === 'enemy') return subject === 'enemy';
         if (needOn === 'self') return sameHero ? subject === 'self' || subject === 'ally' : subject === 'ally';
         return subject === 'ally' || subject === 'self'; // ally
     }
 
     function suppliedLabels(label) {
-        if (BROAD[label]) return BROAD[label];
+        if (EFFECTS[label]) return EFFECTS[label];
         return BRIDGES[label] ? BRIDGES[label].labels : [label];
     }
 
     function ruleFor(label) {
         if (BRIDGES[label]) return BRIDGES[label].rule;
+        if (EFFECTS[label]) return 'effects';
         if (TERRAIN.includes(label)) return 'terrain';
         if (label === 'Injury') return 'injuries';
         return 'direct';
@@ -66,7 +69,7 @@
     const sharesAbility = (a, b) => a.sources.some(s => b.sources.includes(s));
 
     // Every relation as { type, needer, supplier, need, supply, rule }.
-    // type: partner | self | conflict | counter | broad | flag
+    // type: partner | self | conflict | counter | flag
     function computeSynergies(heroes) {
         const pool = supplies(heroes);
         const out = [];
@@ -77,11 +80,6 @@
             const matches = pool.filter(s => labels.includes(s.link.label)
                 && reaches(need.on, supplySubject(s.link), s.hero === h.name));
 
-            if (need.role === 'benefits_from' && BROAD[need.label]) {
-                const suppliers = [...new Set(matches.filter(s => s.hero !== h.name).map(s => s.hero))];
-                out.push({ type: 'broad', needer: h.name, need, suppliers });
-                return;
-            }
             matches.forEach(s => {
                 const same = s.hero === h.name;
                 if (same && (need.role === 'hindered_by' || sharesAbility(need, s.link))) return;
@@ -159,7 +157,6 @@
             ],
             counteredBy: byOpponent(of('counter', 'needer'), 'supplier'),
             counters: byOpponent(of('counter', 'supplier'), 'needer'),
-            broad: of('broad', 'needer').map(r => ({ label: r.need.label, need: r.need, count: r.suppliers.length })),
             flags: { dontFeed: flag('dontFeed'), punishWithDamage: flag('punishWithDamage') }
         };
     }
@@ -170,7 +167,7 @@
     ];
 
     // Compact view for hover tooltips: unique hero names per non-empty group (first `limit`
-    // shown, the rest counted in `more`) plus one-word notes for self-combos, broad needs and flags
+    // shown, the rest counted in `more`) plus one-word notes for self-combos and flags
     function synergySummary(name, relations, limit = 5) {
         const s = heroSynergies(name, relations);
         const groups = SUMMARY_GROUPS.map(([key, label]) => {
@@ -179,7 +176,6 @@
         }).filter(g => g.heroes.length);
         const notes = [
             s.selfCombos.length && 'Self-combo',
-            ...s.broad.map(b => `Works with any ${b.label === 'Negative effect' ? 'debuffer' : 'buffer'}`),
             s.flags.dontFeed && "Don't feed",
             s.flags.punishWithDamage && 'Punish with damage'
         ].filter(Boolean);

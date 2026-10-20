@@ -723,11 +723,6 @@ function synergySection(node) {
             e => `${label(e.label, e.rule)} from ${escapeHtml(abilityList(e.supply.sources))}`,
             e => heroChip(e.hero, `${e.hero} needs ${e.label} for ${abilityList(e.need.sources)}`)));
     }
-    if (s.broad.length) {
-        blocks.push(s.broad.map(b => `<p class="syn-line syn-broad">Works with any ${
-            b.label === 'Negative effect' ? 'debuffer' : 'buffer'}: ${b.count} heroes supply a ${b.label.toLowerCase()}
-            for ${escapeHtml(abilityList(b.need.sources))}.</p>`).join(''));
-    }
     if (s.conflicts.length) {
         blocks.push(`<h5 class="syn-title"><span class="role-dot kind--hindered_by"></span>Careful with</h5>` + groupRows(s.conflicts,
             e => `${e.direction}|${e.label}`,
