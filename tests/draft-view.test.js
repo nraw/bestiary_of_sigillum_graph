@@ -352,3 +352,25 @@ test('rollFrames alternates cleanly between two candidates', () => {
         assert.deepStrictEqual(names, ['B', 'A', 'B', 'A', 'B', 'A', 'B', 'A', 'B']);
     }
 });
+
+test('graphAction: the graph\'s draft button follows the current step', () => {
+    const solo = D.createDraft('solo');
+    assert.deepStrictEqual(V.graphAction(solo, 'AQUS'), { label: 'Add to band', enabled: true });
+    assert.deepStrictEqual(V.graphAction(pickAll(solo, ['AQUS']), 'AQUS'), { label: 'In your band', enabled: false });
+    assert.deepStrictEqual(V.graphAction(D.setEnemies(solo, ['AQUS']), 'AQUS'), { label: 'Facing it', enabled: false });
+    assert.deepStrictEqual(V.graphAction(D.setExcluded(solo, ['AQUS']), 'AQUS'), { label: 'Excluded', enabled: false });
+    assert.deepStrictEqual(V.graphAction(pickAll(solo, ['TEMPUS', 'MANUS', 'CERBERUS']), 'AQUS'),
+        { label: 'Band is full', enabled: false });
+
+    const banFirst = D.createDraft('ban-first');
+    assert.deepStrictEqual(V.graphAction(banFirst, 'AQUS'), { label: 'Ban for Player 1', enabled: true });
+    assert.deepStrictEqual(V.graphAction(pickAll(banFirst, ['TEMPUS']), 'AQUS'), { label: 'Ban for Player 2', enabled: true });
+    assert.deepStrictEqual(V.graphAction(pickAll(banFirst, ['AQUS']), 'AQUS'), { label: 'Banned', enabled: false });
+
+    const standard = D.createDraft('standard');
+    assert.deepStrictEqual(V.graphAction(standard, 'AQUS'), { label: 'Pick for Player 1', enabled: true });
+    assert.deepStrictEqual(V.graphAction(pickAll(standard, ['TEMPUS']), 'TEMPUS'), { label: 'Already picked', enabled: false });
+    assert.deepStrictEqual(V.graphAction(pickAll(standard, ['TEMPUS', 'AQUS']), 'AQUS'), { label: 'Already picked', enabled: false });
+    const done = pickAll(standard, ['TEMPUS', 'AQUS', 'MANUS', 'CERBERUS', 'SAXUM', 'MAGNUS']);
+    assert.deepStrictEqual(V.graphAction(done, 'FIDEA'), { label: 'Draft complete', enabled: false });
+});

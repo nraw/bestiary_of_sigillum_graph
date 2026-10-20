@@ -796,7 +796,8 @@ kbd {
 }
 
 .legend-toggle { display: none; }
-.toolbar-clear { margin-left: auto; flex-shrink: 0; }
+.toolbar-side { margin-left: auto; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.toolbar-side > [hidden] { display: none; }
 
 #graph {
     display: block;
@@ -853,6 +854,8 @@ kbd {
     filter: drop-shadow(0 0 8px rgba(242, 199, 107, 0.9));
 }
 .node.is-connected .halo { stroke: var(--ember); stroke-width: 2.5; }
+/* The opposing band in a band view: lit like the band but with a dashed, colourless ring */
+.node.is-rival .halo { stroke: var(--text-muted); stroke-width: 2.5; stroke-dasharray: 5 4; }
 .node.is-secondary { opacity: 0.55; }
 .node.is-secondary .node-name { font-size: 11px; fill: var(--text-muted); }
 .node.is-secondary:hover { opacity: 1; }
@@ -896,7 +899,7 @@ kbd {
 .node.is-connected .node-name { fill: #FFE2B8; }
 #graph.has-highlight .node.is-dim .node-name { opacity: 0; }
 #graph.has-highlight .node.is-dim:hover .node-name { opacity: 1; }
-#graph.zoomed-out:not(.show-all-names) .node--hero:not(.is-selected):not(.is-connected):not(:hover) .node-name { opacity: 0; }
+#graph.zoomed-out:not(.show-all-names) .node--hero:not(.is-selected):not(.is-connected):not(.is-rival):not(:hover) .node-name { opacity: 0; }
 
 /* Links */
 .link {
@@ -1053,6 +1056,7 @@ kbd {
 .legend-state .ls-ring { fill: none; stroke: transparent; }
 .legend-state.st-selected .ls-ring { stroke: var(--gold-bright); stroke-width: 2.5; }
 .legend-state.st-connected .ls-ring { stroke: var(--ember); stroke-width: 2; }
+.legend-state.st-rival .ls-ring { stroke: var(--text-muted); stroke-width: 2; stroke-dasharray: 3 2.5; }
 .legend-state.st-secondary { opacity: 0.7; }
 .legend-state.st-dim { opacity: 0.25; }
 .legend-list .link { stroke-opacity: 0.6; }

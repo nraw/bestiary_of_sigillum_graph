@@ -3,10 +3,11 @@
 // this file draws (both unit tested). Only DOM, events and persistence live here.
 (function () {
     const Draft = window.Draft;
-    const { draftView, referenceSides, rollFrames, reasonGroups, percentLabel, groupText, collapse } = window.DraftView;
+    const { draftView, referenceSides, graphAction, rollFrames, reasonGroups, percentLabel, groupText, collapse } = window.DraftView;
     const { encodeDraft, decodeDraft, isDraftLink } = window.DraftShare;
     const { escapeHtml, vitalityTokensSvg } = window.GraphLogic;
     const { titleCase } = window.Synergy;
+    const { isGraphRoute } = window.GraphRoute;
 
     const STORAGE_KEY = 'bestiary-draft-v1';
     const ATTRIBUTES = ['Strength', 'Agility', 'Intelligence'];
@@ -89,6 +90,16 @@
                 setTab('draft', { focus: false });
                 openSharedLink(link);
             });
+            // Back / forward onto a graph selection shows the graph (script.js applies the selection)
+            window.addEventListener('popstate', () => {
+                if (ui.tab === 'draft' && (!location.hash || isGraphRoute(location.hash))) setTab('graph', { focus: false });
+            });
+            document.addEventListener('bestiary:selection', event => {
+                ui.graphHero = event.detail.hero;
+                renderGraphAction();
+            });
+            ui.graphHero = window.BestiaryGraph?.selectedHero ?? null; // the graph may have loaded first
+            renderGraphAction();
             // Reference cards come from the graph's card renderer once its data has loaded
             document.addEventListener('bestiary:graph-ready', () => { if ($('cardsDialog').open) renderCards(); });
         } catch (error) {
@@ -120,12 +131,12 @@
         const { state: shared, error } = decodeDraft(hash, ctx.heroes);
         const problem = error || (Draft.isComplete(shared) ? null : 'This shared draft is not finished yet.');
         if (problem) {
-            history.replaceState(null, '', '#draft');
+            history.replaceState(history.state, '', '#draft');
             toast(`Could not open the shared draft: ${problem}`);
             return;
         }
         ui.shared = { state: shared, code: hash.replace(/^#/, '') };
-        history.replaceState(null, '', `#${ui.shared.code}`);
+        history.replaceState(history.state, '', `#${ui.shared.code}`);
         openCards();
     }
 
@@ -144,7 +155,11 @@
         skip.href = tab === 'graph' ? '#graph' : '#bandHeading';
         skip.textContent = tab === 'graph' ? 'Skip to network graph' : 'Skip to your band';
         const draftHash = ui.shared ? `#${ui.shared.code}` : '#draft';
-        history.replaceState(null, '', tab === 'draft' ? draftHash : location.pathname + location.search);
+        // The graph tab shows its selection's link (before the graph has loaded: the link it was opened with)
+        const graph = window.BestiaryGraph;
+        const graphUrl = graph?.ready ? graph.routeUrl()
+            : isGraphRoute(location.hash) ? location.hash : location.pathname + location.search;
+        history.replaceState(history.state, '', tab === 'draft' ? draftHash : graphUrl);
         if (tab === 'graph') window.BestiaryGraph?.refit();
         if (focus) $(tab === 'graph' ? 'tabGraph' : 'tabDraft').focus();
     }
@@ -157,6 +172,7 @@
             event.preventDefault();
             setTab(ui.tab === 'graph' ? 'draft' : 'graph');
         });
+        $('addToDraft').addEventListener('click', addFromGraph);
         $('backToDraft').addEventListener('click', () => {
             window.BestiaryGraph?.clearBand();
             setTab('draft');
@@ -275,6 +291,24 @@
         attempt(s => Draft.applyAction(s, name), () => `${verb} ${display(name)}. ${summary()}`);
     }
 
+    // The graph's button for its selected hero: pick / ban it at the current step, then back to the draft
+    function renderGraphAction() {
+        const button = $('addToDraft');
+        button.hidden = !ui.graphHero;
+        if (!ui.graphHero) return;
+        const { label, enabled } = graphAction(state(), ui.graphHero);
+        button.textContent = enabled ? `+ ${label}` : label;
+        button.disabled = !enabled;
+        button.title = `${display(ui.graphHero)}: ${label}`;
+    }
+
+    function addFromGraph() {
+        const name = ui.graphHero;
+        if (!name || !Draft.currentStep(state())) return;
+        primaryAction(name);
+        if (!Draft.isAvailable(state(), name)) setTab('draft'); // otherwise refused: primaryAction reported why
+    }
+
     function summary() {
         const v = draftView(state(), ctx);
         return `Band covers ${v.analysis.coveredCount} of 3 roles, ${v.analysis.score.label}.`;
@@ -329,6 +363,7 @@
         renderSlots(view);
         renderAgainst();
         renderStep();
+        renderGraphAction();
         renderAnalysis(view);
         renderBar();
         $('undoBtn').disabled = Draft.undo(state()) === state();
@@ -1053,7 +1088,7 @@
         dialog.addEventListener('close', () => {
             if (!ui.shared) return;
             ui.shared = null;
-            if (ui.tab === 'draft') history.replaceState(null, '', '#draft');
+            if (ui.tab === 'draft') history.replaceState(history.state, '', '#draft');
         });
     }
 

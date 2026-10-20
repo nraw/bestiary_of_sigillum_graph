@@ -2,15 +2,19 @@
 // Pure logic lives in graph-logic.js (GraphLogic) and search.js; this file owns
 // the DOM, D3 rendering and interaction state.
 const {
-    buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, arcPath,
+    buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, bandView, bandSprings, bandAnchors, arcPath,
     filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
     ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, linkAbilities, traitHeroesByRole, filterByRole, trimSegment,
     vitalityTokens, TOKEN_RADIUS
 } = window.GraphLogic;
+const { encodeRoute, decodeRoute, isGraphRoute } = window.GraphRoute;
 const { computeSynergies, heroSynergies, synergySummary, synergyArcs, arcAbilities, describeRelation, titleCase, abilityList, formationVerb } = window.Synergy;
 
 let heroesData = [];
 let synergyRelations = [];
+let layoutSize = null; // simulation coordinates: the graph size at setup
+let baseForce = null; // base forceX / forceY strengths
+const TRAIT_LINK_STRENGTH = 0.6;
 let nodesData = [];
 let linksData = [];
 let nodesById = new Map();
@@ -35,6 +39,7 @@ const state = {
     showAllNames: false,
     showSynergies: false,
     bandFocus: null, // { mine, theirs } hero names sent from the Draft tab
+    showOpponent: true, // band view: the opposing band and its counters with mine
     // Clicked edge or synergy arc: { key, links } — the selected hero's trait links behind it are marked on its card
     picked: null
 };
@@ -124,6 +129,7 @@ async function init() {
         setupPanels();
         setupKeyboard();
         render();
+        setupRouting();
         document.dispatchEvent(new Event('bestiary:graph-ready'));
 
         trackEvent('app_loaded', 'Application', `${heroesData.length} heroes loaded`);
@@ -180,14 +186,16 @@ function setupGraph() {
     // Hub traits (Melee, Displacement…) get longer links so their heroes fan out;
     // one-off traits sit close to their hero
     const linkDistance = l => 40 + Math.sqrt(l.target.degree) * 22;
+    layoutSize = { width, height };
+    baseForce = { x: 0.04 * Math.max(1, (height / width) * 2), y: 0.06 * Math.max(1, width / height) };
     simulation = d3.forceSimulation(nodesData)
-        .force('link', d3.forceLink(linksData).id(d => d.id).distance(linkDistance).strength(0.6))
+        .force('link', d3.forceLink(linksData).id(d => d.id).distance(linkDistance).strength(TRAIT_LINK_STRENGTH))
         .force('charge', d3.forceManyBody().strength(d => d.type === 'hero' ? -650 : -90 - d.degree * 12))
         .force('center', d3.forceCenter(width / 2, height / 2))
         .force('collision', d3.forceCollide().radius(d => d.type === 'hero' ? d.radius + 22 : d.radius + 8))
         // Squeeze along the container's short side so the layout matches its shape
-        .force('x', d3.forceX(width / 2).strength(0.04 * Math.max(1, (height / width) * 2)))
-        .force('y', d3.forceY(height / 2).strength(0.06 * Math.max(1, width / height)))
+        .force('x', d3.forceX(width / 2).strength(baseForce.x))
+        .force('y', d3.forceY(height / 2).strength(baseForce.y))
         .stop();
 
     // Settle the layout before the first paint so the graph doesn't jitter in
@@ -422,6 +430,10 @@ function setupToolbar() {
     });
     document.getElementById('clearAllBtn').addEventListener('click', clearAll);
     document.getElementById('synergyToggle').addEventListener('click', toggleSynergies);
+    document.getElementById('opponentToggle').addEventListener('click', () => {
+        state.showOpponent = !state.showOpponent;
+        render();
+    });
     document.getElementById('namesToggle').addEventListener('click', () => {
         state.showAllNames = !state.showAllNames;
         render();
@@ -445,7 +457,6 @@ function runAction(action) {
         case 'zoom-out': svg.transition().duration(250).call(zoom.scaleBy, 1 / 1.35); break;
         case 'fit': fitView(nodesData); break;
         case 'center': if (selected) centerOn(selected); break;
-        case 'reset': fitView(nodesData); break;
     }
     trackEvent('graph_control', 'View', action);
 }
@@ -531,12 +542,12 @@ function render() {
     const synergyMode = Boolean(band) || (state.showSynergies && (!selectedNode || selectedNode.type === 'hero'));
     let highlight = selectedNode ? computeHighlight(state.selectedId, adjacency, nodesById) : null;
     let arcs = [];
+    applyBandLayout();
     if (band) {
-        // A drafted band: its heroes, the heroes it faces and the synergy lines among them
-        const members = new Set([...band.mine, ...band.theirs]);
-        arcs = synergyArcs(synergyRelations).filter(a => members.has(a.a) && members.has(a.b));
-        highlight = new Map(nodesData.map(n => [n.id,
-            n.type !== 'hero' ? 'dim' : band.mine.includes(n.name) ? 'selected' : band.theirs.includes(n.name) ? 'connected' : 'dim']));
+        // A drafted band: its synergy lines (within it and to the pool) and, if shown, the opponent's counters
+        const view = currentBandView();
+        arcs = view.arcs;
+        highlight = new Map(nodesData.map(n => [n.id, n.type === 'hero' ? view.states.get(n.name) : 'dim']));
     } else if (synergyMode) {
         const focus = selectedNode ? selectedNode.name : null;
         arcs = synergyArcs(synergyRelations, focus);
@@ -556,6 +567,7 @@ function render() {
     nodeElements
         .classed('is-selected', d => highlight?.get(d.id) === 'selected')
         .classed('is-connected', d => highlight?.get(d.id) === 'connected')
+        .classed('is-rival', d => highlight?.get(d.id) === 'rival')
         .classed('is-secondary', d => highlight?.get(d.id) === 'secondary')
         .classed('is-dim', d => highlight ? highlight.get(d.id) === 'dim' : (filterSet ? !filterSet.has(d.id) : false))
         .classed('is-match', d => !highlight && filterSet ? filterSet.has(d.id) : false)
@@ -603,6 +615,10 @@ function render() {
 
     updateHeaderState(filterSet);
     renderDetails();
+    syncRoute();
+    // The Draft tab's "add to draft" button follows the selected hero (draft-ui.js)
+    document.dispatchEvent(new CustomEvent('bestiary:selection',
+        { detail: { hero: selectedNode?.type === 'hero' ? selectedNode.name : null } }));
 }
 
 function updateHeaderState(filterSet) {
@@ -631,6 +647,10 @@ function updateHeaderState(filterSet) {
     else if (active.length) title = `Filtered: ${active.join(' · ')}`;
     document.getElementById('graphTitle').textContent = title;
     document.getElementById('backToDraft').hidden = !state.bandFocus;
+    const opponentToggle = document.getElementById('opponentToggle');
+    opponentToggle.hidden = !state.bandFocus?.theirs.length;
+    opponentToggle.setAttribute('aria-pressed', String(state.showOpponent));
+    document.querySelector('[data-legend="opponent"]').hidden = opponentToggle.hidden || !state.showOpponent;
 
     document.getElementById('clearAllBtn').disabled =
         !(state.selectedId || active.length || state.bandFocus);
@@ -909,7 +929,7 @@ function renderDetails() {
                     <dt><kbd>/</kbd></dt><dd>Search</dd>
                     <dt><kbd>Tab</kbd> <kbd>←↑→↓</kbd></dt><dd>Move between nodes</dd>
                     <dt><kbd>Enter</kbd></dt><dd>Select node</dd>
-                    <dt><kbd>+</kbd> <kbd>−</kbd> <kbd>F</kbd> <kbd>0</kbd></dt><dd>Zoom, fit, reset</dd>
+                    <dt><kbd>+</kbd> <kbd>−</kbd> <kbd>F</kbd></dt><dd>Zoom, fit</dd>
                     <dt><kbd>S</kbd></dt><dd>Synergy lines</dd>
                     <dt><kbd>Esc</kbd></dt><dd>Clear selection</dd>
                 </dl>
@@ -1268,6 +1288,7 @@ function renderLegend() {
             <li>${stateSwatch('st-connected')} Connected</li>
             <li>${stateSwatch('st-secondary')} Shares a trait</li>
             <li>${stateSwatch('st-dim')} Unrelated</li>
+            <li data-legend="opponent" hidden>${stateSwatch('st-rival')} Opponent</li>
         </ul>
 
         <h3 class="legend-title">Edges</h3>
@@ -1374,6 +1395,7 @@ function handleResize() {
     resizeTimer = setTimeout(() => {
         const selected = nodesById.get(state.selectedId);
         if (selected) centerOn(selected, 0);
+        else if (state.bandFocus) fitBand(0);
         else fitView(nodesData, 0);
     }, 150);
 }
@@ -1434,8 +1456,6 @@ function setupKeyboard() {
             runAction('zoom-in');
         } else if (event.key === '-' || event.key === '_') {
             runAction('zoom-out');
-        } else if (event.key === '0') {
-            runAction('reset');
         } else if (event.key.toLowerCase() === 'f') {
             runAction('fit');
         } else if (event.key.toLowerCase() === 'c') {
@@ -1464,8 +1484,152 @@ function showBand(mine, theirs = []) {
     state.selectedId = null;
     state.bandFocus = { mine: [...mine], theirs: [...theirs] };
     render();
-    const members = new Set([...mine, ...theirs]);
-    fitView(nodesData.filter(n => n.type === 'hero' && members.has(n.name)));
+}
+
+function currentBandView() {
+    return bandView(synergyArcs(synergyRelations), heroesData.map(h => h.name), state.bandFocus,
+        { showOpponent: state.showOpponent });
+}
+
+// Frame the band with every hero it is linked to
+function fitBand(duration) {
+    const { states } = currentBandView();
+    fitView(nodesData.filter(n => n.type === 'hero' && states.get(n.name) !== 'dim'), duration);
+}
+
+// Band view layout: the bands are pulled to the top (mine left, the opponent right) and synergy
+// springs draw each linked hero towards the band member it works with, with a light pull below the
+// bands' row; trait links slacken so the springs win. Leaving the band view restores the base layout.
+// Re-runs the simulation only when the targets change.
+const BAND_FORCE = { anchor: 0.8, spring: 0.5, springDistance: 110, below: 0.12, traitLinks: 0.12 };
+let bandLayoutKey = '';
+function applyBandLayout() {
+    if (!simulation) return;
+    const { width, height } = layoutSize;
+    const band = state.bandFocus;
+    const view = band ? currentBandView() : null;
+    const { heroes, pool } = band
+        ? bandAnchors(band, { showOpponent: state.showOpponent }, width, height) : { heroes: new Map() };
+    const key = JSON.stringify([...heroes, ...(view?.states ?? [])]);
+    if (key === bandLayoutKey) return;
+    bandLayoutKey = key;
+
+    const anchor = d => (d.type === 'hero' ? heroes.get(d.name) : undefined);
+    const linked = d => d.type === 'hero' && view?.states.get(d.name) === 'connected';
+    const heroByName = new Map(nodesData.filter(n => n.type === 'hero').map(n => [n.name, n]));
+    const springs = view ? bandSprings(view).map(s => ({ source: heroByName.get(s.source), target: heroByName.get(s.target) })) : [];
+    simulation
+        .force('x', d3.forceX(d => anchor(d)?.x ?? width / 2)
+            .strength(d => (anchor(d) ? BAND_FORCE.anchor : baseForce.x)))
+        .force('y', d3.forceY(d => anchor(d)?.y ?? (linked(d) ? pool.y : height / 2))
+            .strength(d => (anchor(d) ? BAND_FORCE.anchor : linked(d) ? BAND_FORCE.below : baseForce.y)))
+        .force('band', springs.length
+            ? d3.forceLink(springs).distance(BAND_FORCE.springDistance).strength(BAND_FORCE.spring) : null);
+    simulation.force('link').strength(band ? BAND_FORCE.traitLinks : TRAIT_LINK_STRENGTH);
+    simulation.alpha(0.7).restart();
+    // Frame the band once the layout has mostly settled, then again once it has stopped
+    simulation.on('tick.band', !band ? null : () => {
+        if (simulation.alpha() > 0.1) return;
+        simulation.on('tick.band', null);
+        if (state.bandFocus) fitBand();
+    });
+    simulation.on('end.band', !band ? null : () => {
+        simulation.on('end.band', null);
+        if (state.bandFocus) fitBand();
+    });
+}
+
+// ---------------------------------------------------------------------------
+// URL and selection history
+// ---------------------------------------------------------------------------
+// Every selection (hero, trait or band view) is a history entry with a shareable hash (graph-route.js),
+// so back / forward replay them. history.state.graphNav numbers our entries for the toolbar arrows.
+let navIndex = 0;
+let navTop = 0;
+let restoringRoute = false;
+let routing = false; // set once the opening link has been applied
+
+function currentRoute() {
+    const band = state.bandFocus;
+    if (band) return { type: 'band', mine: band.mine, theirs: band.theirs };
+    const node = nodesById.get(state.selectedId);
+    if (!node) return { type: 'none' };
+    return { type: node.type === 'hero' ? 'hero' : 'trait', name: node.name };
+}
+
+// The URL of the current selection; no hash when nothing is selected
+function routeUrl() {
+    const route = currentRoute();
+    return route.type === 'none' ? location.pathname + location.search : encodeRoute(route);
+}
+
+const routeNames = () => ({
+    heroes: heroesData.map(h => h.name),
+    traits: nodesData.filter(n => n.type === 'label').map(n => n.name)
+});
+
+function syncRoute() {
+    if (!routing || restoringRoute || document.body.dataset.tab === 'draft') return;
+    const url = routeUrl();
+    const same = url.startsWith('#') ? location.hash === url : !location.hash || location.hash === '#graph';
+    if (same) return;
+    navTop = ++navIndex;
+    history.pushState({ ...history.state, graphNav: navIndex }, '', url);
+    updateNavButtons();
+}
+
+function applyRoute(route) {
+    restoringRoute = true;
+    try {
+        if (route.type === 'band') {
+            showBand(route.mine, route.theirs);
+        } else if (route.type === 'none') {
+            Object.assign(state, { selectedId: null, picked: null, bandFocus: null });
+            render();
+        } else {
+            const type = route.type === 'hero' ? 'hero' : 'label';
+            const node = nodesData.find(n => n.type === type && n.name === route.name);
+            if (node) selectNode(node.id, { source: 'link' });
+        }
+    } finally {
+        restoringRoute = false;
+    }
+}
+
+function updateNavButtons() {
+    document.getElementById('navBack').disabled = navIndex <= 0;
+    document.getElementById('navForward').disabled = navIndex >= navTop;
+}
+
+function setupRouting() {
+    navIndex = navTop = history.state?.graphNav ?? 0;
+    const route = decodeRoute(location.hash, routeNames());
+    if (route) applyRoute(route);
+    // A graph link to an unknown hero or trait opens the plain graph
+    else if (isGraphRoute(location.hash)) history.replaceState(history.state, '', location.pathname + location.search);
+    history.replaceState({ ...history.state, graphNav: navIndex }, '');
+    routing = true;
+    updateNavButtons();
+
+    window.addEventListener('popstate', event => {
+        const next = decodeRoute(location.hash, routeNames());
+        if (!next) {
+            // A draft link is the Draft tab's; a graph link to an unknown hero or trait keeps the current view
+            if (isGraphRoute(location.hash)) history.replaceState(history.state, '', routeUrl());
+            return;
+        }
+        if (typeof event.state?.graphNav === 'number') {
+            navIndex = event.state.graphNav;
+        } else {
+            // A link typed or pasted into the address bar: a new entry after the current one
+            navTop = ++navIndex;
+            history.replaceState({ ...history.state, graphNav: navIndex }, '');
+        }
+        applyRoute(next);
+        updateNavButtons();
+    });
+    document.getElementById('navBack').addEventListener('click', () => history.back());
+    document.getElementById('navForward').addEventListener('click', () => history.forward());
 }
 
 // The graph was hidden (Draft tab): re-measure and frame it again
@@ -1476,7 +1640,7 @@ function refit() {
 
 // Used by the Draft tab (draft-ui.js); the getters also help debugging
 window.BestiaryGraph = {
-    state, showBand, refit,
+    state, showBand, refit, routeUrl,
     clearBand() { state.bandFocus = null; render(); },
     selectHero(name) {
         const node = nodesData.find(n => n.type === 'hero' && n.name === name);
@@ -1488,5 +1652,9 @@ window.BestiaryGraph = {
         return node ? heroCardHtml(node, { traits: false }) : null;
     },
     get ready() { return nodesData.length > 0; },
+    get selectedHero() {
+        const node = nodesById.get(state.selectedId);
+        return node?.type === 'hero' ? node.name : null;
+    },
     get nodesData() { return nodesData; }, get linksData() { return linksData; }
 };

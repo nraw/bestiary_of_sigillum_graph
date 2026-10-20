@@ -134,7 +134,14 @@
         <section class="graph-panel" aria-label="Network visualization">
             <div class="graph-toolbar" role="toolbar" aria-label="Graph controls">
                 <div class="toolbar-main">
-                <button class="btn btn-gold" type="button" id="backToDraft" hidden>← Back to draft</button>
+                <div class="btn-group" role="group" aria-label="Selection history">
+                    <button class="icon-btn" type="button" id="navBack" aria-label="Undo selection" title="Undo selection" disabled>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+                    </button>
+                    <button class="icon-btn" type="button" id="navForward" aria-label="Redo selection" title="Redo selection" disabled>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
+                    </button>
+                </div>
                 <div class="graph-title" id="graphTitle" aria-live="polite">Hero Network</div>
                 <div class="btn-group">
                     <button class="icon-btn" type="button" data-action="zoom-in" aria-label="Zoom in" title="Zoom in (+)">
@@ -150,10 +157,6 @@
                         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
                     </button>
                 </div>
-                <button class="btn btn-ghost" type="button" data-action="reset" title="Reset view (0)">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v5h5"/></svg>
-                    Reset View
-                </button>
                 <button class="btn btn-ghost" type="button" id="namesToggle" aria-pressed="false" title="Show every trait name">
                     All names
                 </button>
@@ -161,11 +164,17 @@
                         title="Show synergy lines between heroes (S)">
                     Synergies
                 </button>
+                <button class="btn btn-ghost" type="button" id="opponentToggle" aria-pressed="true" hidden
+                        title="Show the opposing band and its counters">Opponent</button>
                 <button class="btn btn-ghost legend-toggle" type="button" id="legendToggle" aria-controls="sidePanel" aria-expanded="false">
                     Legend
                 </button>
                 </div>
-                <button class="btn btn-crimson toolbar-clear" id="clearAllBtn" type="button" disabled>Clear Filters</button>
+                <div class="toolbar-side">
+                    <button class="btn btn-crimson" id="clearAllBtn" type="button" disabled>Clear Filters</button>
+                    <button class="btn btn-ghost" type="button" id="backToDraft" hidden>← Back to draft</button>
+                    <button class="btn btn-gold" type="button" id="addToDraft" hidden></button>
+                </div>
             </div>
             <svg id="graph" tabindex="-1" role="application"
                  aria-label="Hero network. Use Tab to reach the nodes, arrow keys to move between them, Enter to select, plus and minus to zoom."
@@ -312,8 +321,9 @@
         <div class="tile-pop" id="tilePopover" role="dialog" aria-labelledby="popHeading" hidden></div>
         <div class="sr-only" id="draftLive" aria-live="polite"></div>
         <div class="card-menu" id="cardMenu" role="menu" hidden></div>
-        <div class="toast" id="draftToast" role="status" hidden></div>
     </main>
+    <!-- Shared by both tabs -->
+    <div class="toast" id="draftToast" role="status" hidden></div>
 
     <!-- Reference cards for a finished draft (or a shared link): the cards of one side at a time -->
     <dialog class="cards-dialog" id="cardsDialog" aria-labelledby="cardsTitle">
@@ -348,6 +358,7 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="search.js"></script>
     <script src="graph-logic.js"></script>
+    <script src="graph-route.js"></script>
     <script src="synergy.js"></script>
     <script src="draft.js"></script>
     <script src="draft-view.js"></script>

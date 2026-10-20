@@ -291,7 +291,20 @@
         return names.map((name, i) => ({ name, delay: Math.round(55 + 220 * (i / (steps - 1)) ** 2) }));
     }
 
-    const api = { draftView, referenceSides, rollFrames, chipsFor, chipKind, shortReason, reasonGroups, REASON_TYPES, synergyGroups, groupText,
+    // The graph's draft button for a selected hero: what the current step would do with it
+    const TAKEN = { picked: 'Already picked', facing: 'Already picked', banned: 'Banned', excluded: 'Excluded' };
+    const TAKEN_SOLO = { picked: 'In your band', facing: 'Facing it', excluded: 'Excluded' };
+    function graphAction(state, name) {
+        const solo = state.format === 'solo';
+        const reason = Draft.unavailableReason(state, name);
+        if (reason) return { label: (solo ? TAKEN_SOLO : TAKEN)[reason], enabled: false };
+        const step = Draft.currentStep(state);
+        if (!step) return { label: solo ? 'Band is full' : 'Draft complete', enabled: false };
+        if (solo) return { label: 'Add to band', enabled: true };
+        return { label: `${step.action === 'ban' ? 'Ban' : 'Pick'} for Player ${step.player}`, enabled: true };
+    }
+
+    const api = { draftView, referenceSides, graphAction, rollFrames, chipsFor, chipKind, shortReason, reasonGroups, REASON_TYPES, synergyGroups, groupText,
         collapse, percentLabel, MAX_CHIPS };
 
     if (typeof module !== 'undefined' && module.exports) {

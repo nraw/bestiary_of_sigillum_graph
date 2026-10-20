@@ -285,6 +285,61 @@
         return 'dim';
     }
 
+    // A drafted band on the graph: its synergy arcs (within the band and to the pool) and
+    // per-hero states 'selected' (mine) | 'connected' (pool hero linked to a band) | 'rival' | 'dim'.
+    // With showOpponent the opposing band joins, but only through its counters, with my band and
+    // with the pool (heroes it counters or that counter it: what matters for my next pick).
+    function bandView(arcs, heroNames, { mine, theirs = [] }, { showOpponent = true } = {}) {
+        const isMine = name => mine.includes(name);
+        const isTheirs = name => theirs.includes(name);
+        const shown = arcs.filter(a => {
+            if (!isMine(a.a) && !isMine(a.b)) {
+                const theirsToPool = isTheirs(a.a) !== isTheirs(a.b);
+                return showOpponent && theirsToPool && a.category === 'counter';
+            }
+            const other = isMine(a.a) ? a.b : a.a;
+            if (isMine(other)) return a.category !== 'counter';
+            if (isTheirs(other)) return showOpponent && a.category === 'counter';
+            return true;
+        });
+        const linked = new Set(shown.flatMap(a => [a.a, a.b]));
+        const states = new Map(heroNames.map(name => [name,
+            isMine(name) ? 'selected'
+                : isTheirs(name) ? (showOpponent ? 'rival' : 'dim')
+                : linked.has(name) ? 'connected' : 'dim']));
+        return { arcs: shown, states };
+    }
+
+    // Layout springs for a band view: one per (band hero, linked pool hero) pair with a synergy line,
+    // so pool heroes settle near the band member (mine or the opponent's) they relate to. The bands
+    // themselves are anchored, so they get no springs between them.
+    function bandSprings({ arcs, states }) {
+        const springs = new Map();
+        arcs.forEach(a => {
+            const [member, other] = states.get(a.a) === 'connected' ? [a.b, a.a] : [a.a, a.b];
+            if (states.get(other) !== 'connected') return;
+            springs.set(`${member}|${other}`, { source: member, target: other });
+        });
+        return [...springs.values()];
+    }
+
+    // Layout targets for a band view: my band packed top-left and the opponent top-right (or my band
+    // top-centre alone), two heroes per row, leaving the middle for counters; `pool` is where the
+    // heroes linked to my band are drawn, just below the bands
+    function bandAnchors({ mine, theirs = [] }, { showOpponent = true } = {}, width, height) {
+        const split = showOpponent && theirs.length > 0;
+        const gap = Math.min(width * 0.14, 115);
+        const top = height * 0.12;
+        const heroes = new Map();
+        const pack = (names, cx) => names.forEach((name, i) => {
+            const row = Math.floor(i / 2);
+            const inRow = Math.min(2, names.length - row * 2);
+            heroes.set(name, { x: cx + ((i % 2) - (inRow - 1) / 2) * gap, y: top + row * gap * 0.9 });
+        });
+        pack(mine, split ? width * 0.18 : width / 2);
+        if (split) pack(theirs, width * 0.82);
+        return { heroes, pool: { x: width / 2, y: top + gap * 2.6 } };
+    }
 
     // Returns a Set of matching node ids, or null when no filter is active
     function filterNodes(nodes, { term = '', category = null, labelCategory = null, attribute = null } = {}) {
@@ -371,7 +426,7 @@
 
     const api = {
         ATTRIBUTES, getLabelCategory, HERO_RADIUS, TOKEN_RADIUS, vitalityTokens, vitalityTokensSvg, labelRadius,
-        buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, arcPath,
+        buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, bandView, bandSprings, bandAnchors, arcPath,
         filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
         ROLES, ROLE_INFO, linkKind, linkDirection, linkSummary, abilityTraits, linkAbilities, traitHeroesByRole, filterByRole, trimSegment
     };
