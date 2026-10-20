@@ -1140,6 +1140,8 @@ kbd {
     .graph-panel { order: 1; height: 64vh; min-height: 380px; }
     .left-column { order: 2; }
     .details-panel { max-height: none; overflow: visible; }
+    /* Nothing selected: the hint and keyboard shortcuts are noise on a phone */
+    .details-panel:has(.empty-state) { display: none; }
 
     .right-column {
         order: 3;
