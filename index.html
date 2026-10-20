@@ -309,15 +309,10 @@
                 <div class="score-bar" aria-hidden="true"><span id="scoreBar"></span></div>
                 <p class="analysis-sub" id="scoreExplain"></p>
                 <p class="analysis-sub" id="scoreDetail" hidden></p>
+                <ul class="score-breakdown" id="scoreBreakdown" aria-label="Points per factor"></ul>
             </section>
-            <section class="analysis-block" id="threatBlock" aria-labelledby="threatHeading" hidden>
-                <h3 class="mini-heading" id="threatHeading">Threats from Against</h3>
-                <div id="threatList"></div>
-            </section>
-            <section class="analysis-block" id="synergyBlock" aria-labelledby="synergyHeading" hidden>
-                <h3 class="mini-heading" id="synergyHeading">Synergy in band</h3>
-                <div id="synergyList"></div>
-            </section>
+            <!-- Synergy, Careful with, Themes, Matchup, Durability: each row opens the inspector -->
+            <div id="analysisSections"></div>
             <button class="btn btn-ghost view-graph" type="button" id="viewInGraph">View band in graph →</button>
         </aside>
 
@@ -351,6 +346,22 @@
             <a href="https://boardgamegeek.com/thread/3571948/character-reference-cards" target="_blank" rel="noopener noreferrer">Character Reference Cards</a>
             on BoardGameGeek. We suggest using those at the table.
         </p>
+    </dialog>
+
+    <!-- Draft inspector: the reasons behind a popover section or analysis row, with the card text that causes them -->
+    <dialog class="cards-dialog inspect-dialog" id="inspectDialog" aria-labelledby="inspectTitle">
+        <header class="cards-head">
+            <div>
+                <h2 class="draft-heading" id="inspectTitle"></h2>
+                <p class="analysis-sub" id="inspectSub"></p>
+            </div>
+            <button class="btn btn-ghost" type="button" id="inspectInGraph">View in graph →</button>
+            <form method="dialog"><button class="icon-btn" value="close" aria-label="Close">✕</button></form>
+        </header>
+        <div class="inspect-body">
+            <ul class="reason-list inspect-lines" id="inspectLines"></ul>
+            <div class="tt-sides inspect-sides" id="inspectSides"></div>
+        </div>
     </dialog>
 
     <dialog class="hero-picker" id="heroPicker" aria-labelledby="pickerTitle">

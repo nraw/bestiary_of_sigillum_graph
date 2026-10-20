@@ -248,3 +248,17 @@ test('arcAbilities: every arc side names an ability or a card-level reason', () 
     arcs.forEach(arc => S.arcAbilities(arc, heroes).forEach(side =>
         assert.ok(side.abilities.length || side.cardLevel.length, `${arc.a}-${arc.b} ${side.hero}`)));
 });
+
+test('heroAbilities: the abilities behind some trait links, plus abilities named without a link', () => {
+    const saxum = heroes.find(h => h.name === 'SAXUM');
+    const link = saxum.trait_links.find(l => l.sources.includes('ROCK BLAST'));
+    const side = S.heroAbilities(saxum, [link]);
+    assert.deepStrictEqual(side.abilities.map(g => [g.index, g.ability.name, g.links]), [[0, 'ROCK BLAST', [link]]]);
+    assert.deepStrictEqual(side.cardLevel, []);
+    // An ability chosen by index (e.g. a scaling core attack) shows without trait links, in card order
+    const withSupport = S.heroAbilities(saxum, [link], { abilities: [1, 0] });
+    assert.deepStrictEqual(withSupport.abilities.map(g => [g.index, g.links.length]), [[0, 1], [1, 0]]);
+    // A link tied to no ability is card-level, and the same link is never listed twice
+    const small = { label: 'Small', role: 'has', sources: [] };
+    assert.deepStrictEqual(S.heroAbilities(saxum, [small, small]).cardLevel, [small]);
+});

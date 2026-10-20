@@ -3,7 +3,7 @@
 // this file draws (both unit tested). Only DOM, events and persistence live here.
 (function () {
     const Draft = window.Draft;
-    const { draftView, referenceSides, graphAction, rollFrames, reasonGroups, percentLabel, percentExplain, ROLE_INFO, groupText, collapse } = window.DraftView;
+    const { draftView, referenceSides, graphAction, rollFrames, inspectView, percentLabel, percentExplain, ROLE_INFO, collapse } = window.DraftView;
     const { encodeDraft, decodeDraft, isDraftLink } = window.DraftShare;
     const { escapeHtml, vitalityTokensSvg } = window.GraphLogic;
     const { titleCase } = window.Synergy;
@@ -17,6 +17,7 @@
         interleaved: { label: 'Interleaved', hint: 'Ban 1 each, pick 1 each, three times' }
     };
     const LIST_LIMIT = 3; // grouped lists show this many before "Show N more"
+    const HOVER_LINES = 2; // lines per section in the hover popover (the pinned one shows all)
     const CHIP_ICON = { synergy: '✦', counter: '⚔', warning: '⚠' };
     const REASON_BADGE = { picked: 'Picked', facing: 'Facing', excluded: 'Excluded', banned: 'Banned', player1: 'Player 1', player2: 'Player 2' };
 
@@ -47,7 +48,9 @@
         shared: null, // { state, code }: a draft opened from a shared link (read-only, shown in the cards modal)
         cardSide: { solo: 'mine', 'two-player': '1' }, // reference cards: whose cards are shown
         cardHero: null, // reference cards: a single hero's card, opened from the pool
-        pop: null // hero shown in the tile popover
+        pop: null, // hero shown in the tile popover
+        pinned: false, // desktop: the popover was pinned (⋯ menu, right-click, I) and can be clicked
+        inspect: null // the inspector's heroes for View in graph: { mine, theirs }
     };
 
     const $ = id => document.getElementById(id);
@@ -67,6 +70,9 @@
         return `<span class="role-pill role--${r}${adds ? '' : ' is-covered'}" title="${label}">${icon(r)}<span class="sr-only">${label}</span></span>`;
     }).join('')}</span>`;
     const narrow = () => window.matchMedia('(max-width: 600px), (hover: none)').matches;
+    // How much a section or row weighs: up to 5 dots (draft-view.js strength), or a warning
+    const dots = st => (st.warning ? '<span class="dots dots--warning" title="Costs points">⚠</span>'
+        : st.dots ? `<span class="dots" title="Weight ${st.dots} of 5" aria-label="Weight ${st.dots} of 5">${'●'.repeat(st.dots)}<span class="dots-off">${'●'.repeat(5 - st.dots)}</span></span>` : '');
     const banner = attribute =>
         `<span class="attr-banner attr--${attribute}" title="${attribute}">${icon(attribute)}<span class="sr-only">${attribute}</span></span>`;
 
@@ -264,7 +270,7 @@
         // A tap outside the sheet (and its bar) closes it
         document.addEventListener('click', event => {
             if ($('analysisPanel').classList.contains('is-open')
-                && !event.target.closest('#analysisPanel, #draftBar')) setSheet(false);
+                && !event.target.closest('#analysisPanel, #draftBar, dialog')) setSheet(false);
         });
         $('openMatch').addEventListener('click', () => openCards());
         $('draftView').addEventListener('click', event => {
@@ -277,6 +283,7 @@
 
         setupPool();
         setupPopover();
+        setupInspect();
         setupSlots();
         setupAgainst();
         setupCards();
@@ -625,7 +632,7 @@
             lastX = event.clientX;
         });
         const hover = event => {
-            if (narrow()) return;
+            if (narrow() || ui.pinned) return;
             const tile = event.target.closest('[data-hero]');
             if (!tile) return;
             const entry = view.pool.find(p => p.name === tile.dataset.hero);
@@ -654,15 +661,16 @@
     }
 
     function leavePool() {
-        if ($('tilePopover').classList.contains('is-sheet')) return;
+        if ($('tilePopover').classList.contains('is-sheet') || ui.pinned) return;
         preview(null);
         hidePopover();
     }
 
     // ---- Tile popover (desktop: next to the tile; phones: a bottom sheet with the action) ---
 
-    // `side`: where to put the desktop popover beside the tile ('left' | 'right'), if there is room
-    function showPopover(name, tile, { sheet = false, side = 'right' } = {}) {
+    // `side`: where to put the desktop popover beside the tile ('left' | 'right'), if there is room.
+    // `pinned`: the desktop popover stays put and can be clicked, like the phone sheet
+    function showPopover(name, tile, { sheet = false, side = 'right', pinned = false } = {}) {
         const entry = view.pool.find(p => p.name === name);
         const s = entry && entry.suggestion;
         const pop = $('tilePopover');
@@ -673,8 +681,23 @@
         const rival = p === 1 ? 2 : 1;
         const forWhom = solo() ? '' : ` for Player ${p}`;
         const verb = ban ? 'Ban' : 'Select';
-        // The desktop popover can't be clicked: Fill band lives in the ⋯ menu there, and in the phone sheet
-        const canFill = sheet && solo() && !ban && s.bestWith.length > 0;
+        // The hover popover can't be clicked: Fill band lives in the ⋯ menu there, the phone sheet and the pinned popover
+        const interactive = sheet || pinned;
+        ui.pinned = pinned;
+        const canFill = interactive && solo() && !ban && s.bestWith.length > 0;
+        const section = x => {
+            const c = collapse(x.lines, interactive ? Infinity : HOVER_LINES, false);
+            const head = `<span class="pop-sec-label">${escapeHtml(x.label)}</span>${dots(x.strength)}`;
+            return `<section class="pop-section pop-section--${x.kind}">
+                ${interactive ? `<button type="button" class="pop-sec-head" data-inspect="${escapeHtml(x.key)}"
+                    aria-label="Inspect: ${escapeHtml(x.title)}">${head}<span class="pop-inspect">Inspect ›</span></button>`
+                    : `<h4 class="pop-sec-head">${head}</h4>`}
+                <ul class="reason-list">${c.items.map((l, i) => `<li class="reason reason--${l.kind}">${interactive
+                    ? `<button type="button" class="pop-line" data-inspect="${escapeHtml(x.key)}" data-line="${i}">${escapeHtml(l.text)}</button>`
+                    : escapeHtml(l.text)}</li>`).join('')}</ul>
+                ${c.hidden ? `<p class="pop-more">+${c.hidden} more</p>` : ''}
+            </section>`;
+        };
         pop.innerHTML = `
             <div class="pop-head">
                 <span class="pop-rank">#${s.rank}</span>
@@ -685,19 +708,17 @@
                 <strong>${s.percentLabel}</strong>
                 <small class="pop-explain">${escapeHtml(percentExplain(s.topPercent, { facing: Draft.bands(state())[ban ? p : rival].length > 0 }))}</small></p>
             ${s.bestWith.length ? `<p class="pop-best">Best with: <strong>${s.bestWith.map(display).map(escapeHtml).join(' + ')}</strong></p>` : ''}
-            ${reasonGroups(s.reasons).map(g => `<section class="reason-group">
-                <h4 class="mini-heading">${g.label}</h4>
-                <ul class="reason-list">${g.reasons.map(r =>
-                    `<li class="reason reason--${r.kind} rtype--${g.type}">${escapeHtml(r.text)}</li>`).join('')}</ul>
-            </section>`).join('') || '<p class="muted">No specific reasons.</p>'}
+            ${s.sections.map(section).join('') || '<p class="muted">No specific reasons.</p>'}
+            ${interactive ? '' : '<p class="pop-hint">Right-click or press <kbd>I</kbd> to inspect the card text behind these</p>'}
             <div class="pop-actions">
                 ${entry.available && view.step.action ? `<button class="btn ${ban ? 'btn-crimson' : 'btn-gold'} pop-primary" type="button" data-pop="primary">${verb}${escapeHtml(forWhom)}</button>` : ''}
                 ${canFill ? `<button class="btn btn-ghost" type="button" data-pop="fill">Fill band</button>` : ''}
-                ${sheet ? `<button class="btn btn-ghost" type="button" data-pop="card">View card</button>` : ''}
+                ${interactive ? `<button class="btn btn-ghost" type="button" data-pop="card">View card</button>` : ''}
             </div>`;
         pop.dataset.hero = name;
         pop.hidden = false;
         pop.classList.toggle('is-sheet', sheet);
+        pop.classList.toggle('is-pinned', pinned);
         document.querySelectorAll('#poolGrid .hero-tile').forEach(t => {
             t.classList.toggle('is-popped', t.dataset.hero === name);
         });
@@ -715,14 +736,24 @@
         pop.style.left = `${(right ? rect.right + 8 : Math.max(host.left, rect.left - 8 - width)) - host.left}px`;
         const top = Math.min(rect.top, window.innerHeight - pop.offsetHeight - 12);
         pop.style.top = `${Math.max(top, host.top) - host.top}px`;
+        if (pinned) (pop.querySelector('[data-inspect]') || pop.querySelector('[data-pop="close"]')).focus();
+    }
+
+    // Keep the popover open to click into it: beside the tile on desktop, the bottom sheet on phones
+    function pinPopover(name) {
+        const tile = document.querySelector(`#poolGrid [data-hero="${name}"]`);
+        if (!tile || !view.pool.find(p => p.name === name)?.suggestion) return;
+        if (narrow()) showPopover(name, tile, { sheet: true });
+        else showPopover(name, tile, { pinned: true });
     }
 
     function hidePopover() {
         const pop = $('tilePopover');
         if (pop.hidden) return;
         pop.hidden = true;
-        pop.classList.remove('is-sheet');
+        pop.classList.remove('is-sheet', 'is-pinned');
         ui.pop = null;
+        ui.pinned = false;
         document.querySelectorAll('#poolGrid .is-popped').forEach(t => t.classList.remove('is-popped'));
     }
 
@@ -736,8 +767,10 @@
     function setupPopover() {
         const pop = $('tilePopover');
         pop.addEventListener('click', event => {
-            const act = event.target.closest('[data-pop]')?.dataset.pop;
             const name = pop.dataset.hero;
+            const target = event.target.closest('[data-inspect]');
+            if (target) { inspectSection(name, target.dataset.inspect, target.dataset.line); return; }
+            const act = event.target.closest('[data-pop]')?.dataset.pop;
             if (!act) return;
             const tile = document.querySelector(`#poolGrid [data-hero="${name}"] .tile-main`);
             hidePopover();
@@ -747,7 +780,9 @@
             else tile?.focus();
         });
         document.addEventListener('click', event => {
-            if (!pop.hidden && pop.classList.contains('is-sheet') && !pop.contains(event.target) && !event.target.closest('#poolGrid')) {
+            if (pop.hidden || pop.contains(event.target) || event.target.closest('#cardMenu, dialog')) return;
+            const sheet = pop.classList.contains('is-sheet') && !event.target.closest('#poolGrid');
+            if (sheet || ui.pinned) {
                 hidePopover();
                 preview(null);
             }
@@ -1056,19 +1091,27 @@
             ? `Preview: ${a.score.change.from === null ? '—' : percentLabel(a.score.change.from)} → ${percentLabel(a.score.change.to)}` : '';
         $('scoreDetail').classList.toggle('is-changed', Boolean(a.score.change));
 
-        $('threatHeading').textContent = solo() ? 'Threats from Against' : `Threats from Player ${v.focus === 1 ? 2 : 1}`;
-        $('threatBlock').hidden = !a.threats.length;
-        $('threatList').innerHTML = moreList('threats', a.threats, t =>
-            `<li class="reason reason--warning${t.preview ? ' is-changed' : ''}">${escapeHtml(t.text)}${t.preview ? ' (preview)' : ''}</li>`);
-        $('synergyBlock').hidden = !a.synergyGroups.length;
-        $('synergyList').innerHTML = moreList('synergy', a.synergyGroups, synergyRow);
+        $('analysisSections').innerHTML = a.sections.map(x => `
+            <section class="analysis-block" aria-label="${escapeHtml(x.label)}">
+                <h3 class="mini-heading">${escapeHtml(x.label)}</h3>
+                ${moreList(x.key, x.rows, row => analysisRow(x.key, row))}
+            </section>`).join('');
+        const most = Math.max(1, ...a.breakdown.map(f => Math.abs(f.delta)));
+        $('scoreBreakdown').innerHTML = a.breakdown.map(f => `
+            <li class="${f.delta < 0 ? 'is-loss' : ''}"><span class="bd-label">${f.label}</span>
+                <span class="bd-bar" aria-hidden="true"><span style="width:${Math.round(Math.abs(f.delta) / most * 100)}%"></span></span>
+                <span class="bd-val">${f.delta > 0 ? '+' : '−'}${Math.abs(f.delta).toFixed(1)}</span></li>`).join('');
         $('viewInGraph').disabled = !Draft.bands(state())[v.focus].length;
     }
 
-    // "Toxicum ← Equita (Poison), Tempus (Swiftness, cooldowns)"
-    const synergyRow = g => `<li class="syn-group${g.preview ? ' is-changed' : ''}">
-        <strong class="syn-hero">${escapeHtml(g.display)}</strong> <span class="syn-arrow" aria-label="helped by">←</span>
-        <span>${escapeHtml(groupText(g))}</span>${g.preview ? ' <span class="syn-new">(preview)</span>' : ''}</li>`;
+    // A sentence ("Arborus keeps Toxicum and Magnus alive ●○○○○") or a labelled row ("Cooldowns ●●●○○ / Toxicum, Tempus");
+    // the row opens the inspector
+    const analysisRow = (section, r) => `<li class="reason reason--${r.kind} analysis-row${r.preview ? ' is-changed' : ''}">
+        <button type="button" class="row-btn" data-row="${section}" data-key="${escapeHtml(r.key)}" aria-label="Inspect: ${escapeHtml(r.label || r.text)}">
+            ${r.label ? `<span class="row-head"><strong class="syn-hero">${escapeHtml(r.label)}</strong>${dots(r.strength)}</span>
+            <span class="row-text">${escapeHtml(r.text)}</span>`
+            : `<span class="row-head"><span class="row-sentence">${escapeHtml(r.text)}</span>${dots(r.strength)}</span>`}${
+            r.preview ? ' <span class="syn-new">(preview)</span>' : ''}</button></li>`;
 
     // A list showing LIST_LIMIT items, then one "Show N more" button that expands in place
     function moreList(key, items, row) {
@@ -1077,6 +1120,53 @@
         return `<ul class="reason-list" id="${id}">${c.items.map(row).join('')}</ul>${c.hidden
             ? `<button class="link-btn more-btn" type="button" data-more="${key}" aria-controls="${id}" aria-expanded="${c.expanded}">
                 ${c.expanded ? 'Show fewer' : `Show ${c.hidden} more`}</button>` : ''}`;
+    }
+
+    // ---- Inspector: the card text behind a popover section or analysis row ---------------------
+
+    function openInspect(reasons, { title, sub = '', opponents = [] }) {
+        const v = inspectView(reasons, ctx, { title, opponents });
+        ui.inspect = { mine: v.sides.filter(x => !x.theirs).map(x => x.hero), theirs: v.sides.filter(x => x.theirs).map(x => x.hero) };
+        $('inspectTitle').textContent = title;
+        $('inspectSub').textContent = sub;
+        $('inspectLines').innerHTML = v.lines.map(l => `<li class="reason reason--${l.kind}">${escapeHtml(l.text)}</li>`).join('');
+        const ready = window.BestiaryGraph && window.BestiaryGraph.ready;
+        $('inspectSides').innerHTML = ready ? window.BestiaryGraph.evidence(v.sides) : '<p class="muted">Loading the cards…</p>';
+        $('inspectInGraph').hidden = !ui.inspect.mine.length;
+        if (!$('inspectDialog').open) $('inspectDialog').showModal();
+    }
+
+    // A popover section (the hero with its teammates, the band, the matchup) or one of its lines
+    function inspectSection(name, key, lineIndex) {
+        const entry = view.pool.find(p => p.name === name);
+        const x = entry?.suggestion?.sections.find(sec => sec.key === key);
+        if (!x) return;
+        const one = lineIndex === undefined ? null : x.lines[Number(lineIndex)];
+        const p = view.suggestions.player;
+        const bands = Draft.bands(state());
+        // On a ban step the hero would play for the rival, against the acting player
+        const opponents = view.suggestions.action === 'ban' ? bands[p] : bands[p === 1 ? 2 : 1];
+        openInspect(one ? one.reasons : x.reasons, { title: x.title, sub: one ? one.text : `${x.label} · ${entry.suggestion.percentLabel} best band`, opponents });
+    }
+
+    function setupInspect() {
+        $('analysisSections').addEventListener('click', event => {
+            const button = event.target.closest('[data-row]');
+            if (!button) return;
+            const x = (shown || view).analysis.sections.find(sec => sec.key === button.dataset.row);
+            const row = x?.rows.find(r => r.key === button.dataset.key);
+            if (row) openInspect(row.reasons, { title: row.title, sub: row.label ? x.label : row.text, opponents: row.opponents });
+        });
+        $('inspectSides').addEventListener('click', event => {
+            const card = event.target.closest('[data-card]');
+            if (card) openCards({ hero: card.dataset.card });
+        });
+        $('inspectInGraph').addEventListener('click', () => {
+            $('inspectDialog').close();
+            hidePopover();
+            setTab('graph');
+            window.BestiaryGraph?.showBand(ui.inspect.mine, ui.inspect.theirs);
+        });
     }
 
     // ---- Reference cards modal (finished draft, or a shared link) ---------------------------
@@ -1237,6 +1327,7 @@
         if (solo() && available && step && suggestion && suggestion.bestWith.length) {
             items.push(['fill', `Fill band: + ${suggestion.bestWith.map(display).join(' + ')}`]);
         }
+        if (suggestion) items.push(['inspect', 'Why? Inspect reasons']);
         if (solo() && available && s.enemies.length < 3) items.push(['enemy', 'Add to Against']);
         if (solo() && available) items.push(['exclude', 'Exclude']);
         if (solo() && s.enemies.includes(name)) items.push(['unface', 'Stop facing']);
@@ -1271,6 +1362,7 @@
             closeMenu(false);
             if (act === 'primary') primaryAction(name);
             else if (act === 'fill') fillBand(name);
+            else if (act === 'inspect') pinPopover(name);
             else if (act === 'enemy') attempt(s => Draft.setEnemies(s, [...s.enemies, name]), `Facing ${display(name)}.`);
             else if (act === 'exclude') attempt(s => Draft.setExcluded(s, [...s.excluded, name]), `Excluded ${display(name)}.`);
             else if (act === 'unface') attempt(s => Draft.setEnemies(s, s.enemies.filter(n => n !== name)), `No longer facing ${display(name)}.`);
@@ -1294,7 +1386,7 @@
 
     function setupKeys() {
         document.addEventListener('keydown', event => {
-            if (ui.tab !== 'draft') return;
+            if (ui.tab !== 'draft' || $('inspectDialog').open) return;
             const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName);
             if (event.key === 'Escape') {
                 if (!$('cardMenu').hidden) closeMenu();
@@ -1306,6 +1398,10 @@
             if (!typing && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
                 event.preventDefault();
                 doUndo();
+            } else if (!typing && !event.metaKey && !event.ctrlKey && !event.altKey && event.key.toLowerCase() === 'i') {
+                // Pin the popover of the focused or hovered tile
+                const name = event.target.closest?.('#poolGrid [data-hero]')?.dataset.hero || (!$('tilePopover').hidden && ui.pop);
+                if (name && !ui.pinned) { event.preventDefault(); pinPopover(name); }
             } else if (!typing && event.key === '/') {
                 event.preventDefault();
                 $('poolSearch').focus();

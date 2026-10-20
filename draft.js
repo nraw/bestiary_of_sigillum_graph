@@ -190,28 +190,43 @@
 
     // Strategy guide roles: Controller (holds and manipulates position, ≥ 3 Hit Points), Attacker (damage,
     // ideally several targets) and Supporter (buffs, heals or debuffs from range). A hero may have several.
-    function battleRoles(hero) {
-        if (hero.battle_roles) return BATTLE_ROLES.filter(r => hero.battle_roles.includes(r));
+    // Evidence: { links, abilities (card indices), notes } showing why the hero plays `role`, or null.
+    const evidence = (links = [], abilities = [], notes = []) => ({ links, abilities, notes });
+    const hasEvidence = e => Boolean(e) && (e.links.length + e.abilities.length + e.notes.length) > 0;
+
+    function derivedRoleEvidence(hero, role) {
         const links = hero.trait_links;
-        const has = (label, roles) => links.some(l => l.label === label && (!roles || roles.includes(l.role)));
         const abilities = [hero.core_ability, ...hero.support_abilities];
         const isLong = source => {
             const ability = abilities.find(a => a.name === source);
             return Boolean(ability) && !SHORT_RANGES.includes(ability.range);
         };
+        const where = (label, roles) => links.filter(l => l.label === label && (!roles || roles.includes(l.role)));
+        if (role === 'Controller') {
+            const found = [...where('Displacement'), ...where('Stun', ['inflicts']), ...where('Swiftness', ['grants'])];
+            return hero.vitality >= 3 && found.length ? evidence(found, [], [`Vitality ${hero.vitality}`]) : null;
+        }
+        if (role === 'Attacker') {
+            const found = [...where('AoE'), ...where('Attack increase', ['gains'])];
+            const scaling = SCALING_ATTACK.test(hero.core_ability.effect) ? [0] : [];
+            return found.length || scaling.length ? evidence(found, scaling) : null;
+        }
         const supports = l => l.role === 'grants'
             || (l.role === 'inflicts' && NEGATIVE.includes(l.label) && (l.on || 'enemy') === 'enemy')
             || (l.role === 'has' && l.label === 'Healing');
-
-        const roles = {
-            Controller: hero.vitality >= 3
-                && (has('Displacement') || has('Stun', ['inflicts']) || has('Swiftness', ['grants'])),
-            Attacker: SCALING_ATTACK.test(hero.core_ability.effect) || has('AoE')
-                || has('Attack increase', ['gains']),
-            Supporter: links.some(l => supports(l) && l.sources.some(isLong))
-        };
-        return BATTLE_ROLES.filter(r => roles[r]);
+        const found = links.filter(l => supports(l) && l.sources.some(isLong));
+        return found.length ? evidence(found) : null;
     }
+
+    // Curated roles (battle_roles) win; a curated role the rules can't see is explained by its note
+    function roleEvidence(hero, role) {
+        if (hero.battle_roles && !hero.battle_roles.includes(role)) return null;
+        const derived = derivedRoleEvidence(hero, role);
+        if (derived || !hero.battle_roles) return derived;
+        return evidence([], [], [hero.battle_roles_note].filter(Boolean));
+    }
+
+    const battleRoles = hero => BATTLE_ROLES.filter(role => roleEvidence(hero, role));
 
     // Roles the hero can fill, with vitality (a hardier hero holds a role longer) breaking ties
     const versatility = hero => battleRoles(hero).length + hero.vitality / 10;
@@ -272,31 +287,37 @@
     const abilityByName = (hero, name) => [hero.core_ability, ...hero.support_abilities].find(a => a.name === name);
 
     // Labels from `labels` the hero puts on the battlefield (self-harm does not count)
-    const supplied = (hero, labels) => [...new Set(hero.trait_links.filter(l => SUPPLY_ROLES.includes(l.role)
-        && labels.includes(l.label) && !(l.role === 'inflicts' && (l.on === 'self' || l.on === 'ally'))).map(l => l.label))];
-    const supplies = (hero, labels) => supplied(hero, labels).length > 0;
-    const grants = (hero, labels) => hero.trait_links.some(l => l.role === 'grants' && labels.includes(l.label));
+    const supplyLinks = (hero, labels) => hero.trait_links.filter(l => SUPPLY_ROLES.includes(l.role)
+        && labels.includes(l.label) && !(l.role === 'inflicts' && (l.on === 'self' || l.on === 'ally')));
+    const supplied = (hero, labels) => [...new Set(supplyLinks(hero, labels).map(l => l.label))];
+    const supplies = (hero, labels) => supplyLinks(hero, labels).length > 0;
+    const grantLinks = (hero, labels) => hero.trait_links.filter(l => l.role === 'grants' && labels.includes(l.label));
+    const grants = (hero, labels) => grantLinks(hero, labels).length > 0;
+    const labelLinks = (hero, labels) => hero.trait_links.filter(l => labels.includes(l.label));
     // Repositions enemies (not only itself or its allies)
-    const movesEnemies = hero => hero.trait_links.some(l => l.label === 'Displacement' && l.sources.some(src => {
+    const moveLinks = hero => hero.trait_links.filter(l => l.label === 'Displacement' && l.sources.some(src => {
         const ability = abilityByName(hero, src);
         return ability && /enemy|character|target/i.test(ability.target) && !/^any ally/i.test(ability.target);
     }));
+    const movesEnemies = hero => moveLinks(hero).length > 0;
 
     // Several heroes pushing the same plan. Variety themes ("a wide range of buffs") count distinct effects
     // rather than heroes. Each theme is weighted by its rarity across the roster (createContext).
     const DEBUFFS = ['Attack decrease', 'Defense decrease', 'Control decrease', 'Slowness', 'Poison'];
+    const themeOf = (name, links, extra = {}) => ({ name, links, test: h => links(h).length > 0, ...extra });
     const THEMES = [
-        { name: 'Stun lock', test: h => supplies(h, ['Stun']) },
-        { name: 'Silence', test: h => supplies(h, ['Silence']) },
-        { name: 'Debuffs', test: h => supplies(h, DEBUFFS), variety: h => supplied(h, DEBUFFS) },
-        { name: 'Buffs', test: h => supplies(h, POSITIVE), variety: h => supplied(h, POSITIVE) },
-        { name: 'Attack boosts', test: h => supplies(h, ['Attack increase']) },
-        { name: 'Tower control', test: h => supplies(h, ['Control increase', 'Control decrease']) },
-        { name: 'Cooldowns', test: h => supplies(h, ['Cooldown-Manipulation']) },
-        { name: 'Mobility', test: h => h.labels.includes('Mobility') },
-        { name: 'Ranged', test: h => attackRange(h) === 'Ranged' },
-        { name: 'Repositioning', test: movesEnemies }
+        themeOf('Stun lock', h => supplyLinks(h, ['Stun'])),
+        themeOf('Silence', h => supplyLinks(h, ['Silence'])),
+        themeOf('Debuffs', h => supplyLinks(h, DEBUFFS), { variety: h => supplied(h, DEBUFFS) }),
+        themeOf('Buffs', h => supplyLinks(h, POSITIVE), { variety: h => supplied(h, POSITIVE) }),
+        themeOf('Attack boosts', h => supplyLinks(h, ['Attack increase'])),
+        themeOf('Tower control', h => supplyLinks(h, ['Control increase', 'Control decrease'])),
+        themeOf('Cooldowns', h => supplyLinks(h, ['Cooldown-Manipulation'])),
+        themeOf('Mobility', h => labelLinks(h, ['Mobility'])),
+        { name: 'Ranged', test: h => attackRange(h) === 'Ranged', evidence: h => evidence(labelLinks(h, ['Ranged']), [0]) },
+        themeOf('Repositioning', moveLinks)
     ];
+    const themeEvidence = (theme, hero) => (theme.evidence ? theme.evidence(hero) : evidence(theme.links(hero)));
     // Rare themes count for more: log(heroes / members) relative to a theme a quarter of the roster shares
     const themeRarity = (theme, heroes) => {
         const members = heroes.filter(theme.test).length || 1;
@@ -307,28 +328,44 @@
     const POSITIONAL = ['Distance', 'Open line', 'Isolated enemies', 'Unengaged enemies', 'Exposed enemies', 'Adjacent enemies', 'Enemies 1 hex away', 'Clustered enemies',
         'Terrain difference', 'Forest'];
     const TERRAIN = ['Mountain', 'Water', 'Forest'];
-    const wantsPosition = hero => hero.trait_links.some(l => l.role === 'benefits_from' && l.on === 'enemy' && POSITIONAL.includes(l.label));
-
+    
     // General team effects from the strategy guide and rulebook, beyond one hero's need meeting another's supply
+    const attackerEvidence = (h, roles) => (roles.includes('Attacker') ? roleEvidence(h, 'Attacker') : null);
+    const benefitLinks = (h, label, on) => h.trait_links.filter(l => l.role === 'benefits_from' && l.label === label && (!on || l.on === on));
+    const cooldownAbilities = h => [h.core_ability, ...h.support_abilities].map((a, i) => (a.cooldown ? i : -1)).filter(i => i >= 0);
+    const enabler = (id, detail, supply, need, text) => ({ id, detail, supply, need, text,
+        supplier: h => supply(h).length > 0, target: (h, roles) => hasEvidence(need(h, roles)) });
     const ENABLERS = [
-        { id: 'swiftness', detail: 'Swiftness', supplier: h => grants(h, ['Swiftness']), target: (h, roles) => roles.includes('Attacker'),
-            text: (s, t) => `${s}'s Swiftness lets ${t} move and still attack` },
-        { id: 'attack-boost', detail: 'attack boost', supplier: h => grants(h, ['Attack increase']), target: (h, roles) => roles.includes('Attacker'),
-            text: (s, t) => `${s} boosts ${t}'s attack` },
-        { id: 'cooldowns', detail: 'cooldowns', supplier: h => grants(h, ['Cooldown-Manipulation']), target: () => true,
-            text: (s, t) => `${s} shortens ${t}'s cooldowns` },
-        { id: 'protection', detail: 'protection', supplier: h => grants(h, ['Defense increase', 'Resistance', 'Vampirism']) || h.labels.includes('Healing'),
-            target: (h, roles) => roles.includes('Attacker') && h.vitality <= 3,
-            text: (s, t) => `${s} keeps ${t} alive` },
-        { id: 'setup', detail: 'positioning', supplier: movesEnemies, target: wantsPosition,
-            text: (s, t) => `${s} moves enemies into position for ${t}` },
-        { id: 'injuries', detail: 'injuries', supplier: h => h.labels.includes('AoE'),
-            target: h => h.trait_links.some(l => l.role === 'benefits_from' && l.label === 'Injury' && l.on === 'enemy'),
-            text: (s, t) => `${s}'s area attacks injure enemies for ${t}` },
-        { id: 'terrain', detail: 'terrain', supplier: h => h.trait_links.some(l => l.role === 'places' && TERRAIN.includes(l.label)),
-            target: h => h.trait_links.some(l => l.role === 'benefits_from' && l.label === 'Terrain difference'),
-            text: (s, t) => `${s}'s terrain creates a terrain difference for ${t}` }
+        enabler('swiftness', 'Swiftness', h => grantLinks(h, ['Swiftness']), attackerEvidence,
+            (s, t) => `${s}'s Swiftness lets ${t} move and still attack`),
+        enabler('attack-boost', 'attack boost', h => grantLinks(h, ['Attack increase']), attackerEvidence,
+            (s, t, v) => `${s} ${v('boosts', 'boost')} ${t}'s attack`),
+        enabler('cooldowns', 'cooldowns', h => grantLinks(h, ['Cooldown-Manipulation']),
+            h => evidence([], cooldownAbilities(h), cooldownAbilities(h).length ? [] : ['Every ability can be cooled down']),
+            (s, t, v) => `${s} ${v('shortens', 'shorten')} ${t}'s cooldowns`),
+        enabler('protection', 'protection',
+            h => [...grantLinks(h, ['Defense increase', 'Resistance', 'Vampirism']), ...h.trait_links.filter(l => l.label === 'Healing' && l.role === 'has')],
+            (h, roles) => {
+                const attacker = attackerEvidence(h, roles);
+                return attacker && h.vitality <= 3 ? { ...attacker, notes: [...attacker.notes, `Vitality ${h.vitality}`] } : null;
+            },
+            (s, t, v) => `${s} ${v('keeps', 'keep')} ${t} alive`),
+        enabler('setup', 'positioning', moveLinks,
+            h => evidence(h.trait_links.filter(l => l.role === 'benefits_from' && l.on === 'enemy' && POSITIONAL.includes(l.label))),
+            (s, t, v) => `${s} ${v('moves', 'move')} enemies into position for ${t}`),
+        enabler('injuries', 'injuries', h => labelLinks(h, ['AoE']), h => evidence(benefitLinks(h, 'Injury', 'enemy')),
+            (s, t) => `${s}'s area attacks injure enemies for ${t}`),
+        enabler('terrain', 'terrain', h => h.trait_links.filter(l => l.role === 'places' && TERRAIN.includes(l.label)),
+            h => evidence(benefitLinks(h, 'Terrain difference')),
+            (s, t) => `${s}'s terrain creates a terrain difference for ${t}`)
     ];
+
+    // "A and B move enemies into position for C": `text(suppliers, targets, verb)`, the verb agreeing with the suppliers
+    const andList = list => list.map(display).join(', ').replace(/, ([^,]*)$/, ' and $1');
+    function enablerText(rule, suppliers, targets) {
+        const e = ENABLERS.find(x => x.id === rule);
+        return e.text(andList(suppliers), andList(targets), (one, many) => (suppliers.length > 1 ? many : one));
+    }
 
     function computeTeam(band, ctx) {
         const w = ctx.weights;
@@ -343,14 +380,15 @@
         ctx.relations.forEach(r => {
             if (r.type !== 'partner' || r.supplier === r.needer || !inBand(band, r.supplier, r.needer)) return;
             const key = r.rule === 'effects' ? `${needKey(r)}:${r.supplier}` : needKey(r);
-            if (!partners.has(key)) partners.set(key, { r, suppliers: new Set() });
+            if (!partners.has(key)) partners.set(key, { r, suppliers: new Set(), relations: [] });
             partners.get(key).suppliers.add(r.supplier);
+            partners.get(key).relations.push(r);
         });
-        partners.forEach(({ r, suppliers }, key) => {
+        partners.forEach(({ r, suppliers, relations }, key) => {
             const list = [...suppliers];
             add('synergy', `synergy:${key}`, 'positive', r.rule === 'effects' ? w.effect : w.synergy,
                 `Synergy: ${heroList(list)} → ${display(r.needer)} (${r.need.label})`, [...list, r.needer],
-                helped(r.needer, list, r.need.label));
+                { ...helped(r.needer, list, r.need.label), relations });
         });
 
         // Enablers: one bonus per (effect, ally helped), whoever supplies it
@@ -360,7 +398,7 @@
             const suppliers = band.filter(n => n !== target && e.supplier(ctx.byName.get(n)));
             if (!suppliers.length) return;
             add('synergy', `enabler:${e.id}:${target}`, 'positive', w.enabler,
-                e.text(heroList(suppliers), display(target)), [...suppliers, target], helped(target, suppliers, e.detail));
+                enablerText(e.id, suppliers, [target]), [...suppliers, target], { ...helped(target, suppliers, e.detail), rule: e.id });
         }));
 
         // Theme: several heroes pushing the same plan
@@ -371,14 +409,14 @@
             const strength = effects ? Math.max(members.length, effects.size) - 1 : members.length - 1;
             const detail = effects ? `${[...effects].join(', ')}` : heroList(members);
             add('theme', `theme:${theme.name}`, 'positive', w.theme * ctx.themeRarity.get(theme.name) * strength,
-                `Theme: ${theme.name} (${detail})`, members);
+                `Theme: ${theme.name} (${detail})`, members, { theme: theme.name });
         });
 
         // Battle-role coverage
         const coverage = roleCoverage(band, ctx);
         if (coverage.covered.length) {
             add('coverage', 'coverage', 'positive', w.coverage * coverage.covered.length,
-                `Covers ${coverage.covered.length} of 3 roles`, Object.values(coverage.assignment));
+                `Covers ${coverage.covered.length} of 3 roles`, Object.values(coverage.assignment), { assignment: coverage.assignment });
         }
         if (band.length === BAND_SIZE) {
             coverage.missing.forEach(role => add('coverage', `coverage:missing:${role}`, 'warning', -w.missingRole,
@@ -395,18 +433,57 @@
         }
 
         // Internal conflicts
-        const conflicts = new Set();
+        const conflicts = new Map();
         ctx.relations.forEach(r => {
             if (r.type !== 'conflict' || r.supplier === r.needer || !inBand(band, r.supplier, r.needer)) return;
             const id = `conflict:${r.supplier}>${r.needer}:${r.need.label}`;
-            if (conflicts.has(id)) return;
-            conflicts.add(id);
+            if (conflicts.has(id)) { conflicts.get(id).push(r); return; }
+            conflicts.set(id, [r]);
             add('conflict', id, 'warning', -w.conflict,
-                `Conflicts: ${display(r.supplier)}'s ${r.supply.label} hinders ${display(r.needer)}`, [r.supplier, r.needer]);
+                `Conflicts: ${display(r.supplier)}'s ${r.supply.label} hinders ${display(r.needer)}`, [r.supplier, r.needer],
+                { relations: conflicts.get(id) });
         });
         if (band.length >= 2 && !conflicts.size) add('conflict', 'conflict:none', 'info', 0, 'No internal conflicts', []);
 
         return { total: reasons.reduce((t, r) => t + r.delta, 0), reasons };
+    }
+
+    // The card evidence behind a reason, per hero: [{ hero, links, abilities, notes }], the reason's heroes first
+    function reasonEvidence(reason, ctx) {
+        const found = new Map();
+        const put = (hero, e) => {
+            if (!hasEvidence(e)) return;
+            if (!found.has(hero)) found.set(hero, { links: new Set(), abilities: new Set(), notes: new Set() });
+            const f = found.get(hero);
+            e.links.forEach(l => f.links.add(l));
+            e.abilities.forEach(i => f.abilities.add(i));
+            e.notes.forEach(n => f.notes.add(n));
+        };
+        const hero = name => ctx.byName.get(name);
+        const roles = (name, list) => list.forEach(role => put(name, roleEvidence(hero(name), role)));
+        if (reason.relations) {
+            reason.relations.forEach(r => { put(r.supplier, evidence([r.supply])); put(r.needer, evidence([r.need])); });
+        } else if (reason.rule && reason.beneficiary) {
+            const e = ENABLERS.find(x => x.id === reason.rule);
+            reason.suppliers.forEach(n => put(n, evidence(e.supply(hero(n)))));
+            put(reason.beneficiary, e.need(hero(reason.beneficiary), ctx.roles.get(reason.beneficiary)));
+        } else if (reason.theme) {
+            const theme = THEMES.find(t => t.name === reason.theme);
+            reason.heroes.forEach(n => put(n, themeEvidence(theme, hero(n))));
+        } else if (reason.assignment) {
+            Object.entries(reason.assignment).forEach(([role, n]) => roles(n, [role]));
+        } else if (reason.factor === 'versatility' || reason.id === 'fills') {
+            reason.heroes.forEach(n => roles(n, reason.roles || ctx.roles.get(n)));
+        } else if (reason.factor === 'durability') {
+            reason.heroes.forEach(n => put(n, evidence([], [], [`Vitality ${hero(n).vitality}`])));
+        } else if (reason.band) {
+            scoreTeam(reason.band, ctx).reasons.forEach(r => reasonEvidence(r, ctx).forEach(e => put(e.hero, e)));
+        }
+        const order = [...reason.heroes, ...[...found.keys()].filter(n => !reason.heroes.includes(n))];
+        return order.filter(n => found.has(n)).map(n => {
+            const f = found.get(n);
+            return { hero: n, links: [...f.links], abilities: [...f.abilities].sort((a, b) => a - b), notes: [...f.notes] };
+        });
     }
 
     const bandKey = band => [...band].sort().join('|');
@@ -431,7 +508,7 @@
             const id = `${ours ? 'counter' : 'countered'}:${r.supplier}>${r.needer}:${r.need.label}`;
             if (seen.has(id)) return;
             seen.add(id);
-            const relation = { attacker: r.supplier, victim: r.needer, supply: r.supply, need: r.need, rule: r.rule };
+            const relation = { attacker: r.supplier, victim: r.needer, supply: r.supply, need: r.need, rule: r.rule, relations: [r] };
             reasons.push(ours
                 ? { id, factor: 'matchup', kind: 'counter', delta: w.counter,
                     text: `Counters ${display(r.needer)} (${r.supply.label})`, heroes: [r.supplier, r.needer], ...relation }
@@ -582,7 +659,7 @@
         return suggestPick(state, ctx, limit, { player: rival }).map(s => ({
             ...s,
             reasons: [{ id: 'ban:denies', factor: 'ban', kind: 'positive', delta: s.score,
-                text: `Denies Player ${rival}: ${s.bestBand.map(display).join(' + ')}`, heroes: [s.name] }, ...s.reasons]
+                text: `Denies Player ${rival}: ${s.bestBand.map(display).join(' + ')}`, heroes: [s.name], band: s.bestBand }, ...s.reasons]
         }));
     }
 
@@ -615,7 +692,7 @@
         draftSequence, createDraft, applyAction, undo, reset, currentStep, isComplete,
         bands, bans, myBand, opponentBand, unavailableReason, isAvailable, availableHeroes, randomHero,
         setEnemies, setExcluded, removePick, movePick, replacePick, fillBand,
-        size, attackRange, battleRoles, versatility,
+        size, attackRange, battleRoles, roleEvidence, reasonEvidence, enablerText, versatility,
         createContext, roleCoverage, fillableRoles, scoreTeam, scoreMatchup, allBands, topPercent, bestBand, bandPercent,
         suggestPick, suggestBands, suggestBan, suggestFor, suggestSwaps
     };

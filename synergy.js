@@ -218,24 +218,26 @@
         return [...arcs.values()];
     }
 
-    // The card side of an arc: per hero (supplier first) the abilities behind its part in the
-    // relations, as [{ ability, index, links }] in card order, plus links no ability causes (Small)
-    function arcAbilities(arc, heroes) {
-        const order = arc.aToB || !arc.bToA ? [arc.a, arc.b] : [arc.b, arc.a];
-        return order.map(name => {
-            const hero = heroes.find(h => h.name === name);
-            const links = [...new Set(arc.relations.flatMap(r => [
-                ...(r.supplier === name ? [r.supply] : []), ...(r.needer === name ? [r.need] : [])]))];
-            const cards = [hero.core_ability, ...hero.support_abilities];
-            const abilities = cards
-                .map((ability, index) => ({ ability, index, links: links.filter(l => ability.name && l.sources.includes(ability.name)) }))
-                .filter(g => g.links.length);
-            const named = new Set(cards.map(a => a.name).filter(Boolean));
-            return { hero: name, abilities, cardLevel: links.filter(l => !l.sources.some(src => named.has(src))) };
-        });
+    // One hero's card side of some trait links: the abilities they come from, as [{ ability, index, links }]
+    // in card order, plus links no ability causes (Small). `abilities` adds card indices shown without a link.
+    function heroAbilities(hero, links, { abilities: extra = [] } = {}) {
+        const unique = [...new Set(links)];
+        const cards = [hero.core_ability, ...hero.support_abilities];
+        const abilities = cards
+            .map((ability, index) => ({ ability, index, links: unique.filter(l => ability.name && l.sources.includes(ability.name)) }))
+            .filter(g => g.links.length || extra.includes(g.index));
+        const named = new Set(cards.map(a => a.name).filter(Boolean));
+        return { hero: hero.name, abilities, cardLevel: unique.filter(l => !l.sources.some(src => named.has(src))) };
     }
 
-    const api = { computeSynergies, heroSynergies, synergySummary, synergyArcs, arcAbilities, describeRelation, titleCase, abilityList, POSITIVE, NEGATIVE, formationVerb };
+    // The card side of an arc: per hero (supplier first) the abilities behind its part in the relations
+    function arcAbilities(arc, heroes) {
+        const order = arc.aToB || !arc.bToA ? [arc.a, arc.b] : [arc.b, arc.a];
+        return order.map(name => heroAbilities(heroes.find(h => h.name === name), arc.relations.flatMap(r => [
+            ...(r.supplier === name ? [r.supply] : []), ...(r.needer === name ? [r.need] : [])])));
+    }
+
+    const api = { computeSynergies, heroSynergies, synergySummary, synergyArcs, arcAbilities, heroAbilities, describeRelation, titleCase, abilityList, POSITIVE, NEGATIVE, formationVerb };
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;

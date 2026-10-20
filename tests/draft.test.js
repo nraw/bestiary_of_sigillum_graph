@@ -478,3 +478,83 @@ test('effect needs score once per teammate supplying the effect, and not for oth
     two.forEach(r => assert.strictEqual(r.delta, ctx.weights.effect));
     assert.match(two[0].text, /^Synergy: (Toxicum|Librorum) → Carnifex \(Negative effect\)$/);
 });
+
+// ---- Card evidence behind reasons --------------------------------------------------------------
+
+const evidenceOf = (reason, hero) => D.reasonEvidence(reason, ctx).find(e => e.hero === hero);
+const linkTags = e => e.links.map(l => `${l.role}:${l.label}`).sort();
+
+test('every reason with heroes names card evidence for each of them', () => {
+    const solo = D.setEnemies(D.createDraft('solo'), ['SAXUM', 'MORTUM']);
+    const reasons = [
+        ...[['TOXICUM', 'TEMPUS', 'EQUITA'], ['IGNIFER', 'EQUITA', 'TOXICUM'], ['REDUX', 'FERRARIUS', 'ARMUS'], ['CARNIFEX', 'TOXICUM', 'LIBRORUM']]
+            .flatMap(band => [...D.scoreTeam(band, ctx).reasons, ...D.scoreMatchup(band, ['SAXUM', 'MORTUM', 'GOETIUM'], ctx).reasons]),
+        ...D.suggestPick(solo, ctx, Infinity).flatMap(s => s.reasons),
+        ...D.suggestPick(pickAll(solo, ['TOXICUM']), ctx, Infinity).flatMap(s => s.reasons)
+    ];
+    reasons.filter(r => r.heroes.length).forEach(r => {
+        const evidence = D.reasonEvidence(r, ctx);
+        r.heroes.forEach(h => {
+            const e = evidence.find(x => x.hero === h);
+            assert.ok(e && (e.links.length || e.abilities.length || e.notes.length), `${r.id}: ${h}`);
+        });
+    });
+});
+
+test('synergy, conflict and matchup evidence are the two sides of the relation', () => {
+    const team = D.scoreTeam(['TOXICUM', 'TEMPUS', 'EQUITA'], ctx).reasons;
+    const poison = team.find(r => r.id.startsWith('synergy:TOXICUM:Poison'));
+    assert.ok(evidenceOf(poison, 'TOXICUM').links.every(l => l.label === 'Poison' && l.role === 'benefits_from'));
+    assert.deepStrictEqual(linkTags(evidenceOf(poison, 'EQUITA')), ['inflicts:Poison']);
+    const counter = ctx.relations.find(r => r.type === 'counter' && r.supply.sources.length);
+    const lost = D.scoreMatchup([counter.needer], [counter.supplier], ctx).reasons.find(r => r.kind === 'warning');
+    assert.deepStrictEqual(evidenceOf(lost, counter.supplier).links, [counter.supply]);
+    assert.deepStrictEqual(evidenceOf(lost, counter.needer).links, [counter.need]);
+    const clash = ctx.relations.find(r => r.type === 'conflict' && r.supplier !== r.needer);
+    const conflict = D.scoreTeam([clash.supplier, clash.needer], ctx).reasons.find(r => r.factor === 'conflict' && r.kind === 'warning');
+    assert.ok(evidenceOf(conflict, clash.supplier).links.length && evidenceOf(conflict, clash.needer).links.length);
+});
+
+test('enabler evidence: what the supplier grants and why the target gains from it', () => {
+    const team = D.scoreTeam(['TOXICUM', 'TEMPUS', 'EQUITA'], ctx).reasons;
+    const cooldowns = team.find(r => r.id === 'enabler:cooldowns:TOXICUM');
+    assert.deepStrictEqual(linkTags(evidenceOf(cooldowns, 'TEMPUS')), ['grants:Cooldown-Manipulation']);
+    assert.deepStrictEqual(evidenceOf(cooldowns, 'TOXICUM').abilities, [1, 2], 'the abilities with a cooldown');
+    const swift = team.find(r => r.id === 'enabler:swiftness:TOXICUM');
+    assert.deepStrictEqual(linkTags(evidenceOf(swift, 'TEMPUS')), ['grants:Swiftness']);
+    assert.deepStrictEqual(evidenceOf(swift, 'TOXICUM'), { hero: 'TOXICUM', ...D.roleEvidence(byName.TOXICUM, 'Attacker') });
+});
+
+test('theme evidence: the abilities each member brings to the plan', () => {
+    const theme = D.scoreTeam(['TOXICUM', 'TEMPUS', 'EQUITA'], ctx).reasons.find(r => r.id === 'theme:Cooldowns');
+    theme.heroes.forEach(h => assert.ok(evidenceOf(theme, h).links.every(l => l.label === 'Cooldown-Manipulation'), h));
+    const ranged = D.scoreTeam(['TOXICUM', 'IGNIFER', 'EQUITA'], ctx).reasons.find(r => r.id === 'theme:Ranged');
+    ranged.heroes.forEach(h => assert.ok(evidenceOf(ranged, h).abilities.includes(0), `${h}: the core attack`));
+});
+
+test('roleEvidence explains each battle role, and battleRoles is exactly the roles with evidence', () => {
+    heroes.forEach(h => {
+        const proven = D.BATTLE_ROLES.filter(role => D.roleEvidence(h, role));
+        assert.deepStrictEqual(D.battleRoles(h), proven, h.name);
+    });
+    assert.deepStrictEqual(D.roleEvidence(byName.REDUX, 'Supporter').notes, [byName.REDUX.battle_roles_note]);
+    const attacker = heroes.find(h => !h.battle_roles && /\bper\b/.test(h.core_ability.effect));
+    assert.ok(D.roleEvidence(attacker, 'Attacker').abilities.includes(0), attacker.name);
+    const controller = D.roleEvidence(byName.SAXUM, 'Controller');
+    assert.ok(controller.notes.some(n => /Vitality \d/.test(n)) && controller.links.length);
+});
+
+test('durability evidence is each hero\'s Vitality; ban evidence covers the denied band', () => {
+    const frontline = D.scoreTeam(['SAXUM', 'TEMPUS', 'EQUITA'], ctx).reasons.find(r => r.id === 'durability:frontline');
+    assert.deepStrictEqual(evidenceOf(frontline, 'SAXUM').notes, [`Vitality ${byName.SAXUM.vitality}`]);
+    const ban = D.suggestBan(D.createDraft('ban-first'), ctx, 1)[0].reasons.find(r => r.id === 'ban:denies');
+    assert.deepStrictEqual(D.reasonEvidence(ban, ctx).map(e => e.hero).sort(), [...ban.band].sort());
+});
+
+test('enabler texts read as sentences: "and" between heroes, the verb agreeing with the suppliers', () => {
+    const setup = D.scoreTeam(['ARBORUS', 'TOXICUM', 'MAGNUS'], ctx).reasons.find(r => r.id === 'enabler:setup:ARBORUS');
+    assert.strictEqual(setup.text, 'Toxicum and Magnus move enemies into position for Arborus');
+    assert.strictEqual(D.enablerText('protection', ['ARBORUS'], ['TOXICUM', 'MAGNUS']), 'Arborus keeps Toxicum and Magnus alive');
+    assert.strictEqual(D.enablerText('swiftness', ['TEMPUS', 'IGNIFER'], ['EQUITA']), 'Tempus and Ignifer\'s Swiftness lets Equita move and still attack');
+    assert.strictEqual(D.enablerText('cooldowns', ['A', 'B', 'C'], ['D']), 'A, B and C shorten D\'s cooldowns');
+});

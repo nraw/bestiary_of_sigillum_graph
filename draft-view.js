@@ -3,7 +3,8 @@
 // and in Node via require().
 (function (root) {
     const Draft = typeof module !== 'undefined' && module.exports ? require('./draft.js') : root.Draft;
-    const { titleCase } = typeof module !== 'undefined' && module.exports ? require('./synergy.js') : root.Synergy;
+    const Synergy = typeof module !== 'undefined' && module.exports ? require('./synergy.js') : root.Synergy;
+    const { titleCase, describeRelation, heroAbilities } = Synergy;
 
     const MAX_CHIPS = 2;
     const SHORT_MAX = 32;
@@ -80,12 +81,12 @@
         };
     }
 
-    // `band`: the picks of whoever would play this hero (the rival, on a ban step)
-    function suggestionItem(s, band) {
+    // `band`: the picks of whoever would play this hero (the rival, on a ban step), called `own`; `vs`: who they face
+    function suggestionItem(s, band, own, vs) {
         return { name: s.name, display: titleCase(s.name), image: image(s.name), score: s.score,
             topPercent: s.topPercent, percentLabel: percentLabel(s.topPercent), bestBand: s.bestBand,
             bestWith: s.bestBand.filter(n => n !== s.name && !band.includes(n)),
-            reasons: s.reasons, ...chipsFor(s.reasons, s.name) };
+            reasons: s.reasons, sections: popoverSections(s.reasons, s.name, { band, own, vs }), ...chipsFor(s.reasons, s.name) };
     }
 
     // Every available hero ranked for whoever acts now, with the same verbs for both players
@@ -96,58 +97,161 @@
         const list = ban
             ? Draft.suggestBan(state, ctx, Infinity, { player: step.player })
             : Draft.suggestPick(state, ctx, Infinity, { player: step.player });
-        const band = Draft.bands(state)[ban ? (step.player === 1 ? 2 : 1) : step.player];
-        return { action: ban ? 'ban' : 'select', player: step.player, items: list.map(s => suggestionItem(s, band)) };
+        const plays = ban ? (step.player === 1 ? 2 : 1) : step.player;
+        const band = Draft.bands(state)[plays];
+        const vs = state.format === 'solo' ? 'Against' : `Player ${plays === 1 ? 2 : 1}`;
+        const own = ban ? `Player ${plays}'s band` : 'your band';
+        return { action: ban ? 'ban' : 'select', player: step.player, items: list.map(s => suggestionItem(s, band, own, vs)) };
     }
 
-    // Synergy grouped by the hero who benefits: { hero, from: [{ heroes, details }] }. Suppliers giving the
-    // same help share an entry, and the same help told twice (partner + enabler wording) is listed once.
-    function synergyGroups(reasons) {
-        const groups = new Map();
-        reasons.filter(r => r.beneficiary).forEach(r => {
-            if (!groups.has(r.beneficiary)) {
-                groups.set(r.beneficiary, { hero: r.beneficiary, display: titleCase(r.beneficiary), suppliers: new Map(), ids: [], delta: 0, preview: false });
-            }
-            const g = groups.get(r.beneficiary);
-            g.ids.push(r.id);
-            g.delta += r.delta;
-            g.preview = g.preview || Boolean(r.preview);
-            r.suppliers.forEach(supplier => {
-                if (!g.suppliers.has(supplier)) g.suppliers.set(supplier, []);
-                const details = g.suppliers.get(supplier);
-                if (!details.some(d => d.toLowerCase() === r.detail.toLowerCase())) details.push(r.detail);
-            });
+    // How much a group of reasons weighs: one dot per DOT_POINTS (the smallest bonus), at most 5
+    const DOT_POINTS = 1.5;
+    const strength = delta => ({ dots: delta > 0 ? Math.min(5, Math.max(1, Math.round(delta / DOT_POINTS))) : 0, warning: delta < 0 });
+
+    const sum = reasons => reasons.reduce((t, r) => t + r.delta, 0);
+    const andList = list => list.map(titleCase).join(', ').replace(/, ([^,]*)$/, ' and $1');
+
+    // One line for some reasons: a single relation names the abilities on both sides
+    function line(reasons, text) {
+        const r = reasons[0];
+        const rel = r.relations && r.relations[0];
+        const own = !rel ? r.text
+            : r.relations.length === 1 || !r.beneficiary ? describeRelation(rel)
+            : `${andList(r.suppliers)} each supply ${rel.need.label} for ${titleCase(rel.needer)}'s ${Synergy.abilityList(rel.need.sources)}`;
+        return { ids: reasons.map(x => x.id), reasons, text: text || own, kind: r.kind, delta: sum(reasons) };
+    }
+    const byWeight = (a, b) => (b.delta >= 0) - (a.delta >= 0) || Math.abs(b.delta) - Math.abs(a.delta);
+
+    // The same help from the same heroes to several teammates is one line ("Arborus keeps Toxicum and Magnus alive")
+    function mergedLines(reasons) {
+        const merged = new Map();
+        const lines = [];
+        reasons.forEach(r => {
+            if (!r.rule || !r.beneficiary) { lines.push(line([r])); return; }
+            const key = `${r.rule}|${r.suppliers.join('|')}`;
+            if (!merged.has(key)) { merged.set(key, []); lines.push(key); }
+            merged.get(key).push(r);
         });
-        return [...groups.values()].map(({ suppliers, ...g }) => {
-            const from = [];
-            suppliers.forEach((details, supplier) => {
-                const same = from.find(f => f.details.join('|') === details.join('|'));
-                if (same) same.heroes.push(supplier); else from.push({ heroes: [supplier], details });
-            });
-            return { ...g, from };
+        return lines.map(l => (typeof l === 'string'
+            ? line(merged.get(l), Draft.enablerText(merged.get(l)[0].rule, merged.get(l)[0].suppliers, merged.get(l).map(r => r.beneficiary)))
+            : l));
+    }
+
+    // The tile popover's reasons by who they are with: the ban (ban steps), the hero with its teammates
+    // (synergy, support, conflicts), the band as a whole (roles, themes, durability), then the matchup.
+    // `band`: the picks of whoever would play `name`; `own`: what to call that band; `vs`: who they face.
+    // Info lines are left out.
+    function popoverSections(reasons, name, { band = [], own = 'your band', vs = 'Against' } = {}) {
+        const sections = new Map();
+        const put = (key, reason, make) => {
+            if (!sections.has(key)) sections.set(key, { key, reasons: [], ...make() });
+            sections.get(key).reasons.push(reason);
+        };
+        const kept = reasons.filter(r => r.kind !== 'info');
+        const isTeam = r => (r.factor === 'synergy' || r.factor === 'conflict') && r.heroes.some(h => h !== name && band.includes(h));
+        const teammates = band.filter(h => h !== name && kept.some(r => isTeam(r) && r.heroes.includes(h)));
+        kept.forEach(r => {
+            if (r.factor === 'ban') put('ban', r, () => ({ kind: 'ban', label: 'Ban', title: r.text }));
+            else if (r.factor === 'matchup') put('matchup', r, () => ({ kind: 'matchup', label: `vs ${vs}`, title: `${titleCase(name)} vs ${vs}` }));
+            else if (isTeam(r)) put('team', r, () => ({ kind: 'team', label: `With ${own}`, title: `${titleCase(name)} with ${andList(teammates)}`, heroes: teammates }));
+            else put('band', r, () => ({ kind: 'band', label: 'Band', title: `${titleCase(name)} in the band` }));
+        });
+        const ORDER = ['ban', 'team', 'band', 'matchup'];
+        return [...sections.values()].map(x => {
+            const delta = sum(x.reasons);
+            const lines = x.key === 'team' ? mergedLines(x.reasons) : x.reasons.map(r => line([r]));
+            return { ...x, delta, strength: strength(delta), lines: lines.sort(byWeight) };
+        }).sort((a, b) => ORDER.indexOf(a.key) - ORDER.indexOf(b.key));
+    }
+
+    // ---- Band analysis rows --------------------------------------------------------------------
+
+    const ANALYSIS_SECTIONS = [
+        { key: 'synergy', label: 'Synergy in band', test: r => r.factor === 'synergy' },
+        { key: 'conflict', label: 'Careful with', test: r => r.factor === 'conflict' && r.kind === 'warning' },
+        { key: 'theme', label: 'Themes', test: r => r.factor === 'theme' },
+        { key: 'matchup', label: 'Matchup', test: r => r.factor === 'matchup' },
+        { key: 'durability', label: 'Durability', test: r => r.factor === 'durability' }
+    ];
+
+    // Rows of one analysis section: { key, label, text, title, kind, strength, preview, reasons }. Synergy and
+    // conflicts are one sentence per fact (no label); matchup rows are per pair, themes and durability per reason.
+    function rowsFor(key, reasons, opponents) {
+        const finish = row => {
+            const delta = sum(row.reasons);
+            return { ...row, title: row.title || row.label, delta, strength: strength(delta), preview: row.reasons.some(r => r.preview), opponents };
+        };
+        if (key === 'synergy' || key === 'conflict') {
+            return mergedLines(reasons).map(l => finish({
+                key: l.ids.join('+'), label: '', text: l.text, kind: l.kind, reasons: l.reasons,
+                title: andList([...new Set(l.reasons.flatMap(r => r.heroes))])
+            })).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+        }
+        const rows = new Map();
+        const put = (rowKey, r, make) => {
+            if (!rows.has(rowKey)) rows.set(rowKey, { key: rowKey, reasons: [], ...make() });
+            rows.get(rowKey).reasons.push(r);
+        };
+        reasons.forEach(r => {
+            if (key === 'matchup') {
+                const ours = r.kind === 'counter' ? r.attacker : r.victim;
+                const theirs = r.kind === 'counter' ? r.victim : r.attacker;
+                put(`${r.kind}:${ours}|${theirs}`, r, () => ({ kind: r.kind,
+                    label: r.kind === 'counter' ? `${titleCase(ours)} counters ${titleCase(theirs)}` : `${titleCase(theirs)} threatens ${titleCase(ours)}` }));
+            } else {
+                put(r.id, r, () => ({ kind: r.kind,
+                    label: key === 'theme' ? r.theme : r.id === 'durability:fragile' ? 'Fragile' : 'Frontline' }));
+            }
+        });
+        return [...rows.values()].map(row => {
+            const rs = row.reasons;
+            const text = key === 'matchup' ? [...new Set(rs.map(r => r.supply.label))].join(', ')
+                : key === 'theme' ? rs[0].text.replace(/^Theme: [^(]*\(/, '').replace(/\)$/, '')
+                : rs[0].text.replace(/^(Frontline|Fragile): /, '');
+            return finish({ ...row, text });
         }).sort((a, b) => b.delta - a.delta);
     }
 
-    // Popover reasons by type; each type has its own marker colour in the UI
-    const REASON_TYPES = [
-        { type: 'ban', label: 'Ban', test: r => r.factor === 'ban' },
-        { type: 'roles', label: 'Roles', test: r => r.factor === 'coverage' || r.factor === 'versatility' },
-        { type: 'synergy', label: 'Synergy', test: r => r.id.startsWith('synergy:') },
-        { type: 'support', label: 'Support', test: r => r.id.startsWith('enabler:') },
-        { type: 'theme', label: 'Themes', test: r => r.factor === 'theme' },
-        { type: 'matchup', label: 'Matchup', test: r => r.factor === 'matchup' },
-        { type: 'durability', label: 'Durability', test: r => r.factor === 'durability' },
-        { type: 'conflict', label: 'Conflicts', test: r => r.factor === 'conflict' },
-        { type: 'other', label: 'Other', test: () => true }
-    ];
-
-    function reasonGroups(reasons) {
-        const typeOf = r => REASON_TYPES.find(t => t.test(r)).type;
-        return REASON_TYPES.map(({ type, label }) => ({ type, label, reasons: reasons.filter(r => typeOf(r) === type) }))
-            .filter(g => g.reasons.length);
+    function analysisSections(reasons, { vs = 'Against', opponents = [] } = {}) {
+        return ANALYSIS_SECTIONS.map(({ key, label, test }) => ({
+            key, label: key === 'matchup' ? `${label} vs ${vs}` : label,
+            rows: rowsFor(key, reasons.filter(test), opponents)
+        })).filter(x => x.rows.length);
     }
 
-    const groupText = g => g.from.map(f => `${names(f.heroes)} (${f.details.join(', ')})`).join(', ');
+    // Points per scoring factor (they add up to the band's value)
+    const FACTORS = [['coverage', 'Roles'], ['synergy', 'Synergy'], ['theme', 'Themes'], ['durability', 'Durability'], ['conflict', 'Conflicts'], ['matchup', 'Matchup']];
+    const breakdown = reasons => FACTORS
+        .map(([factor, label]) => ({ factor, label, delta: sum(reasons.filter(r => r.factor === factor)) }))
+        .filter(f => f.delta !== 0);
+
+    // ---- Inspector: the reasons in words and the card text behind them ------------------------------
+
+    // A single relation reads as its sentence, several as one sentence each; enablers merge as in the popover
+    const inspectLines = reasons => mergedLines(reasons).flatMap(l => (l.reasons.length === 1 && l.reasons[0].relations
+        ? l.reasons[0].relations.map(rel => ({ text: describeRelation(rel), kind: l.kind }))
+        : [{ text: l.text, kind: l.kind }]));
+
+    // `reasons`: a popover section or analysis row. Sides: one per hero in card order of appearance,
+    // with the abilities to mark ({ ability, index, links }), card-level links and notes (Vitality, curated roles)
+    function inspectView(reasons, ctx, { title = '', opponents = [] } = {}) {
+        const all = reasons.flatMap(r => (r.band ? [r, ...Draft.scoreTeam(r.band, ctx).reasons.filter(x => x.kind !== 'info')] : [r]));
+        const lines = [];
+        inspectLines(all).forEach(l => { if (!lines.some(x => x.text === l.text)) lines.push(l); });
+        const merged = new Map();
+        reasons.forEach(r => Draft.reasonEvidence(r, ctx).forEach(e => {
+            if (!merged.has(e.hero)) merged.set(e.hero, { links: [], abilities: [], notes: [] });
+            const m = merged.get(e.hero);
+            e.links.forEach(l => { if (!m.links.includes(l)) m.links.push(l); });
+            e.abilities.forEach(i => { if (!m.abilities.includes(i)) m.abilities.push(i); });
+            e.notes.forEach(n => { if (!m.notes.includes(n)) m.notes.push(n); });
+        }));
+        const sides = [...merged.entries()].map(([hero, m]) => ({
+            ...heroAbilities(ctx.byName.get(hero), m.links, { abilities: m.abilities }),
+            display: titleCase(hero), image: image(hero), theirs: opponents.includes(hero), notes: m.notes
+        }));
+        return { title, lines, sides };
+    }
 
     // The first `limit` items unless expanded, and exactly how many are hidden
     const collapse = (list, limit, expanded) =>
@@ -171,7 +275,7 @@
     }
 
 
-    // Results for a (possibly previewed) band: roles, score, threats, synergy
+    // Results for a (possibly previewed) band: roles, score and every reason (team and matchup)
     function analysis(band, opponents, pool, ctx) {
         const coverage = Draft.roleCoverage(band, ctx);
         const roles = Draft.BATTLE_ROLES.map(role => ({ role, coveredBy: coverage.assignment[role] || null, change: null }));
@@ -186,12 +290,12 @@
         }
         return {
             roles, coveredCount: coverage.covered.length, score,
-            threats: opponents.length ? Draft.scoreMatchup(band, opponents, ctx).reasons.filter(r => r.kind === 'warning') : [],
-            synergy: Draft.scoreTeam(band, ctx).reasons.filter(r => r.factor === 'synergy')
+            reasons: [...Draft.scoreTeam(band, ctx).reasons, ...(opponents.length ? Draft.scoreMatchup(band, opponents, ctx).reasons : [])]
         };
     }
 
-    const withGroups = a => ({ ...a, synergyGroups: synergyGroups(a.synergy) });
+    // Rows and breakdown, once the reasons carry their preview flags
+    const withSections = (a, options) => ({ ...a, sections: analysisSections(a.reasons, options), breakdown: breakdown(a.reasons) });
 
     // Heroes a preview adds to the acting player's band (one candidate, or a whole suggested band)
     function previewHeroes(state, band, preview) {
@@ -242,7 +346,8 @@
         const available = poolEntries.filter(p => p.available).length;
 
         // Analysis of the focus band against the other; a preview shows when it's the focus band's turn
-        const base = withGroups(analysis(bands[focus], bands[other], pool, ctx));
+        const rowOptions = { vs: solo ? 'Against' : `Player ${other}`, opponents: bands[other] };
+        const base = withSections(analysis(bands[focus], bands[other], pool, ctx), rowOptions);
         let result = base;
         if (added[focus].length) {
             result = analysis([...bands[focus], ...added[focus]], bands[other], pool.filter(n => !added[focus].includes(n)), ctx);
@@ -253,9 +358,8 @@
                 const known = new Set(baseList.map(r => r.id));
                 return list.map(r => ({ ...r, preview: !known.has(r.id) }));
             };
-            result.threats = flag(result.threats, base.threats);
-            result.synergy = flag(result.synergy, base.synergy);
-            result = withGroups(result);
+            result.reasons = flag(result.reasons, base.reasons);
+            result = withSections(result, rowOptions);
         }
 
         const banLists = Draft.bans(state);
@@ -321,7 +425,7 @@
         return { label: `${step.action === 'ban' ? 'Ban' : 'Pick'} for Player ${step.player}`, enabled: true };
     }
 
-    const api = { draftView, referenceSides, graphAction, rollFrames, chipsFor, chipKind, shortReason, reasonGroups, REASON_TYPES, synergyGroups, groupText,
+    const api = { draftView, referenceSides, graphAction, rollFrames, chipsFor, chipKind, shortReason, strength, popoverSections, inspectView,
         collapse, percentLabel, percentExplain, ROLE_INFO, MAX_CHIPS };
 
     if (typeof module !== 'undefined' && module.exports) {
