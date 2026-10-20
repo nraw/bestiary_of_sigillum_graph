@@ -280,7 +280,21 @@
         return [1, 2].map(p => ({ key: String(p), label: `Player ${p}`, heroes: bands[p] }));
     }
 
-    const api = { draftView, referenceSides, chipsFor, chipKind, shortReason, reasonGroups, REASON_TYPES, synergyGroups, groupText,
+    // ---- Random hero roll -----------------------------------------------------------------
+
+    // The highlight hops between candidates, slowing down (delay in ms before the next frame), and lands on the winner
+    function rollFrames(candidates, winner, { steps = 12, rng = Math.random } = {}) {
+        if (candidates.length < 2) return [{ name: winner, delay: 0 }];
+        // Built backwards from the winner so neighbouring frames always differ
+        const names = [winner];
+        while (names.length < steps) {
+            const options = candidates.filter(n => n !== names[0]);
+            names.unshift(options[Math.floor(rng() * options.length)]);
+        }
+        return names.map((name, i) => ({ name, delay: Math.round(55 + 220 * (i / (steps - 1)) ** 2) }));
+    }
+
+    const api = { draftView, referenceSides, rollFrames, chipsFor, chipKind, shortReason, reasonGroups, REASON_TYPES, synergyGroups, groupText,
         collapse, percentLabel, MAX_CHIPS, INTRO };
 
     if (typeof module !== 'undefined' && module.exports) {

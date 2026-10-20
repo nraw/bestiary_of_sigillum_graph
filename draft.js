@@ -490,6 +490,13 @@
 
     const availableNames = (state, ctx) => ctx.heroes.map(h => h.name).filter(n => isAvailable(state, n));
 
+    // A random available hero from the candidates for the current step (null when none or the draft is done)
+    function randomHero(state, candidates, rng = Math.random) {
+        if (!currentStep(state)) return null;
+        const open = candidates.filter(n => isAvailable(state, n));
+        return open.length ? open[Math.floor(rng() * open.length)] : null;
+    }
+
     // Every way to fill the band's empty slots, scored best first
     function completions(band, pool, opponents, ctx) {
         return combinations(pool, BAND_SIZE - band.length)
@@ -614,7 +621,7 @@
     const api = {
         BATTLE_ROLES, DRAFT_FORMATS, DEFAULT_WEIGHTS, THEMES,
         draftSequence, createDraft, applyAction, undo, reset, currentStep, isComplete,
-        bands, bans, myBand, opponentBand, unavailableReason, isAvailable, availableHeroes,
+        bands, bans, myBand, opponentBand, unavailableReason, isAvailable, availableHeroes, randomHero,
         setEnemies, setExcluded, removePick, movePick, replacePick, fillBand,
         size, attackRange, battleRoles, versatility,
         createContext, roleCoverage, fillableRoles, scoreTeam, scoreMatchup, allBands, topPercent, bestBand, bandPercent,

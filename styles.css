@@ -1371,6 +1371,13 @@ kbd {
 .step-badge--done { border-color: var(--border-strong); background: none; color: var(--text-muted); }
 .pool-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .pool-count { color: var(--text-faint); font-size: 0.88rem; }
+/* Random hero: a line-drawn die in the pool bar and on the next empty slot */
+.random-btn { width: 30px; height: 28px; border: 1px solid var(--border-strong); border-radius: 8px; color: var(--gold); }
+.random-btn:not(:disabled):hover { box-shadow: 0 0 12px rgba(242, 199, 107, 0.25); }
+.random-btn:focus-visible { border-radius: 8px; }
+.random-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.random-btn svg, .slot-fate svg { transition: transform 0.3s ease; }
+.random-btn:not(:disabled):hover svg, .slot-fate:hover svg { transform: rotate(-20deg) scale(1.1); }
 .sort-switch { margin-left: auto; display: inline-flex; border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; }
 .sort-switch button { padding: 3px 10px; border: none; background: none; color: var(--text-muted); font-size: 0.9rem; }
 .sort-switch button + button { border-left: 1px solid var(--border); }
@@ -1611,6 +1618,15 @@ kbd {
 .slot-num--id { top: auto; bottom: 8px; }
 .slot-add { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: none; color: var(--text-muted); }
 .slot-add:not(:disabled):hover { color: var(--gold-bright); }
+.slot-fate { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; background: none; border: none;
+    color: var(--text-muted); font-family: 'Crimson Text', serif; font-style: italic; font-size: 0.92rem; }
+.slot-fate .ico { color: var(--gold); }
+.slot-fate:hover { color: var(--gold-bright); text-shadow: 0 0 10px rgba(242, 199, 107, 0.45); }
+.slot.is-arrived { animation: slot-arrive 0.9s ease-out; }
+@keyframes slot-arrive {
+    0% { box-shadow: inset 0 0 30px rgba(110, 72, 30, 0.35), 0 0 0 3px var(--gold-bright), 0 0 30px rgba(242, 199, 107, 0.6); }
+    100% { box-shadow: inset 0 0 30px rgba(110, 72, 30, 0.35), 0 6px 18px rgba(0, 0, 0, 0.5); }
+}
 .slot-plus { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 1px solid currentColor; font-size: 1.5rem; }
 .slot-portrait { width: 84px; height: 84px; }
 .slot-name { font-family: 'Cinzel', serif; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
@@ -1841,6 +1857,20 @@ kbd {
 }
 /* The hovered hero and the partners of its best band */
 .hero-tile.is-popped .tile-main { box-shadow: inset 0 0 22px rgba(110, 72, 30, 0.35), 0 0 0 2px var(--gold-bright), 0 0 16px rgba(242, 199, 107, 0.4); }
+/* Random roll: the highlight hops between tiles, then the chosen one flares */
+/* Hops are quicker than the tile transitions, so the highlight snaps from tile to tile */
+.pool-grid.is-rolling .tile-main { transition: none; }
+.pool-grid.is-rolling .hero-tile:not(.is-rolled) .tile-main { filter: brightness(0.55) saturate(0.7); }
+.hero-tile.is-rolled .tile-main {
+    transform: translateY(-3px);
+    box-shadow: inset 0 0 22px rgba(110, 72, 30, 0.35), 0 0 0 2px #FFB347, 0 0 24px rgba(255, 140, 40, 0.65);
+}
+.hero-tile.is-fated .tile-main { animation: tile-fated 0.5s ease-out; }
+@keyframes tile-fated {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.06); box-shadow: 0 0 0 3px #FFB347, 0 0 40px rgba(255, 140, 40, 0.85); }
+    100% { transform: scale(1); box-shadow: 0 0 0 2px #FFB347, 0 0 24px rgba(255, 140, 40, 0.65); }
+}
 .draft-pool.is-flash { animation: pool-flash 1.3s ease-out; }
 @keyframes pool-flash {
     0%, 40% { box-shadow: 0 0 0 2px var(--gold-bright), 0 0 26px rgba(242, 199, 107, 0.45); }

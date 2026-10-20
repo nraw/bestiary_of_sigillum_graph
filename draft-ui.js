@@ -3,7 +3,7 @@
 // this file draws (both unit tested). Only DOM, events and persistence live here.
 (function () {
     const Draft = window.Draft;
-    const { draftView, referenceSides, reasonGroups, percentLabel, groupText, collapse } = window.DraftView;
+    const { draftView, referenceSides, rollFrames, reasonGroups, percentLabel, groupText, collapse } = window.DraftView;
     const { encodeDraft, decodeDraft, isDraftLink } = window.DraftShare;
     const { escapeHtml, vitalityTokensSvg } = window.GraphLogic;
     const { titleCase } = window.Synergy;
@@ -25,7 +25,8 @@
         Intelligence: '<path d="M3 6c3-1 6-1 9 1 3-2 6-2 9-1v13c-3-1-6-1-9 1-3-2-6-2-9-1z"/><path d="M12 7v13"/>',
         Controller: '<path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>',
         Attacker: '<path d="M5 5l11 11M19 5 8 16"/><path d="M14 18l4-4M6 14l4 4"/>',
-        Supporter: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M7.5 12h9"/>'
+        Supporter: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M7.5 12h9"/>',
+        Dice: '<rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><g fill="currentColor" stroke="none"><circle cx="8.3" cy="8.3" r="1.5"/><circle cx="15.7" cy="8.3" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="8.3" cy="15.7" r="1.5"/><circle cx="15.7" cy="15.7" r="1.5"/></g>'
     };
     const icon = (name, cls = 'ico') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICON[name]}</svg>`;
 
@@ -190,6 +191,8 @@
             const open = $('poolFilters').classList.toggle('is-open');
             $('filtersToggle').setAttribute('aria-expanded', String(open));
         });
+        $('randomHero').innerHTML = icon('Dice');
+        $('randomHero').addEventListener('click', rollRandom);
         $('fillsToggle').addEventListener('change', event => { ui.filters.fills = event.target.checked; renderPool(); });
         $('unavailableToggle').addEventListener('change', event => { ui.filters.showUnavailable = event.target.checked; renderPool(); });
 
@@ -482,6 +485,13 @@
         $('filtersToggle').textContent = active ? `Filters (${active})` : 'Filters';
         $('poolCount').textContent = `${view.counts.available} available · ${view.counts.unavailable} unavailable`
             + (entries.length < (ui.filters.showUnavailable ? 36 : view.counts.available) ? ` · ${entries.length} shown` : '');
+        // Random respects the filters: it picks (or bans) among the available heroes shown
+        const action = view.step.action;
+        const randomBtn = $('randomHero');
+        const randomLabel = action ? `${action === 'ban' ? 'Ban' : 'Select'} a random hero${solo() ? '' : ` for Player ${view.step.player}`}` : 'Random hero';
+        randomBtn.disabled = !action || !entries.some(e => e.available);
+        randomBtn.title = action ? `${randomLabel} from those shown` : 'The draft is complete';
+        randomBtn.setAttribute('aria-label', randomLabel);
         if (!entries.length) {
             $('poolGrid').innerHTML = `<p class="empty-note">No heroes match these filters.
                 <button class="link-btn" type="button" data-act="clear-filters">Clear filters</button></p>`;
@@ -699,12 +709,14 @@
 
     // ---- Band slots ----------------------------------------------------------------------
 
-    function slotHtml(slot, { editable, choosable, count }) {
+    function slotHtml(slot, { editable, choosable, count, fate }) {
         if (!slot.hero) {
             return `<div class="slot is-empty" data-slot="${slot.index}" data-drop="slot">
                 <span class="slot-num">${slot.index + 1}</span>
                 <button class="slot-add" type="button" data-act="choose" ${choosable ? '' : 'disabled'}>
                     <span class="slot-plus" aria-hidden="true">+</span>Choose ${['1st', '2nd', '3rd'][slot.index]} hero</button>
+                ${choosable && fate ? `<button class="slot-fate" type="button" data-act="random"
+                    title="A random hero from those shown in the pool">${icon('Dice')}or let fate decide</button>` : ''}
             </div>`;
         }
         const hero = heroOf(slot.hero);
@@ -727,14 +739,17 @@
     }
 
     // Solo: your band (editable). Two-player: Player 1 here and Player 2 in the second section.
+    // Only the next empty slot offers a random hero
+    const fateIndex = slots => slots.findIndex(x => !x.hero);
     function renderSlots(v) {
         const picking = v.step.action === 'pick';
         if (v.mode === 'solo') {
             const count = v.slots.filter(x => x.hero && !x.preview).length;
-            $('bandSlots').innerHTML = v.slots.map(x => slotHtml(x, { editable: true, choosable: picking, count })).join('');
+            const fate = fateIndex(v.slots);
+            $('bandSlots').innerHTML = v.slots.map(x => slotHtml(x, { editable: true, choosable: picking, count, fate: x.index === fate })).join('');
             return;
         }
-        const row = p => p.slots.map(x => slotHtml(x, { editable: false, choosable: picking && p.acting })).join('');
+        const row = p => p.slots.map(x => slotHtml(x, { editable: false, choosable: picking && p.acting, fate: x.index === fateIndex(p.slots) })).join('');
         $('bandSlots').innerHTML = row(v.players[0]);
         $('againstRow').innerHTML = row(v.players[1]);
         [['bandSection', 'bandTurn', v.players[0]], ['againstSection', 'againstTurn', v.players[1]]].forEach(([section, tag, p]) => {
@@ -758,6 +773,49 @@
         announce(`Choose a hero from the pool. ${view.step.label}.`);
     }
 
+    // Random hero (respects the pool filters): a highlight hops across the shown tiles, slows, settles with a
+    // gold flash, then the hero is picked (or banned) and its slot glows. Any other draft change cancels the roll.
+    let rolling = false;
+    function rollRandom() {
+        if (rolling) return;
+        const candidates = view.pool.filter(e => e.available && poolFilter(e)).map(e => e.name);
+        const name = Draft.randomHero(state(), candidates);
+        if (!name) { announce('No available hero matches these filters.'); return; }
+        const start = state();
+        const tileOf = n => document.querySelector(`#poolGrid [data-hero="${n}"]`);
+        const light = n => document.querySelectorAll('#poolGrid .is-rolled, #poolGrid .is-fated')
+            .forEach(t => { if (t.dataset.hero !== n) t.classList.remove('is-rolled', 'is-fated'); });
+        const land = () => {
+            rolling = false;
+            light(null);
+            $('poolGrid').classList.remove('is-rolling');
+            if (state() !== start) return;
+            primaryAction(name);
+            document.querySelector(`.slot[data-hero="${name}"]`)?.classList.add('is-arrived');
+        };
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { land(); return; }
+        rolling = true;
+        // Hop only across tiles on screen so the roll can be followed; the winner is drawn from all candidates
+        const onScreen = candidates.filter(n => {
+            const r = tileOf(n)?.getBoundingClientRect();
+            return r && r.bottom > 0 && r.top < window.innerHeight;
+        });
+        const frames = rollFrames(onScreen.includes(name) ? onScreen : [...onScreen, name], name);
+        $('poolGrid').classList.add('is-rolling');
+        let i = 0;
+        (function next() {
+            if (state() !== start) { rolling = false; light(null); $('poolGrid').classList.remove('is-rolling'); return; }
+            const frame = frames[i++];
+            light(frame.name);
+            tileOf(frame.name)?.classList.add('is-rolled');
+            if (i < frames.length) { setTimeout(next, frame.delay); return; }
+            const winner = tileOf(name);
+            winner?.classList.add('is-fated');
+            if (!onScreen.includes(name)) winner?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            setTimeout(land, onScreen.includes(name) ? 520 : 900);
+        })();
+    }
+
     function moveSlot(index, delta) {
         const to = index + delta;
         attempt(s => Draft.movePick(s, index, to), 'Band reordered.');
@@ -775,6 +833,7 @@
             else if (act === 'left') moveSlot(index, -1);
             else if (act === 'right') moveSlot(index, 1);
             else if (act === 'choose') choosePrompt();
+            else if (act === 'random') rollRandom();
         });
         slots.addEventListener('keydown', event => {
             const slot = event.target.closest('[data-slot][data-hero]');
@@ -849,6 +908,7 @@
     function setupAgainst() {
         $('againstRow').addEventListener('click', event => {
             if (event.target.closest('[data-act="choose"]')) { choosePrompt(); return; }
+            if (event.target.closest('[data-act="random"]')) { rollRandom(); return; }
             const name = event.target.closest('[data-remove]')?.dataset.remove;
             if (name) attempt(s => Draft.setEnemies(s, s.enemies.filter(n => n !== name)), `No longer facing ${display(name)}.`);
         });

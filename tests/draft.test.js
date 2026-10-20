@@ -449,3 +449,20 @@ test('matchup reasons carry the relation behind them', () => {
     assert.deepStrictEqual([lost.attacker, lost.victim], [counter.supplier, counter.needer]);
     assert.ok(lost.supply.label && Array.isArray(lost.supply.sources) && lost.rule);
 });
+
+// ---- Random hero -----------------------------------------------------------------------------
+
+test('randomHero chooses among the available candidates using the given rng', () => {
+    const s = pickAll(D.createDraft('standard'), ['FERRARIUS']);
+    const candidates = ['FERRARIUS', 'TEMPUS', 'IRATUS'];
+    assert.strictEqual(D.randomHero(s, candidates, () => 0), 'TEMPUS');
+    assert.strictEqual(D.randomHero(s, candidates, () => 0.99), 'IRATUS');
+});
+
+test('randomHero returns null when no candidate is available or the draft is complete', () => {
+    const s = pickAll(D.createDraft('standard'), ['FERRARIUS']);
+    assert.strictEqual(D.randomHero(s, ['FERRARIUS'], () => 0), null);
+    const done = pickAll(D.createDraft('solo'), ['FERRARIUS', 'TEMPUS', 'IRATUS']);
+    assert.ok(D.isComplete(done));
+    assert.strictEqual(D.randomHero(done, ['MAGNUS'], () => 0), null);
+});

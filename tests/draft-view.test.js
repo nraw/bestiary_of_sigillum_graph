@@ -329,3 +329,27 @@ test('reference cards: one tab per player, or your band and Against in solo', ()
     assert.deepStrictEqual(V.referenceSides(band), [{ key: 'mine', label: 'Your band', heroes: ['FIDEA', 'GOETIUM', 'MESSUM'] }]);
     assert.deepStrictEqual(V.referenceSides(D.setEnemies(band, ['SAXUM'])).map(x => x.key), ['mine', 'against']);
 });
+
+// ---- Random hero roll ------------------------------------------------------------------------
+
+test('rollFrames highlights candidates with growing delays and settles on the winner', () => {
+    const frames = V.rollFrames(['A', 'B', 'C', 'D'], 'C', { steps: 10, rng: () => 0.5 });
+    assert.strictEqual(frames.length, 10);
+    assert.strictEqual(frames.at(-1).name, 'C');
+    frames.forEach(f => assert.ok(['A', 'B', 'C', 'D'].includes(f.name)));
+    frames.slice(1).forEach((f, i) => {
+        assert.notStrictEqual(f.name, frames[i].name, 'never lights the same tile twice in a row');
+        assert.ok(f.delay >= frames[i].delay, 'slows down as it settles');
+    });
+});
+
+test('rollFrames with a single candidate shows only the winner', () => {
+    assert.deepStrictEqual(V.rollFrames(['A'], 'A', { steps: 10 }).map(f => f.name), ['A']);
+});
+
+test('rollFrames alternates cleanly between two candidates', () => {
+    for (const r of [0, 0.5, 0.99]) {
+        const names = V.rollFrames(['A', 'B'], 'B', { steps: 9, rng: () => r }).map(f => f.name);
+        assert.deepStrictEqual(names, ['B', 'A', 'B', 'A', 'B', 'A', 'B', 'A', 'B']);
+    }
+});
