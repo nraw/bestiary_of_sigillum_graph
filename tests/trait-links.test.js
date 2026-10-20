@@ -160,12 +160,19 @@ test('condition traits are named after the condition, not "-Dependent"', () => {
 });
 
 test('positional conditions say whose position matters', () => {
-    assert.deepStrictEqual(heroesWith('Isolated enemies', 'benefits_from', 'enemy'), ['GOETIUM', 'MESSUM', 'TENEBRIS']);
+    // Harvest: none of the target's allies next to it; Lightning: none of Goetium's band; Shades: empty hexes around it
+    assert.deepStrictEqual(heroesWith('Isolated enemies', 'benefits_from', 'enemy'), ['MESSUM']);
+    assert.deepStrictEqual(links('GOETIUM', 'Unengaged enemies'),
+        [{ label: 'Unengaged enemies', role: 'benefits_from', sources: ['LIGHTNING'], on: 'enemy' }]);
+    assert.deepStrictEqual(links('TENEBRIS', 'Exposed enemies'),
+        [{ label: 'Exposed enemies', role: 'benefits_from', sources: ['SHADES'], on: 'enemy' }]);
     assert.deepStrictEqual(heroesWith('Clustered enemies', 'benefits_from', 'enemy'), ['LIGNUM']);
     assert.deepStrictEqual(heroesWith('Adjacent allies', 'benefits_from', 'ally'), ['MANUS']);
     assert.deepStrictEqual(heroesWith('Adjacent enemies', 'benefits_from', 'enemy'), ['IRATUS', 'REDUX']);
     // Ballista grows with each empty hex between; Ancestral Cannon cannot hit adjacent hexes at all
-    assert.deepStrictEqual(heroesWith('Distance', 'benefits_from', 'enemy'), ['BALLISTARIUS', 'MECHANICUS']);
+    assert.deepStrictEqual(heroesWith('Distance', 'benefits_from', 'enemy'), ['MECHANICUS']);
+    assert.deepStrictEqual(links('BALLISTARIUS', 'Open line'),
+        [{ label: 'Open line', role: 'benefits_from', sources: ['BALLISTA'], on: 'enemy' }]);
     assert.deepStrictEqual(links('MECHANICUS', 'Distance')[0].sources, ['ANCESTRAL CANNON']);
     assert.deepStrictEqual(heroesWith('Tower control', 'benefits_from', 'ally'), ['ARCHITECTUS', 'CORNIBUS', 'MALLEUS']);
     // Siege Tank hits enemies in the control areas of Towers the opponent holds

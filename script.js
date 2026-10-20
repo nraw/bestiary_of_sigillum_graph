@@ -7,7 +7,7 @@ const {
     ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, traitHeroesByRole, filterByRole, trimSegment,
     vitalityTokens, TOKEN_RADIUS
 } = window.GraphLogic;
-const { computeSynergies, heroSynergies, synergySummary, synergyArcs, describeRelation, titleCase, abilityList, FORMATIONS } = window.Synergy;
+const { computeSynergies, heroSynergies, synergySummary, synergyArcs, describeRelation, titleCase, abilityList, formationVerb } = window.Synergy;
 
 let heroesData = [];
 let synergyRelations = [];
@@ -740,15 +740,18 @@ function synergySection(node) {
     const counterText = (attacker, reasons) => {
         const bySupply = new Map();
         reasons.forEach(r => {
+            if (r.rule === 'size') return;
             const key = `${r.supply.label}|${r.supply.sources}`;
             if (!bySupply.has(key)) bySupply.set(key, { supply: r.supply, effects: [] });
             bySupply.get(key).effects.push(r.rule === 'hindrance' ? `hinders ${abilityList(r.need.sources)}`
-                : r.rule === 'formation' ? `${FORMATIONS[r.need.label].verb} the ${r.need.label} ${abilityList(r.need.sources)} needs`
+                : r.rule === 'formation' ? `${formationVerb(r)} the ${r.need.label} ${abilityList(r.need.sources)} needs`
                 : `undoes ${r.need.label} for ${abilityList(r.need.sources)}`);
         });
-        return [...bySupply.values()].map(({ supply, effects }) =>
+        const size = reasons.filter(r => r.rule === 'size').map(r =>
+            `${escapeHtml(titleCase(attacker))} is <strong>Small</strong> (max Vitality 2): ${escapeHtml(abilityList(r.need.sources))} cannot target it`);
+        return [...size, ...[...bySupply.values()].map(({ supply, effects }) =>
             `${escapeHtml(titleCase(attacker))} ${ROLE_INFO[supply.role].verb} <strong>${escapeHtml(supply.label)}</strong>
-             (${escapeHtml(abilityList(supply.sources))}): ${escapeHtml(effects.join(' and '))}`).join('<br>');
+             (${escapeHtml(abilityList(supply.sources))}): ${escapeHtml(effects.join(' and '))}`)].join('<br>');
     };
     const counterRows = (list, attacker) => list.map(c => `
         <div class="syn-row"><div class="syn-chips">${heroChip(c.hero, '')}</div>

@@ -297,7 +297,7 @@
     };
 
     // Enemy positions a hero's abilities care about, which an ally who moves enemies can set up
-    const POSITIONAL = ['Distance', 'Isolated enemies', 'Adjacent enemies', 'Enemies 1 hex away', 'Clustered enemies',
+    const POSITIONAL = ['Distance', 'Open line', 'Isolated enemies', 'Unengaged enemies', 'Exposed enemies', 'Adjacent enemies', 'Enemies 1 hex away', 'Clustered enemies',
         'Terrain difference', 'Forest'];
     const TERRAIN = ['Mountain', 'Water', 'Forest'];
     const wantsPosition = hero => hero.trait_links.some(l => l.role === 'benefits_from' && l.on === 'enemy' && POSITIONAL.includes(l.label));

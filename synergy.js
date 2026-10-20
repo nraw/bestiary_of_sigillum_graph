@@ -17,11 +17,17 @@
         'Attack increase': 'Attack decrease', 'Defense increase': 'Defense decrease',
         'Control increase': 'Control decrease', Swiftness: 'Slowness'
     };
-    // Formation a hero needs -> the opponent need that works against it, and how
+    // Positioning a hero needs -> opponent traits that work against it (`role` defaults to benefits_from)
     const FORMATIONS = {
-        'Adjacent allies': { by: 'Clustered enemies', verb: 'punishes' },
-        'Isolated enemies': { by: 'Adjacent allies', verb: 'denies' }
+        'Adjacent allies': [{ by: 'Clustered enemies', verb: 'punishes' }],
+        'Isolated enemies': [{ by: 'Adjacent allies', verb: 'denies' }],
+        'Exposed enemies': [{ by: 'Adjacent allies', verb: 'denies' }, { by: 'Place obstacle', role: 'has', verb: 'crowds' }],
+        'Open line': [{ by: 'Place obstacle', role: 'has', verb: 'blocks' }]
     };
+    const formationVerb = r => FORMATIONS[r.need.label].find(f => f.by === r.supply.label).verb;
+    // Rulebook: Small characters have max Vitality 2, and Catapult only targets Medium or Big ones
+    const SMALL = { label: 'Small', role: 'has', sources: [] };
+    const IMMUNE_IF_SMALL = ['Big enemies'];
     const SUPPLY_ROLES = ['inflicts', 'grants', 'gains', 'places'];
 
     // Who a supply link lands on: null = anyone (e.g. "any enemy or ally")
@@ -110,11 +116,19 @@
         // Formation counters: the opponent's own positioning works against the hero's
         heroes.forEach(h => h.trait_links.forEach(need => {
             if (need.role !== 'benefits_from' || !FORMATIONS[need.label]) return;
-            heroes.forEach(o => o.name !== h.name && o.trait_links
-                .filter(l => l.role === 'benefits_from' && l.label === FORMATIONS[need.label].by)
+            FORMATIONS[need.label].forEach(f => heroes.forEach(o => o.name !== h.name && o.trait_links
+                .filter(l => l.role === (f.role || 'benefits_from') && l.label === f.by)
                 .forEach(link => out.push({
                     type: 'counter', needer: h.name, supplier: o.name, need, supply: link, rule: 'formation'
-                })));
+                }))));
+        }));
+
+        // Size counters: Small opponents cannot be targeted at all
+        heroes.forEach(h => h.trait_links.forEach(need => {
+            if (need.role !== 'benefits_from' || !IMMUNE_IF_SMALL.includes(need.label)) return;
+            heroes.filter(o => o.name !== h.name && o.vitality === 2).forEach(o => out.push({
+                type: 'counter', needer: h.name, supplier: o.name, need, supply: SMALL, rule: 'size'
+            }));
         }));
         return out;
     }
@@ -176,15 +190,16 @@
     const titleCase = text => text.toLowerCase().split(' ')
         .map((w, i) => (i && SMALL_WORDS.includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(' ');
     const abilityList = sources => sources.map(titleCase).join(' / ');
-    const VERB = { inflicts: 'inflicts', grants: 'grants', gains: 'gains', places: 'places', benefits_from: 'benefits from' };
+    const VERB = { inflicts: 'inflicts', grants: 'grants', gains: 'gains', places: 'places', benefits_from: 'benefits from', has: 'has' };
 
     // One sentence for a partner / conflict / counter relation (arc tooltips)
     function describeRelation(r) {
-        const supplier = `${titleCase(r.supplier)} ${VERB[r.supply.role]} ${r.supply.label} (${abilityList(r.supply.sources)})`;
         const target = `${titleCase(r.needer)}'s ${abilityList(r.need.sources)}`;
+        if (r.rule === 'size') return `${titleCase(r.supplier)} is Small (max Vitality 2), which ${target} cannot target`;
+        const supplier = `${titleCase(r.supplier)} ${VERB[r.supply.role]} ${r.supply.label} (${abilityList(r.supply.sources)})`;
         if (r.type === 'partner') return `${supplier} for ${target}`;
         if (r.type === 'counter' && r.rule === 'opposite') return `${supplier}, which undoes ${r.need.label} for ${target}`;
-        if (r.type === 'counter' && r.rule === 'formation') return `${supplier}, which ${FORMATIONS[r.need.label].verb} the ${r.need.label} of ${target}`;
+        if (r.type === 'counter' && r.rule === 'formation') return `${supplier}, which ${formationVerb(r)} the ${r.need.label} of ${target}`;
         return `${supplier}, which hinders ${target}`;
     }
 
@@ -207,7 +222,7 @@
         return [...arcs.values()];
     }
 
-    const api = { computeSynergies, heroSynergies, synergySummary, synergyArcs, describeRelation, titleCase, abilityList, POSITIVE, NEGATIVE, FORMATIONS };
+    const api = { computeSynergies, heroSynergies, synergySummary, synergyArcs, describeRelation, titleCase, abilityList, POSITIVE, NEGATIVE, formationVerb };
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;

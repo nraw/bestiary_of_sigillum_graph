@@ -265,7 +265,7 @@
         ],
         "labels": [
           "Ranged",
-          "Distance",
+          "Open line",
           "Displacement",
           "Attack increase",
           "Mountain"
@@ -284,7 +284,7 @@
             ]
           },
           {
-            "label": "Distance",
+            "label": "Open line",
             "role": "benefits_from",
             "sources": [
               "BALLISTA"
@@ -972,7 +972,7 @@
         ],
         "labels": [
           "Ranged",
-          "Isolated enemies",
+          "Unengaged enemies",
           "Healing",
           "Displacement",
           "Self-Sacrifice",
@@ -992,7 +992,7 @@
             ]
           },
           {
-            "label": "Isolated enemies",
+            "label": "Unengaged enemies",
             "role": "benefits_from",
             "sources": [
               "LIGHTNING"
@@ -2723,7 +2723,7 @@
         ],
         "labels": [
           "Melee",
-          "Isolated enemies",
+          "Exposed enemies",
           "Mobility",
           "Displacement",
           "Injury"
@@ -2742,7 +2742,7 @@
             ]
           },
           {
-            "label": "Isolated enemies",
+            "label": "Exposed enemies",
             "role": "benefits_from",
             "sources": [
               "SHADES"
@@ -3163,7 +3163,7 @@
         "text": "Cares how many of an enemy's Support Abilities are on cooldown: more on cooldown makes some attacks stronger, while still-available ones can weaken others."
       },
       "Adjacent allies": {
-        "text": "Gets stronger with allies standing in hexes adjacent to this hero. Clustered enemies attackers punish that huddle; Isolated enemies attackers find no lone target."
+        "text": "Gets stronger with allies standing in hexes adjacent to this hero. Clustered enemies attackers punish that huddle; it denies Isolated and Exposed enemies attackers."
       },
       "Adjacent enemies": {
         "text": "Gets stronger when several enemies crowd the hexes adjacent to this hero."
@@ -3183,7 +3183,7 @@
         "source": "Rulebook"
       },
       "Big enemies": {
-        "text": "Deals more to bigger enemies. Size comes from max Vitality: Big 5, Medium 3-4, Small 2."
+        "text": "Deals more to bigger enemies and cannot target Small ones. Size comes from max Vitality: Big 5, Medium 3-4, Small 2."
       },
       "Castle-Defender": {
         "text": "Repairs the allied Castle by removing Damage points from its track."
@@ -3217,7 +3217,7 @@
         "text": "Moves other characters (enemies, allies or both) to new hexes: pushes, pulls, swaps, setting them up for attacks."
       },
       "Distance": {
-        "text": "Wants targets kept at range: the attack grows with each unoccupied hex in between, or cannot reach adjacent hexes at all."
+        "text": "Wants targets kept at range: the attack cannot reach adjacent hexes."
       },
       "Effect-Copy": {
         "text": "Copies the most recent positive effect from another character onto itself."
@@ -3245,7 +3245,16 @@
         "text": "A flipped Vitality marker; a character with 1 or more is Injured. Many Abilities care about Injuries: some grow stronger with them, some cost one."
       },
       "Isolated enemies": {
-        "text": "Stronger against enemies left on their own, with no characters (or few) around them. Bands that huddle for Adjacent allies deny it."
+        "text": "Stronger against enemies with none of their allies in adjacent hexes. Bands that huddle for Adjacent allies deny it."
+      },
+      "Unengaged enemies": {
+        "text": "Only hits enemies with nobody from this hero's own band next to them, so its melee allies can block its targets."
+      },
+      "Exposed enemies": {
+        "text": "Stronger the more empty hexes surround the target. Any character or Obstacle next to the target weakens the hit."
+      },
+      "Open line": {
+        "text": "Attack grows with each unoccupied hex between attacker and target in a straight line. An Obstacle counts as occupied."
       },
       "Melee": {
         "text": "Core attack only reaches enemies in adjacent hexes (rulebook attack range class)."

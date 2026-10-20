@@ -82,7 +82,7 @@ test('counters: an opponent inflicts what hinders you, or the opposite of what y
     assert.deepStrictEqual(counteredBy('EQUITA'), ['CABALLUS', 'FRIGUS']);
     assert.deepStrictEqual(counteredBy('SAXUM'), ['MESSUM']);
     assert.deepStrictEqual(counteredBy('CERBERUS'), ['ARBORUS', 'MAGNUS', 'TOXICUM']);
-    assert.deepStrictEqual(names(forHero('MESSUM').counters), ['SAXUM']);
+    assert.deepStrictEqual(names(forHero('MESSUM').counters), ['CATAPULTUS', 'SAXUM']); // Messum is also Small
     const equita = forHero('EQUITA').counteredBy.find(r => r.hero === 'CABALLUS');
     assert.deepStrictEqual(equita.reasons.map(r => r.rule).sort(), ['hindrance', 'opposite']);
 });
@@ -90,17 +90,38 @@ test('counters: an opponent inflicts what hinders you, or the opposite of what y
 test('counters: a formation a hero needs is punished by an opponent who feeds on it', () => {
     // Manus's Joint Assault wants allies packed around him; Lignum hits harder per adjacent ally
     assert.deepStrictEqual(names(forHero('MANUS').counteredBy), ['LIGNUM']);
-    assert.deepStrictEqual(names(forHero('LIGNUM').counters), ['MANUS']);
+    assert.deepStrictEqual(names(forHero('LIGNUM').counters.filter(c => c.reasons[0].rule === 'formation')), ['MANUS']);
     const lignum = forHero('MANUS').counteredBy[0];
     assert.deepStrictEqual(lignum.reasons.map(r => [r.rule, r.need.label, r.supply.label]),
         [['formation', 'Adjacent allies', 'Clustered enemies']]);
 });
 
-test('counters: a huddled band denies heroes who need isolated enemies', () => {
-    ['GOETIUM', 'MESSUM', 'TENEBRIS'].forEach(name => assert.deepStrictEqual(names(forHero(name).counteredBy), ['MANUS'], name));
-    assert.deepStrictEqual(names(forHero('MANUS').counters).sort(), ['GOETIUM', 'MESSUM', 'TENEBRIS']);
-    assert.deepStrictEqual(forHero('GOETIUM').counteredBy[0].reasons.map(r => [r.rule, r.need.label, r.supply.label]),
-        [['formation', 'Isolated enemies', 'Adjacent allies']]);
+const counterReasons = (needer, supplier) => forHero(needer).counteredBy.find(c => c.hero === supplier)
+    .reasons.map(r => [r.rule, r.need.label, r.supply.label]);
+
+test('counters: a huddled band denies heroes who need lone or exposed targets', () => {
+    // Harvest wants no allies next to the target; Shades wants empty hexes around it
+    assert.deepStrictEqual(names(forHero('MANUS').counters), ['MESSUM', 'TENEBRIS']);
+    assert.deepStrictEqual(counterReasons('MESSUM', 'MANUS'), [['formation', 'Isolated enemies', 'Adjacent allies']]);
+    assert.deepStrictEqual(counterReasons('TENEBRIS', 'MANUS'), [['formation', 'Exposed enemies', 'Adjacent allies']]);
+    // Lightning only needs Goetium's own band away from the target, which a huddle does not stop
+    assert.ok(!names(forHero('GOETIUM').counteredBy).includes('MANUS'));
+});
+
+test('counters: an Obstacle blocks Ballista lines and crowds Shades targets', () => {
+    // Rulebook: "When calculating Ballistarius's Attack points, consider a hex with the Obstacle marker as an occupied hex"
+    assert.deepStrictEqual(names(forHero('ARCHITECTUS').counters), ['BALLISTARIUS', 'TENEBRIS']);
+    assert.deepStrictEqual(counterReasons('BALLISTARIUS', 'ARCHITECTUS'), [['formation', 'Open line', 'Place obstacle']]);
+    assert.deepStrictEqual(counterReasons('TENEBRIS', 'ARCHITECTUS'), [['formation', 'Exposed enemies', 'Place obstacle']]);
+    // Ancestral Cannon only cannot hit adjacent hexes, so Obstacles do not matter to it
+    assert.ok(!names(forHero('MECHANICUS').counteredBy).includes('ARCHITECTUS'));
+});
+
+test('counters: Small heroes (max Vitality 2) are immune to Catapult', () => {
+    const small = heroes.filter(h => h.vitality === 2).map(h => h.name).sort();
+    assert.strictEqual(small.length, 12);
+    assert.deepStrictEqual(names(forHero('CATAPULTUS').counteredBy), small);
+    assert.deepStrictEqual(counterReasons('CATAPULTUS', 'LIGNUM'), [['size', 'Big enemies', 'Small']]);
 });
 
 test('broad needs report the pool size instead of partners', () => {
@@ -130,10 +151,10 @@ const arcBetween = (a, b, category) => arcs.find(x => x.category === category
 // Arrow flags read from `from`'s point of view: does the help/harm flow from -> to?
 const flows = (arc, from) => (arc.a === from ? { out: arc.aToB, in: arc.bToA } : { out: arc.bToA, in: arc.aToB });
 
-test('synergyArcs: one arc per hero pair and category, 71 in all', () => {
-    assert.strictEqual(arcs.length, 71);
+test('synergyArcs: one arc per hero pair and category, 84 in all', () => {
+    assert.strictEqual(arcs.length, 84);
     assert.deepStrictEqual(Object.fromEntries(['partner', 'conflict', 'counter']
-        .map(c => [c, arcs.filter(x => x.category === c).length])), { partner: 47, conflict: 14, counter: 10 });
+        .map(c => [c, arcs.filter(x => x.category === c).length])), { partner: 47, conflict: 14, counter: 23 });
     assert.ok(arcs.every(x => x.a < x.b), 'pair ends are sorted so arcs are stable');
 });
 
@@ -150,7 +171,7 @@ test('synergyArcs can focus on one hero', () => {
     const focused = S.synergyArcs(relations, 'GOETIUM');
     assert.ok(focused.every(x => x.a === 'GOETIUM' || x.b === 'GOETIUM'));
     assert.deepStrictEqual(focused.map(x => `${x.category}:${x.a === 'GOETIUM' ? x.b : x.a}`).sort(), [
-        'conflict:MECHANICUS', 'conflict:VINCTUM', 'counter:MANUS',
+        'conflict:MECHANICUS', 'conflict:VINCTUM', 'counter:CATAPULTUS',
         'partner:IRATUS', 'partner:MAGNUS', 'partner:MORTUM', 'partner:SATURN', 'partner:VINCTUM'
     ]);
 });
@@ -167,8 +188,12 @@ test('describeRelation words each relation for arc tooltips', () => {
         'Brewus inflicts Cooldown-Manipulation (Fragrant Hop) for Tempus\'s Pendulum');
     assert.strictEqual(S.describeRelation(find('counter', 'MANUS', 'LIGNUM')),
         'Lignum benefits from Clustered enemies (Puppet / Limp Hands), which punishes the Adjacent allies of Manus\'s Joint Assault');
-    assert.strictEqual(S.describeRelation(find('counter', 'GOETIUM', 'MANUS')),
-        'Manus benefits from Adjacent allies (Joint Assault), which denies the Isolated enemies of Goetium\'s Lightning');
+    assert.strictEqual(S.describeRelation(find('counter', 'TENEBRIS', 'MANUS')),
+        'Manus benefits from Adjacent allies (Joint Assault), which denies the Exposed enemies of Tenebris\'s Shades');
+    assert.strictEqual(S.describeRelation(find('counter', 'BALLISTARIUS', 'ARCHITECTUS')),
+        'Architectus has Place obstacle (Fortification), which blocks the Open line of Ballistarius\'s Ballista');
+    assert.strictEqual(S.describeRelation(find('counter', 'CATAPULTUS', 'LIGNUM')),
+        'Lignum is Small (max Vitality 2), which Catapultus\'s Catapult cannot target');
 });
 
 test('synergySummary lists unique heroes per non-empty group, in display order', () => {
