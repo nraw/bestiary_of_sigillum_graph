@@ -293,7 +293,7 @@
     const EFFECT_ARTWORK = [
         'Attack increase', 'Attack decrease', 'Defense increase', 'Defense decrease',
         'Control increase', 'Control decrease', 'Swiftness', 'Slowness', 'Flying',
-        'Place obstacle', 'Resistance', 'Vampirism', 'Stun', 'Poison'
+        'Place obstacle', 'Resistance', 'Vampirism', 'Stun', 'Poison', 'Silence', 'Web'
     ];
 
     function effectIcon(label) {

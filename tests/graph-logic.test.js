@@ -129,7 +129,8 @@ test('filterNodes by labelCategory keeps only trait nodes of that group', () => 
 test('effectIcon maps official effects that have artwork, else null', () => {
     assert.strictEqual(G.effectIcon('Attack increase'), 'effect_images/attack_increase.png');
     assert.strictEqual(G.effectIcon('Place obstacle'), 'effect_images/place_obstacle.png');
-    assert.strictEqual(G.effectIcon('Silence'), null);
+    assert.strictEqual(G.effectIcon('Silence'), 'effect_images/silence.png');
+    assert.strictEqual(G.effectIcon('Web'), 'effect_images/web.png');
     assert.strictEqual(G.effectIcon('Melee'), null);
 });
 

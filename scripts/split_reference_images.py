@@ -3,7 +3,7 @@
 Usage:
     python3 scripts/split_reference_images.py
 
-Reads  effect_images/effect_markers.png  -> effect_images/<effect>.png
+Reads  effect_images/effect_markers_v2.png  -> effect_images/<effect>.png
        ability_images/ability_ranges.png -> ability_images/<range>.png
 """
 from pathlib import Path
@@ -29,7 +29,9 @@ EFFECT_NAMES = [
     "vampirism",
     "stun",
     "poison",
+    "silence",
     "place_obstacle",
+    "web",
 ]
 
 # Column-major order as laid out on the sheet.
@@ -175,7 +177,7 @@ def split_abilities(sheet_path, out_dir):
 
 
 if __name__ == "__main__":
-    for path in split_effects(ROOT / "effect_images" / "effect_markers.png", ROOT / "effect_images"):
+    for path in split_effects(ROOT / "effect_images" / "effect_markers_v2.png", ROOT / "effect_images"):
         print(path.relative_to(ROOT))
     for path in split_abilities(ROOT / "ability_images" / "ability_ranges.png", ROOT / "ability_images"):
         print(path.relative_to(ROOT))

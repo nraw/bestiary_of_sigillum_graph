@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import split_reference_images as sri  # noqa: E402
 
-EFFECT_SHEET = ROOT / "effect_images" / "effect_markers.png"
+EFFECT_SHEET = ROOT / "effect_images" / "effect_markers_v2.png"
 ABILITY_SHEET = ROOT / "ability_images" / "ability_ranges.png"
 
 
@@ -28,22 +28,27 @@ def ability_boxes():
 
 
 def test_name_lists_are_unique():
-    assert len(set(sri.EFFECT_NAMES)) == len(sri.EFFECT_NAMES) == 14
+    assert len(set(sri.EFFECT_NAMES)) == len(sri.EFFECT_NAMES) == 16
     assert len(set(sri.ABILITY_RANGE_NAMES)) == len(sri.ABILITY_RANGE_NAMES) == 8
 
 
+def test_effect_names_include_silence_and_web_in_sheet_order():
+    # Right column: ... Poison (cooldown), Silence, Occupied hex (obstacle), Web.
+    assert sri.EFFECT_NAMES[12:] == ["poison", "silence", "place_obstacle", "web"]
+
+
 def test_detects_one_square_box_per_effect_icon(effect_boxes):
-    assert len(effect_boxes) == 14
+    assert len(effect_boxes) == 16
     for left, top, right, bottom in effect_boxes:
         w, h = right - left, bottom - top
-        assert 110 <= w <= 150 and 110 <= h <= 150
+        assert 140 <= w <= 175 and 140 <= h <= 175
         assert abs(w - h) <= 2
 
 
 def test_effect_boxes_are_column_major(effect_boxes):
-    left_col, right_col = effect_boxes[:7], effect_boxes[7:]
-    assert all(b[2] < 700 for b in left_col)
-    assert all(b[0] > 690 for b in right_col)
+    left_col, right_col = effect_boxes[:8], effect_boxes[8:]
+    assert all(b[2] < 865 for b in left_col)
+    assert all(b[0] > 865 for b in right_col)
     for col in (left_col, right_col):
         tops = [b[1] for b in col]
         assert tops == sorted(tops)
