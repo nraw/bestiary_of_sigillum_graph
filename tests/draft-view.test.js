@@ -35,6 +35,18 @@ test('pool entries carry display facts', () => {
         { display: 'Fidea', attribute: 'Intelligence', size: 'Small', battleRoles: ['Supporter'], image: 'hero_images/fidea.png' });
 });
 
+test('pool entries list the terms the search finds them by, each once and tagged with its kind', () => {
+    const fidea = V.draftView(D.createDraft('solo'), ctx).pool.find(p => p.name === 'FIDEA');
+    const kinds = Object.fromEntries(fidea.terms.map(t => [t.text, t.kind]));
+    assert.strictEqual(kinds.Intelligence, 'attribute');
+    assert.strictEqual(kinds.Small, 'size');
+    assert.strictEqual(kinds.Supporter, 'role');
+    const hero = heroes.find(h => h.name === 'FIDEA');
+    hero.labels.forEach(l => assert.ok(kinds[l], l));
+    const texts = fidea.terms.map(t => t.text.toLowerCase());
+    assert.strictEqual(new Set(texts).size, texts.length);
+});
+
 test('slots: 3 in pick order', () => {
     const v = V.draftView(soloState(), ctx);
     assert.deepStrictEqual(v.slots.map(s => s.hero), ['FERRARIUS', 'BALLISTARIUS', null]);
@@ -400,7 +412,33 @@ test('score breakdown: the points per factor, adding up to the band\'s value', (
     const sum = v.analysis.breakdown.reduce((t, f) => t + f.delta, 0);
     assert.ok(Math.abs(sum - total) < 1e-9);
     assert.deepStrictEqual(v.analysis.breakdown.map(f => f.label).filter(l => ['Roles', 'Synergy', 'Themes'].includes(l)), ['Roles', 'Synergy', 'Themes']);
-    v.analysis.breakdown.forEach(f => assert.ok(f.delta !== 0, f.label));
+    v.analysis.breakdown.forEach(f => assert.ok(Math.abs(f.delta - f.reasons.reduce((t, r) => t + r.delta, 0)) < 1e-9, f.label));
+});
+
+test('score breakdown: every factor is listed, in a fixed order, even at zero', () => {
+    const v = V.draftView(pickAll(D.createDraft('solo'), ['TOXICUM']), ctx);
+    assert.deepStrictEqual(v.analysis.breakdown.map(f => f.factor), ['coverage', 'synergy', 'theme', 'durability', 'conflict', 'matchup']);
+    const matchup = v.analysis.breakdown.find(f => f.factor === 'matchup');
+    assert.deepStrictEqual([matchup.delta, matchup.reasons], [0, []]);
+    v.analysis.breakdown.forEach(f => f.reasons.forEach(r => assert.notStrictEqual(r.kind, 'info')));
+    assert.deepStrictEqual(V.draftView(D.createDraft('solo'), ctx).analysis.breakdown, [], 'nothing to break down without a hero');
+});
+
+test('sortPool: recommended by rank, counters first, A–Z by name, or by card id', () => {
+    const entries = [
+        { name: 'B', display: 'Beta', id: 3, counters: 0, suggestion: { rank: 1 } },
+        { name: 'A', display: 'Alpha', id: 2, counters: 2, suggestion: { rank: 3 } },
+        { name: 'C', display: 'Gamma', id: 1, counters: 0, suggestion: { rank: 2 } },
+        { name: 'D', display: 'Delta', id: 4, counters: 0, suggestion: null }
+    ];
+    const order = sort => V.sortPool(entries, sort).map(e => e.name);
+    assert.deepStrictEqual(order('recommended'), ['B', 'C', 'A', 'D']);
+    assert.deepStrictEqual(order('counters'), ['A', 'B', 'C', 'D']);
+    assert.deepStrictEqual(order('name'), ['A', 'B', 'D', 'C']);
+    assert.deepStrictEqual(order('id'), ['C', 'A', 'B', 'D']);
+    // Without ranks (draft complete) the recommended order falls back to the card id
+    assert.deepStrictEqual(V.sortPool(entries.map(e => ({ ...e, suggestion: null })), 'recommended').map(e => e.name), ['C', 'A', 'B', 'D']);
+    assert.deepStrictEqual(entries.map(e => e.name), ['B', 'A', 'C', 'D'], 'input untouched');
 });
 
 test('preview flags the lines only the previewed hero brings', () => {

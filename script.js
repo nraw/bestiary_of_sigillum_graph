@@ -4,7 +4,7 @@
 const {
     buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, bandView, bandSprings, bandAnchors, arcPath,
     filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
-    ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, linkAbilities, traitHeroesByRole, filterByRole, trimSegment,
+    ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, linkAbilities, traitHeroesByRole, filterByRole, trimSegment, gradientVector,
     vitalityTokens, TOKEN_RADIUS
 } = window.GraphLogic;
 const { encodeRoute, decodeRoute, isGraphRoute } = window.GraphRoute;
@@ -168,6 +168,7 @@ function setupGraph() {
             .append('path').attr('class', `arrow arrow--${hue}`).attr('d', 'M0,-5L10,0L0,5Z');
     });
 
+    gradientDefs = defs;
     viewport = svg.append('g').attr('class', 'viewport');
 
     zoom = d3.zoom()
@@ -325,6 +326,38 @@ function nodeAriaLabel(d) {
     return `${d.name} trait, ${LABEL_SHAPES[d.category].label}, ${d.degree} heroes`;
 }
 
+// One-way edges fade in from tail to arrowhead so the direction reads along the whole line.
+// Each edge has its own userSpaceOnUse gradient, moved with the edge on every tick.
+let gradientDefs = null;
+const GRADIENT_TAIL_OPACITY = 0.2;
+
+function edgeGradient(id, hue) {
+    let grad = gradientDefs.select(`#${id}`);
+    if (grad.empty()) {
+        grad = gradientDefs.append('linearGradient').attr('id', id).attr('gradientUnits', 'userSpaceOnUse');
+        grad.append('stop').attr('offset', 0).attr('stop-opacity', GRADIENT_TAIL_OPACITY);
+        grad.append('stop').attr('offset', 1).attr('stop-opacity', 1);
+    }
+    grad.selectAll('stop').attr('class', `grad-stop grad-stop--${hue}`);
+    return grad;
+}
+
+// `vec` null: a two-way or undirected edge, drawn without a gradient
+function placeGradient(id, vec) {
+    if (!vec) return;
+    gradientDefs.select(`#${id}`).attr('x1', vec.x1).attr('y1', vec.y1).attr('x2', vec.x2).attr('y2', vec.y2);
+}
+
+// Apply (or clear) an edge's gradient stroke; `dir` null = solid colour from the CSS
+function strokeGradient(el, id, hue, dir, seg) {
+    const vec = dir && gradientVector(seg, dir);
+    if (!vec) { el.style('stroke', null); return false; }
+    edgeGradient(id, hue);
+    placeGradient(id, vec);
+    el.style('stroke', `url(#${id})`);
+    return true;
+}
+
 function ticked() {
     // Stop edges at the node rims so arrowheads aren't hidden under the nodes
     linksData.forEach(d => { d.seg = trimSegment(d.source, d.target, d.source.radius + 3, d.target.radius + 4); });
@@ -333,6 +366,7 @@ function ticked() {
         .attr('y1', d => d.seg.y1)
         .attr('x2', d => d.seg.x2)
         .attr('y2', d => d.seg.y2));
+    linksData.forEach(d => { if (d.gradDir) placeGradient(`lg-${d.index}`, gradientVector(d.seg, d.gradDir)); });
     nodeElements.attr('transform', d => `translate(${d.x},${d.y})`);
     updateSynergyArcs();
 }
@@ -340,13 +374,15 @@ function ticked() {
 function updateSynergyArcs() {
     synergyArcData.forEach(d => {
         d.geo = arcPath(d.source, d.target, d.source.radius + 4, d.target.radius + 4, SYNERGY_STYLE[d.category].bend);
+        if (d.gradDir) placeGradient(`sg-${d.i}`, gradientVector(d.geo, d.gradDir));
     });
     synergyLayer.selectAll('path').attr('d', d => d.geo.d);
 }
 
 function drawSynergyArcs(arcs, focused) {
     const heroByName = new Map(nodesData.filter(n => n.type === 'hero').map(n => [n.name, n]));
-    synergyArcData = arcs.map(a => ({ ...a, source: heroByName.get(a.a), target: heroByName.get(a.b) }));
+    synergyArcData = arcs.map((a, i) => ({ ...a, i, source: heroByName.get(a.a), target: heroByName.get(a.b),
+        gradDir: Boolean(a.aToB) !== Boolean(a.bToA) ? { toTrait: Boolean(a.aToB), toHero: Boolean(a.bToA) } : null }));
     const key = d => `${d.category}|${d.a}|${d.b}`;
     synergyLayer.selectAll('path.syn-arc-hit').data(synergyArcData, key).join('path')
         .attr('class', 'syn-arc-hit')
@@ -362,6 +398,9 @@ function drawSynergyArcs(arcs, focused) {
         .attr('marker-end', d => (d.aToB ? `url(#arrow-${SYNERGY_STYLE[d.category].hue})` : null))
         .attr('marker-start', d => (d.bToA ? `url(#arrow-${SYNERGY_STYLE[d.category].hue})` : null));
     updateSynergyArcs();
+    synergyLayer.selectAll('path.syn-arc').each(function (d) {
+        if (!strokeGradient(d3.select(this), `sg-${d.i}`, SYNERGY_STYLE[d.category].hue, d.gradDir, d.geo)) d.gradDir = null;
+    });
 }
 
 function dragstarted(event, d) {
@@ -603,6 +642,7 @@ function render() {
         const hue = kind === 'mixed' ? 'mixed' : ROLE_STYLE[kind]?.hue;
         line.attr('marker-end', shown && dir.toTrait ? `url(#arrow-${hue})` : null)
             .attr('marker-start', shown && dir.toHero ? `url(#arrow-${hue})` : null);
+        d.gradDir = shown && strokeGradient(line, `lg-${d.index}`, hue, dir, d.seg) ? dir : null;
     });
 
     // Raise highlighted nodes so they draw above the dimmed crowd
@@ -1266,15 +1306,20 @@ function setupChips() {
 // Legend
 // ---------------------------------------------------------------------------
 
-// Mini "hero — trait" diagram with the role's line style and arrow direction
+// The graph's tail-to-head fade for a legend line running from x1 to x2
+const swatchGradient = (id, hue, [x1, x2]) => `<defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${x1}" y1="0" x2="${x2}" y2="0">
+    <stop offset="0" stop-opacity="${GRADIENT_TAIL_OPACITY}" class="grad-stop grad-stop--${hue}"/><stop offset="1" class="grad-stop grad-stop--${hue}"/></linearGradient></defs>`;
+
+// Mini "hero — trait" diagram with the role's line style and arrow direction (and its fade)
 function roleSwatch(kind) {
     const hue = kind === 'mixed' ? 'mixed' : ROLE_STYLE[kind].hue;
     const dir = kind === 'mixed' ? 'both' : ROLE_INFO[kind].direction;
     const arrowRight = '<path d="M33 2 L39 6 L33 10 Z"/>';
     const arrowLeft = '<path d="M13 2 L7 6 L13 10 Z"/>';
-    return `<svg class="role-swatch hue--${hue}" width="50" height="12" viewBox="0 0 50 12" aria-hidden="true">
+    const grad = dir === 'both' ? '' : swatchGradient(`swg-${kind}`, hue, dir === 'out' ? [8, 38] : [38, 8]);
+    return `<svg class="role-swatch hue--${hue}" width="50" height="12" viewBox="0 0 50 12" aria-hidden="true">${grad}
         <circle cx="4" cy="6" r="3.5" class="sw-hero"/><rect x="42" y="2.5" width="7" height="7" class="sw-trait"/>
-        <line x1="8" y1="6" x2="38" y2="6" class="sw-line${kind === 'mixed' ? '' : ROLE_STYLE[kind].dashed === 'dotted'
+        <line x1="8" y1="6" x2="38" y2="6"${grad ? ` style="stroke:url(#swg-${kind})"` : ''} class="sw-line${kind === 'mixed' ? '' : ROLE_STYLE[kind].dashed === 'dotted'
             ? ' sw-dotted' : ROLE_STYLE[kind].dashed ? ' sw-dashed' : ''}"/>
         <g class="sw-arrow">${dir === 'out' || dir === 'both' ? arrowRight : ''}${dir === 'in' || dir === 'both' ? arrowLeft : ''}</g></svg>`;
 }
@@ -1282,9 +1327,9 @@ function roleSwatch(kind) {
 // Two heroes joined by a bowed synergy line, as drawn on the graph
 function synergySwatch(category) {
     const st = SYNERGY_STYLE[category];
-    return `<svg class="role-swatch hue--${st.hue}" width="50" height="14" viewBox="0 0 50 14" aria-hidden="true">
+    return `<svg class="role-swatch hue--${st.hue}" width="50" height="14" viewBox="0 0 50 14" aria-hidden="true">${swatchGradient(`swg-syn-${category}`, st.hue, [9, 38])}
         <circle cx="4" cy="9" r="3.5" class="sw-hero"/><circle cx="46" cy="9" r="3.5" class="sw-hero"/>
-        <path d="M9 9 Q25 1 38 8" fill="none" class="sw-line${category === 'conflict' ? ' sw-dashed' : ''}"/>
+        <path d="M9 9 Q25 1 38 8" fill="none" style="stroke:url(#swg-syn-${category})" class="sw-line${category === 'conflict' ? ' sw-dashed' : ''}"/>
         <path class="sw-arrow" d="M36 4.5 L42 9 L35 11 Z"/></svg>`;
 }
 

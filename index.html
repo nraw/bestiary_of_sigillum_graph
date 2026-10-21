@@ -258,9 +258,13 @@
             </div>
             <div class="search-box">
                 <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 L21 21"/></svg>
-                <input type="search" id="poolSearch" placeholder="Search heroes, traits or roles…" autocomplete="off"
-                       aria-label="Search the hero pool">
+                <input type="search" id="poolSearch" placeholder="Search heroes, traits, roles or #id…" autocomplete="off"
+                       aria-label="Search the hero pool" role="combobox" aria-autocomplete="list" aria-expanded="false"
+                       aria-controls="poolSuggestions">
+                <ul class="suggestions" id="poolSuggestions" role="listbox" aria-label="Pool search suggestions" hidden></ul>
             </div>
+            <!-- Terms chosen from the search dropdown; click one to remove it -->
+            <div class="chips search-pills" id="poolPills" role="group" aria-label="Search filters" hidden></div>
             <div class="pool-filters" id="poolFilters">
                 <div class="chips" id="attributeFilter" role="group" aria-label="Filter by attribute"></div>
                 <div class="chips" id="roleFilter" role="group" aria-label="Filter by battle role"></div>
@@ -277,6 +281,7 @@
                     <button type="button" role="radio" data-sort="recommended" aria-checked="true">Recommended</button>
                     <button type="button" role="radio" data-sort="counters" aria-checked="false" hidden>Counters</button>
                     <button type="button" role="radio" data-sort="name" aria-checked="false">A–Z</button>
+                    <button type="button" role="radio" data-sort="id" aria-checked="false" title="By card number" aria-label="By card number">#</button>
                 </div>
             </div>
             <div class="pool-grid" id="poolGrid" role="list"></div>
@@ -305,11 +310,18 @@
             <section class="analysis-block" aria-labelledby="scoreHeading">
                 <h3 class="mini-heading" id="scoreHeading">Band score</h3>
                 <p class="analysis-sub" id="scoreCaption"></p>
-                <p class="band-score" id="bandScore"></p>
+                <div class="band-score-row">
+                    <p class="band-score" id="bandScore"></p>
+                    <!-- What the score means: shown on hover / focus, pinned by a click (a tap on phones) -->
+                    <span class="info-tip" id="scoreInfo">
+                        <button class="info-btn" type="button" id="scoreInfoBtn" aria-label="What does this score mean?"
+                                aria-describedby="scoreExplain" aria-expanded="false" aria-controls="scoreExplain">i</button>
+                        <span class="info-pop" id="scoreExplain" role="tooltip"></span>
+                    </span>
+                </div>
                 <div class="score-bar" aria-hidden="true"><span id="scoreBar"></span></div>
-                <p class="analysis-sub" id="scoreExplain"></p>
                 <p class="analysis-sub" id="scoreDetail" hidden></p>
-                <ul class="score-breakdown" id="scoreBreakdown" aria-label="Points per factor"></ul>
+                <ul class="score-breakdown" id="scoreBreakdown" aria-label="Points per factor (each opens what scores it)"></ul>
             </section>
             <!-- Synergy, Careful with, Themes, Matchup, Durability: each row opens the inspector -->
             <div id="analysisSections"></div>

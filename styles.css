@@ -391,6 +391,16 @@ kbd {
 .suggestions .no-results { display: block; color: var(--text-muted); cursor: default; }
 .sugg-glyph { display: grid; place-items: center; }
 .sugg-type { font-size: 0.8rem; color: var(--text-faint); }
+.sugg-name { min-width: 0; }
+.search-pills { margin-top: 8px; }
+.search-pills[hidden] { display: none; }
+.search-pill { background: rgba(217, 168, 78, 0.16); border-color: var(--gold); color: var(--gold-bright); }
+.search-pill-kind { font-size: 0.75rem; color: var(--text-faint); }
+.search-pill-x { margin-left: 2px; font-size: 0.75rem; opacity: 0.7; }
+.search-pill:hover .search-pill-x, .search-pill:focus-visible .search-pill-x { opacity: 1; }
+.search-pill:hover { border-color: var(--gold-bright); }
+.sugg-heroes { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--text-muted); }
+.sugg-glyph .ico { width: 18px; height: 18px; color: var(--gold); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 
@@ -932,6 +942,12 @@ kbd {
 .link.kind--gains, .link.kind--hindered_by { stroke-dasharray: 7 4; }
 .link.kind--places { stroke: var(--role-place); stroke-dasharray: 2 4; stroke-linecap: round; }
 .link[class*="kind--"] { filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8)); }
+/* One-way edges fade from tail to arrowhead (script.js edgeGradient) */
+.grad-stop--harm { stop-color: var(--role-harm); }
+.grad-stop--help { stop-color: var(--role-help); }
+.grad-stop--condition { stop-color: var(--role-condition); }
+.grad-stop--mixed { stop-color: var(--role-mixed); }
+.grad-stop--place { stop-color: var(--role-place); }
 .arrow--harm { fill: var(--role-harm); }
 .arrow--help { fill: var(--role-help); }
 .arrow--condition { fill: var(--role-condition); }
@@ -1167,7 +1183,7 @@ kbd {
 }
 
 @media (forced-colors: active) {
-    .link--direct { stroke: Highlight; }
+    .link--direct, .syn-arc { stroke: Highlight !important; }
     .node.is-selected .halo { stroke: Highlight; }
 }
 
@@ -1781,6 +1797,25 @@ kbd {
 .role-row.is-changed .role-status, .is-changed { color: var(--gold-bright) !important; font-weight: 600; }
 .band-score { font-family: 'Cinzel', serif; font-size: 2rem; line-height: 1.1; font-weight: 700; color: var(--gold-bright); }
 .score-bar { height: 8px; }
+/* The score's (i) and its explanation (hover / focus, or pinned open by a click) */
+.band-score-row { position: relative; display: flex; align-items: center; gap: 10px; }
+.info-tip[hidden] { display: none; }
+.info-btn {
+    display: inline-grid; place-items: center; width: 22px; height: 22px; padding: 0;
+    border: 1px solid var(--bronze); border-radius: 50%; background: none; color: var(--gold);
+    font: italic 700 0.85rem/1 'Crimson Text', serif; cursor: help;
+}
+.info-btn:hover, .info-btn:focus-visible, .info-tip.is-open .info-btn { color: var(--gold-bright); border-color: var(--gold-bright); box-shadow: 0 0 8px rgba(242, 199, 107, 0.35); }
+.info-pop {
+    position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; right: 0;
+    padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 8px;
+    background: var(--surface-2); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+    color: var(--text-muted); font-size: 0.92rem; line-height: 1.4;
+    visibility: hidden; opacity: 0; transition: opacity 0.15s ease, visibility 0.15s;
+}
+/* is-dismissed: Escape hides it until the pointer or focus comes back */
+.info-tip:not(.is-dismissed):has(.info-btn:focus-visible) .info-pop, .info-tip.is-open .info-pop { visibility: visible; opacity: 1; }
+@media (hover: hover) { .info-tip:not(.is-dismissed):hover .info-pop { visibility: visible; opacity: 1; } } /* touch: hover sticks after a tap */
 .view-graph { justify-content: center; }
 /* What the roles mean: a disclosure under Team balance (on phones too, at the top of the sheet) */
 .role-help summary { cursor: pointer; color: var(--gold); font-size: 0.95rem; }
@@ -2106,7 +2141,9 @@ button.pop-sec-head:hover .pop-inspect { color: var(--gold-bright); }
     .tile-main { padding: 8px 3px 6px; }
     .tile-portrait { width: 48px; height: 48px; }
     .tile-name { font-size: 0.72rem; }
-    .tile-main .role-pills { display: none; }
+    .tile-main .role-pills { gap: 2px; }
+    .tile-main .role-pill { width: 17px; height: 17px; }
+    .tile-main .role-pill .ico { width: 10px; height: 10px; }
     .tile-chip:not(:first-child) { display: none; }
     .tile-counter { top: 32px; left: 6px; right: auto; width: 18px; height: 18px; font-size: 0.68rem; }
     .tile-badge { bottom: 26px; }
@@ -2130,7 +2167,14 @@ button.pop-sec-head:hover .pop-inspect { color: var(--gold-bright); }
 /* Score breakdown: points per factor */
 .score-breakdown { list-style: none; display: grid; gap: 3px; margin-top: 8px; font-size: 0.9rem; }
 .score-breakdown:empty { display: none; }
-.score-breakdown li { display: grid; grid-template-columns: 80px 1fr 40px; align-items: center; gap: 8px; color: var(--text-muted); }
+.bd-row {
+    display: grid; grid-template-columns: 80px 1fr 40px 10px; align-items: center; gap: 8px; width: 100%;
+    padding: 3px 4px; border: none; border-radius: 4px; background: none; color: var(--text-muted); font: inherit; text-align: left; cursor: pointer;
+}
+.bd-row:hover, .bd-row:focus-visible { background: var(--surface-2); color: var(--text); }
+.bd-go { color: var(--text-faint); }
+.bd-row:hover .bd-go, .bd-row:focus-visible .bd-go { color: var(--gold-bright); }
+.score-breakdown .is-zero .bd-label, .score-breakdown .is-zero .bd-val { color: var(--text-faint); }
 .bd-bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
 .bd-bar span { display: block; height: 100%; border-radius: 3px; background: var(--gold); }
 .score-breakdown .is-loss .bd-bar span { background: var(--chip-warning); }

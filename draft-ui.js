@@ -3,7 +3,7 @@
 // this file draws (both unit tested). Only DOM, events and persistence live here.
 (function () {
     const Draft = window.Draft;
-    const { draftView, referenceSides, graphAction, rollFrames, inspectView, percentLabel, percentExplain, ROLE_INFO, TOPICS, collapse } = window.DraftView;
+    const { draftView, referenceSides, graphAction, rollFrames, inspectView, sortPool, percentLabel, percentExplain, ROLE_INFO, TOPICS, collapse } = window.DraftView;
     const { encodeDraft, decodeDraft, isDraftLink } = window.DraftShare;
     const { escapeHtml, vitalityTokensSvg } = window.GraphLogic;
     const { titleCase } = window.Synergy;
@@ -39,7 +39,8 @@
         tab: 'graph',
         mode: 'two-player',
         states: { solo: Draft.createDraft('solo'), 'two-player': Draft.createDraft('standard') },
-        filters: { term: '', attribute: 'All', roles: [], fills: false, showUnavailable: false }, // roles combine with OR
+        // roles combine with OR; pills: terms chosen from the search dropdown, all required
+        filters: { term: '', pills: [], attribute: 'All', roles: [], fills: false, showUnavailable: false },
         sort: 'recommended',
         focus: null, // two-player analysis: null follows whoever acts, or a chosen player
         picker: null,
@@ -244,7 +245,7 @@
             ui.filters.roles = roles.includes(role) ? roles.filter(r => r !== role) : [...roles, role];
             renderPool();
         });
-        $('poolSearch').addEventListener('input', event => { ui.filters.term = event.target.value; renderPool(); });
+        setupPoolSearch();
         $('filtersToggle').addEventListener('click', () => {
             const open = $('poolFilters').classList.toggle('is-open');
             $('filtersToggle').setAttribute('aria-expanded', String(open));
@@ -526,17 +527,130 @@
 
     // ---- Pool ----------------------------------------------------------------------------
 
-    function poolFilter(entry) {
+    // Every filter but the typed search term (pills included)
+    function otherFilters(entry) {
         const f = ui.filters;
         if (!entry.available && !f.showUnavailable) return false;
+        if (!window.poolHasPills(entry, f.pills)) return false;
         if (f.attribute !== 'All' && entry.attribute !== f.attribute) return false;
         if (f.roles.length && !f.roles.some(r => entry.battleRoles.includes(r))) return false;
-        if (f.fills && !entry.fills.length) return false; // adds no role the band lacks
-        const term = f.term.trim().toLowerCase();
-        if (!term) return true;
-        const hero = heroOf(entry.name);
-        return [entry.display, entry.attribute, entry.size, entry.attackRange || '', ...entry.battleRoles, ...hero.labels]
-            .some(text => text.toLowerCase().includes(term));
+        return !(f.fills && !entry.fills.length); // adds no role the band lacks
+    }
+    const poolFilter = entry => otherFilters(entry) && window.poolMatches(entry, ui.filters.term);
+
+    // ---- Pool search: a dropdown like the graph's, showing what each term finds ----------------
+
+    const poolSearch = { items: [], active: -1 };
+    const KIND_LABEL = { attribute: 'attribute', size: 'size', range: 'attack', role: 'role', trait: 'trait' };
+
+    function highlight(text, term) {
+        const i = text.toLowerCase().indexOf(term.toLowerCase());
+        if (i < 0 || /^#?\d+$/.test(term)) return escapeHtml(text);
+        return `${escapeHtml(text.slice(0, i))}<mark>${escapeHtml(text.slice(i, i + term.length))}</mark>${escapeHtml(text.slice(i + term.length))}`;
+    }
+
+    function suggestionHtml(item, i, term) {
+        const glyph = item.type === 'hero' ? portrait(item.name, '')
+            : ICON[item.label] ? `<span class="sugg-glyph">${icon(item.label)}</span>` : '<span class="sugg-glyph" aria-hidden="true">✦</span>';
+        const shown = item.type === 'term' ? item.heroes.slice(0, 4).map(display).join(', ') + (item.count > 4 ? ` +${item.count - 4}` : '') : '';
+        return `<li role="option" id="pool-sugg-${i}" data-index="${i}" aria-selected="false">${glyph}
+            <span class="sugg-name">${highlight(item.label, term)}${shown ? `<small class="sugg-heroes">${escapeHtml(shown)}</small>` : ''}</span>
+            <span class="sugg-type">${item.type === 'hero' ? `#${item.id}` : `${KIND_LABEL[item.kind]} · ${item.count}`}</span></li>`;
+    }
+
+    function closePoolSuggestions() {
+        $('poolSuggestions').hidden = true;
+        $('poolSearch').setAttribute('aria-expanded', 'false');
+        $('poolSearch').removeAttribute('aria-activedescendant');
+        poolSearch.active = -1;
+    }
+
+    // Counts are of the heroes the other filters leave in the pool
+    function updatePoolSuggestions() {
+        const term = $('poolSearch').value.trim();
+        if (!term) { closePoolSuggestions(); return; }
+        poolSearch.items = window.poolSuggestions(view.pool.filter(otherFilters), term, 8, { exclude: ui.filters.pills });
+        poolSearch.active = -1;
+        $('poolSuggestions').innerHTML = poolSearch.items.length
+            ? poolSearch.items.map((item, i) => suggestionHtml(item, i, term)).join('')
+            : '<li class="no-results" role="option" aria-disabled="true">No heroes, traits or roles match</li>';
+        $('poolSuggestions').hidden = false;
+        $('poolSearch').setAttribute('aria-expanded', 'true');
+    }
+
+    function setPoolSuggestion(index) {
+        poolSearch.active = index;
+        document.querySelectorAll('#poolSuggestions [role="option"]').forEach((li, i) => {
+            li.setAttribute('aria-selected', String(i === index));
+            if (i === index) li.scrollIntoView({ block: 'nearest' });
+        });
+        $('poolSearch').setAttribute('aria-activedescendant', `pool-sugg-${index}`);
+    }
+
+    // A chosen hero is searched by name; a chosen term becomes a pill (the box clears for the next one)
+    function choosePoolSuggestion(item) {
+        if (item.type === 'term') {
+            ui.filters.pills = [...ui.filters.pills, item.label];
+            announce(`Filter added: ${item.label}`);
+        }
+        $('poolSearch').value = item.type === 'term' ? '' : item.label;
+        ui.filters.term = $('poolSearch').value;
+        closePoolSuggestions();
+        renderPool();
+    }
+
+    function removePill(label) {
+        ui.filters.pills = ui.filters.pills.filter(p => p !== label);
+        announce(`Filter removed: ${label}`);
+        renderPool();
+    }
+
+    function renderPills() {
+        const kindOf = label => view.pool.flatMap(e => e.terms).find(t => t.text === label)?.kind;
+        $('poolPills').hidden = !ui.filters.pills.length;
+        $('poolPills').innerHTML = ui.filters.pills.map(label => `<button class="chip search-pill" type="button" data-pill="${escapeHtml(label)}"
+            aria-label="Remove filter ${escapeHtml(label)}" title="Remove this filter">${ICON[label] ? icon(label) : ''}${escapeHtml(label)}
+            <span class="search-pill-kind">${KIND_LABEL[kindOf(label)] || ''}</span><span class="search-pill-x" aria-hidden="true">✕</span></button>`).join('');
+    }
+
+    function setupPoolSearch() {
+        const input = $('poolSearch');
+        input.addEventListener('input', () => {
+            ui.filters.term = input.value;
+            renderPool();
+            updatePoolSuggestions();
+        });
+        input.addEventListener('keydown', event => {
+            const count = poolSearch.items.length;
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                if ($('poolSuggestions').hidden) updatePoolSuggestions();
+                if (count) setPoolSuggestion((poolSearch.active + (event.key === 'ArrowDown' ? 1 : -1) + count) % count);
+            } else if (event.key === 'Enter') {
+                const pick = poolSearch.items[poolSearch.active] || (count === 1 && poolSearch.items[0]);
+                if (pick && !$('poolSuggestions').hidden) { event.preventDefault(); choosePoolSuggestion(pick); }
+            } else if (event.key === 'Escape' && !$('poolSuggestions').hidden) {
+                event.stopPropagation();
+                closePoolSuggestions();
+            } else if (event.key === 'Backspace' && !input.value && ui.filters.pills.length) {
+                removePill(ui.filters.pills[ui.filters.pills.length - 1]);
+            }
+        });
+        $('poolPills').addEventListener('click', event => {
+            const pill = event.target.closest('[data-pill]');
+            if (!pill) return;
+            removePill(pill.dataset.pill);
+            // Keep keyboard focus nearby: the next pill, or the search box
+            ($('poolPills').querySelector('[data-pill]') || input).focus();
+        });
+        input.addEventListener('focus', () => { if (input.value.trim()) updatePoolSuggestions(); });
+        input.addEventListener('blur', () => setTimeout(closePoolSuggestions, 120));
+        $('poolSuggestions').addEventListener('mousedown', event => {
+            const li = event.target.closest('[data-index]');
+            if (!li) return;
+            event.preventDefault();
+            choosePoolSuggestion(poolSearch.items[Number(li.dataset.index)]);
+        });
     }
 
     // Same verbs for both players: Select (pick) and Ban; Player 2's turn is marked in crimson
@@ -553,15 +667,11 @@
         return `${verb} ${entry.display}${solo() ? '' : ` for Player ${view.step.player}`}`;
     }
 
-    const ranked = () => ui.sort !== 'name' && view.suggestions.items.length > 0;
+    const hasRanks = () => view.suggestions.items.length > 0;
+    // Without suggestions (draft complete) the ranked orders fall back to the card number
+    const sortBy = () => (hasRanks() || ui.sort === 'name' ? ui.sort : 'id');
+    const ranked = () => ['recommended', 'counters'].includes(sortBy());
     const anyCounters = () => view.pool.some(e => e.counters > 0);
-
-    function sortPool(entries) {
-        if (!ranked()) return entries;
-        const rank = e => (e.suggestion ? e.suggestion.rank : Infinity);
-        const counters = ui.sort === 'counters' ? e => -e.counters : () => 0;
-        return [...entries].sort((a, b) => counters(a) - counters(b) || rank(a) - rank(b) || a.id - b.id);
-    }
 
     function tileChips(entry) {
         const s = entry.suggestion;
@@ -572,11 +682,12 @@
     }
 
     function renderPool() {
+        renderPills();
         document.querySelectorAll('#attributeFilter .chip').forEach(c =>
             c.setAttribute('aria-pressed', String(c.dataset.attribute === ui.filters.attribute)));
         document.querySelectorAll('#roleFilter .chip').forEach(c =>
             c.setAttribute('aria-pressed', String(ui.filters.roles.includes(c.dataset.role))));
-        const entries = sortPool(view.pool.filter(poolFilter));
+        const entries = sortPool(view.pool.filter(poolFilter), sortBy());
         const active = (ui.filters.attribute !== 'All') + ui.filters.roles.length + ui.filters.fills + ui.filters.showUnavailable;
         $('filtersToggle').textContent = active ? `Filters (${active})` : 'Filters';
         $('poolCount').textContent = `${view.counts.available} available · ${view.counts.unavailable} unavailable`
@@ -619,7 +730,7 @@
         const grid = $('poolGrid');
         grid.addEventListener('click', event => {
             if (event.target.closest('[data-act="clear-filters"]')) {
-                Object.assign(ui.filters, { term: '', attribute: 'All', roles: [], fills: false });
+                Object.assign(ui.filters, { term: '', pills: [], attribute: 'All', roles: [], fills: false });
                 $('poolSearch').value = '';
                 $('fillsToggle').checked = false;
                 renderPool();
@@ -1075,13 +1186,12 @@
         const { action } = view.suggestions;
         $('stepLabel').textContent = action ? `${view.step.label} · ${action} a hero` : view.step.label;
         $('stepLabel').className = `step-badge${p2Turn() ? ' step-badge--p2' : ''}${action ? '' : ' step-badge--done'}`;
-        const hasRanks = view.suggestions.items.length > 0;
-        document.querySelector('.sort-switch').hidden = !hasRanks;
         const counters = anyCounters();
         if (!counters && ui.sort === 'counters') ui.sort = 'recommended';
+        document.querySelector('.sort-switch [data-sort="recommended"]').hidden = !hasRanks();
         document.querySelector('.sort-switch [data-sort="counters"]').hidden = !counters;
         document.querySelectorAll('.sort-switch [data-sort]').forEach(b =>
-            b.setAttribute('aria-checked', String(b.dataset.sort === ui.sort)));
+            b.setAttribute('aria-checked', String(b.dataset.sort === sortBy())));
         $('completeNote').hidden = !view.complete;
         $('completeText').textContent = solo() ? 'Band complete.' : 'Draft complete.';
     }
@@ -1106,6 +1216,7 @@
         const facing = Draft.bands(state())[v.focus === 1 ? 2 : 1].length > 0;
         $('scoreExplain').textContent = a.score.percent === null ? ''
             : `${percentExplain(a.score.percent, { facing })} Scored on roles, synergy, themes, durability and conflicts${facing ? ', plus the matchup' : ''}.`;
+        $('scoreInfo').hidden = a.score.percent === null;
         $('scoreDetail').hidden = !a.score.change;
         $('scoreDetail').textContent = a.score.change
             ? `Preview: ${a.score.change.from === null ? '—' : percentLabel(a.score.change.from)} → ${percentLabel(a.score.change.to)}` : '';
@@ -1116,10 +1227,14 @@
             ${a.sections.map(x => sectionHtml(x, { interactive: true, limit: LIST_LIMIT, moreKey: x.key })).join('')}
             ${topicLegend(a.sections)}</div>` : '';
         const most = Math.max(1, ...a.breakdown.map(f => Math.abs(f.delta)));
+        // Every factor, zero included; each row opens the inspector on what scores it
         $('scoreBreakdown').innerHTML = a.breakdown.map(f => `
-            <li class="${f.delta < 0 ? 'is-loss' : ''}"><span class="bd-label">${f.label}</span>
+            <li class="${f.delta < 0 ? 'is-loss' : f.delta === 0 ? 'is-zero' : ''}"><button type="button" class="bd-row" data-factor="${f.factor}"
+                    aria-label="${f.label}: ${f.delta === 0 ? 'no points' : `${f.delta > 0 ? 'plus' : 'minus'} ${Math.abs(f.delta).toFixed(1)}`}. Inspect">
+                <span class="bd-label">${f.label}</span>
                 <span class="bd-bar" aria-hidden="true"><span style="width:${Math.round(Math.abs(f.delta) / most * 100)}%"></span></span>
-                <span class="bd-val">${f.delta > 0 ? '+' : '−'}${Math.abs(f.delta).toFixed(1)}</span></li>`).join('');
+                <span class="bd-val">${f.delta > 0 ? '+' : f.delta < 0 ? '−' : ''}${Math.abs(f.delta).toFixed(1)}</span>
+                <span class="bd-go" aria-hidden="true">›</span></button></li>`).join('');
         $('viewInGraph').disabled = !Draft.bands(state())[v.focus].length;
     }
 
@@ -1134,7 +1249,17 @@
         <ul class="ov-abilities">${side.overview.map(o => `<li><span class="ov-ability">${escapeHtml(o.name)}</span>${
             o.tags.length ? ` <span class="ov-tags">${o.tags.map(escapeHtml).join(', ')}</span>` : ''}</li>`).join('')}</ul></div>`;
 
-    function openInspect(reasons, { title, sub = '', opponents = [] }) {
+    // Why a score factor is at zero
+    const EMPTY_FACTOR = {
+        coverage: 'No battle role is covered yet.',
+        synergy: 'No hero in this band helps another one yet.',
+        theme: 'The band shares no theme (such as Cooldowns or Debuffs) yet.',
+        durability: 'Neither fragile nor a strong frontline: Vitality is neither a bonus nor a cost.',
+        conflict: 'No hero in this band works against another one.',
+        matchup: 'No counters either way against the opponent (or no opponent yet).'
+    };
+
+    function openInspect(reasons, { title, sub = '', opponents = [], empty = 'Nothing scores here.' }) {
         const v = inspectView(reasons, ctx, { title, opponents });
         const sides = v.items.flatMap(i => i.sides);
         ui.inspect = { mine: [...new Set(sides.filter(x => !x.theirs).map(x => x.hero))], theirs: [...new Set(sides.filter(x => x.theirs).map(x => x.hero))] };
@@ -1142,7 +1267,7 @@
         $('inspectSub').textContent = sub;
         const ready = window.BestiaryGraph && window.BestiaryGraph.ready;
         const single = v.items.length === 1;
-        $('inspectItems').innerHTML = v.items.map(item => `
+        $('inspectItems').innerHTML = !v.items.length ? `<p class="muted inspect-empty">${escapeHtml(empty)}</p>` : v.items.map(item => `
             <article class="inspect-item">
                 <header class="inspect-item-head"><p class="reason reason--${item.kind} topic--${item.topic}" title="${escapeHtml(TOPICS[item.topic].label)}">${
                     escapeHtml(item.text)}</p>${dots(item.strength)}</header>
@@ -1168,6 +1293,13 @@
         openInspect(one ? one.reasons : x.reasons, { title: x.title, sub: one ? one.text : `${x.label} · ${entry.suggestion.percentLabel} best band`, opponents });
     }
 
+    // `dismiss`: Escape hides it even while hovered or focused (until hovered or focused again)
+    function setScoreInfo(open, { dismiss = false } = {}) {
+        $('scoreInfo').classList.toggle('is-open', open);
+        $('scoreInfo').classList.toggle('is-dismissed', dismiss);
+        $('scoreInfoBtn').setAttribute('aria-expanded', String(open));
+    }
+
     function setupInspect() {
         $('analysisSections').addEventListener('click', event => {
             const button = event.target.closest('[data-inspect]');
@@ -1175,6 +1307,25 @@
             const x = (shown || view).analysis.sections.find(sec => sec.key === button.dataset.inspect);
             const one = button.dataset.line === undefined ? null : x?.lines[Number(button.dataset.line)];
             if (x) openInspect(one ? one.reasons : x.reasons, { title: x.title, sub: one ? one.text : x.label, opponents: x.opponents });
+        });
+        $('scoreBreakdown').addEventListener('click', event => {
+            const factor = event.target.closest('[data-factor]')?.dataset.factor;
+            const v = shown || view;
+            const f = v.analysis.breakdown.find(x => x.factor === factor);
+            if (!f) return;
+            const whose = solo() ? 'Your band' : `Player ${v.focus}'s band`;
+            const total = `${f.delta > 0 ? '+' : f.delta < 0 ? '−' : ''}${Math.abs(f.delta).toFixed(1)} points`;
+            openInspect(f.reasons, { title: `${f.label}: ${whose}`, sub: `Band score · ${total}`,
+                opponents: Draft.bands(state())[v.focus === 1 ? 2 : 1], empty: EMPTY_FACTOR[f.factor] });
+        });
+        // The score's (i): hover or focus shows it, a click pins it open until a click elsewhere or Escape
+        $('scoreInfoBtn').addEventListener('click', () => {
+            const open = !$('scoreInfo').classList.contains('is-open');
+            setScoreInfo(open, { dismiss: !open }); // closing by click hides it even while hovered or focused
+        });
+        ['mouseenter', 'focusin'].forEach(type => $('scoreInfo').addEventListener(type, () => $('scoreInfo').classList.remove('is-dismissed')));
+        document.addEventListener('click', event => {
+            if (!event.target.closest('#scoreInfo')) setScoreInfo(false);
         });
         $('inspectItems').addEventListener('click', event => {
             const card = event.target.closest('[data-card]');
@@ -1408,7 +1559,9 @@
             if (ui.tab !== 'draft' || $('inspectDialog').open) return;
             const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName);
             if (event.key === 'Escape') {
-                if (!$('cardMenu').hidden) closeMenu();
+                const tip = $('scoreInfo');
+                if (tip.classList.contains('is-open') || tip.matches(':hover') || tip.contains(document.activeElement)) setScoreInfo(false, { dismiss: true });
+                else if (!$('cardMenu').hidden) closeMenu();
                 else if (!$('tilePopover').hidden) { hidePopover(); preview(null); }
                 else if ($('analysisPanel').classList.contains('is-open')) setSheet(false);
                 return;

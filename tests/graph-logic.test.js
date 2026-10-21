@@ -249,3 +249,11 @@ test('vitalityTokensSvg draws the same token stack as markup for HTML portraits'
     const [first] = G.vitalityTokens(4, G.HERO_RADIUS);
     assert.ok(svg.includes(`translate(${first.x.toFixed(2)},${first.y.toFixed(2)})`), 'tokens use the graph layout');
 });
+
+test('gradientVector: runs from the tail to the arrowhead; none for two-way or undirected edges', () => {
+    const seg = { x1: 0, y1: 0, x2: 10, y2: 5 };
+    assert.deepStrictEqual(G.gradientVector(seg, { toTrait: true, toHero: false }), { x1: 0, y1: 0, x2: 10, y2: 5 });
+    assert.deepStrictEqual(G.gradientVector(seg, { toTrait: false, toHero: true }), { x1: 10, y1: 5, x2: 0, y2: 0 });
+    assert.strictEqual(G.gradientVector(seg, { toTrait: true, toHero: true }), null);
+    assert.strictEqual(G.gradientVector(seg, { toTrait: false, toHero: false }), null);
+});

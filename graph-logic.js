@@ -132,6 +132,13 @@
         return { x1: a.x + ux * ra, y1: a.y + uy * ra, x2: b.x - ux * rb, y2: b.y - uy * rb };
     }
 
+    // A one-way edge fades in from its tail to its arrowhead: the gradient's start and end points
+    // (`seg` is drawn from x1,y1 to x2,y2). Two-way or undirected edges keep a solid colour (null).
+    function gradientVector(seg, dir) {
+        if (dir.toTrait === dir.toHero) return null;
+        return dir.toTrait ? { x1: seg.x1, y1: seg.y1, x2: seg.x2, y2: seg.y2 } : { x1: seg.x2, y1: seg.y2, x2: seg.x1, y2: seg.y1 };
+    }
+
     // Quadratic curve from a to b bowed sideways by `bend` x length (sign picks the side),
     // ends pulled back to the node rims; (mx, my) is the curve's midpoint
     function arcPath(a, b, ra, rb, bend) {
@@ -428,7 +435,7 @@
         ATTRIBUTES, getLabelCategory, HERO_RADIUS, TOKEN_RADIUS, vitalityTokens, vitalityTokensSvg, labelRadius,
         buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, bandView, bandSprings, bandAnchors, arcPath,
         filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
-        ROLES, ROLE_INFO, linkKind, linkDirection, linkSummary, abilityTraits, linkAbilities, traitHeroesByRole, filterByRole, trimSegment
+        ROLES, ROLE_INFO, linkKind, linkDirection, linkSummary, abilityTraits, linkAbilities, traitHeroesByRole, filterByRole, trimSegment, gradientVector
     };
 
     if (typeof module !== 'undefined' && module.exports) {

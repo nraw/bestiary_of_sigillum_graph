@@ -71,9 +71,24 @@
 
     const image = name => `hero_images/${name.toLowerCase()}.png`;
 
+    // What the pool search finds a hero by (search.js poolMatches), each term once
+    function searchTerms(hero) {
+        const terms = [];
+        const add = (text, kind) => {
+            if (text && !terms.some(t => t.text.toLowerCase() === text.toLowerCase())) terms.push({ text, kind });
+        };
+        add(hero.attribute, 'attribute');
+        add(Draft.size(hero), 'size');
+        add(Draft.attackRange(hero), 'range');
+        Draft.battleRoles(hero).forEach(r => add(r, 'role'));
+        hero.labels.forEach(l => add(l, 'trait'));
+        return terms;
+    }
+
     function poolEntry(hero, state) {
         const reason = Draft.unavailableReason(state, hero.name);
         return {
+            terms: searchTerms(hero),
             name: hero.name, display: titleCase(hero.name), id: hero.id, image: image(hero.name),
             attribute: hero.attribute, size: Draft.size(hero), attackRange: Draft.attackRange(hero),
             battleRoles: Draft.battleRoles(hero), vitality: hero.vitality,
@@ -189,9 +204,25 @@
 
     // Points per scoring factor (they add up to the band's value)
     const FACTORS = [['coverage', 'Roles'], ['synergy', 'Synergy'], ['theme', 'Themes'], ['durability', 'Durability'], ['conflict', 'Conflicts'], ['matchup', 'Matchup']];
-    const breakdown = reasons => FACTORS
-        .map(([factor, label]) => ({ factor, label, delta: sum(reasons.filter(r => r.factor === factor)) }))
-        .filter(f => f.delta !== 0);
+    // Every factor, even at zero, with the reasons behind it (for the inspector); none for an empty band
+    const breakdown = (reasons, band) => (band.length ? FACTORS.map(([factor, label]) => {
+        const own = reasons.filter(r => r.factor === factor);
+        return { factor, label, delta: sum(own), reasons: own.filter(r => r.kind !== 'info') };
+    }) : []);
+
+    // The pool's order: recommended (by suggestion rank), counters first, A–Z, or the card id. Unranked
+    // heroes (or every hero, once the draft is over) follow in card id order.
+    const SORTS = {
+        recommended: () => 0,
+        counters: (a, b) => b.counters - a.counters,
+        name: (a, b) => a.display.localeCompare(b.display),
+        id: (a, b) => a.id - b.id
+    };
+    function sortPool(entries, sort) {
+        const rank = e => (e.suggestion ? e.suggestion.rank : Infinity);
+        const byRank = sort === 'recommended' || sort === 'counters';
+        return [...entries].sort((a, b) => (SORTS[sort] || SORTS.recommended)(a, b) || (byRank ? rank(a) - rank(b) : 0) || a.id - b.id);
+    }
 
     // ---- Inspector: the reasons in words and the card text behind them ------------------------------
 
@@ -274,7 +305,7 @@
 
     // The popover's sections for the whole band (role coverage is Team balance's) and the score breakdown,
     // once the reasons carry their preview flags
-    const withSections = (a, options) => ({ ...a, breakdown: breakdown(a.reasons),
+    const withSections = (a, band, options) => ({ ...a, breakdown: breakdown(a.reasons, band),
         sections: popoverSections(a.reasons.filter(r => r.factor !== 'coverage'), null, options) });
 
     // Heroes a preview adds to the acting player's band (one candidate, or a whole suggested band)
@@ -327,7 +358,7 @@
 
         // Analysis of the focus band against the other; a preview shows when it's the focus band's turn
         const rowOptions = { own: solo ? 'your band' : `Player ${focus}'s band`, vs: solo ? 'Against' : `Player ${other}`, opponents: bands[other] };
-        const base = withSections(analysis(bands[focus], bands[other], pool, ctx), rowOptions);
+        const base = withSections(analysis(bands[focus], bands[other], pool, ctx), bands[focus], rowOptions);
         let result = base;
         if (added[focus].length) {
             result = analysis([...bands[focus], ...added[focus]], bands[other], pool.filter(n => !added[focus].includes(n)), ctx);
@@ -339,7 +370,7 @@
                 return list.map(r => ({ ...r, preview: !known.has(r.id) }));
             };
             result.reasons = flag(result.reasons, base.reasons);
-            result = withSections(result, rowOptions);
+            result = withSections(result, [...bands[focus], ...added[focus]], rowOptions);
         }
 
         const banLists = Draft.bans(state);
@@ -406,7 +437,7 @@
     }
 
     const api = { draftView, referenceSides, graphAction, rollFrames, chipsFor, chipKind, shortReason, strength, popoverSections, inspectView, topicOf, TOPICS,
-        collapse, percentLabel, percentExplain, ROLE_INFO, MAX_CHIPS };
+        collapse, sortPool, percentLabel, percentExplain, ROLE_INFO, MAX_CHIPS };
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;
