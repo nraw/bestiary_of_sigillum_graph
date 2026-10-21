@@ -529,3 +529,13 @@ test('graphAction: the graph\'s draft button follows the current step', () => {
     const done = pickAll(standard, ['TEMPUS', 'AQUS', 'MANUS', 'CERBERUS', 'SAXUM', 'MAGNUS']);
     assert.deepStrictEqual(V.graphAction(done, 'FIDEA'), { label: 'Draft complete', enabled: false });
 });
+
+test('theme lines lead with the theme (the bullet colour says it is one): members or effects after it', () => {
+    const v = V.draftView(pickAll(D.createDraft('solo'), ['TOXICUM', 'TEMPUS', 'EQUITA']), ctx);
+    const lines = v.analysis.sections.flatMap(x => x.lines).filter(l => l.topic === 'theme');
+    assert.ok(lines.length > 0 && lines.every(l => !l.text.startsWith('Theme:')));
+    const cooldowns = lines.find(l => l.ids[0] === 'theme:Cooldowns');
+    assert.match(cooldowns.text, /^Cooldowns: \w+, \w+ and \w+$/);
+    assert.deepStrictEqual(cooldowns.text.replace('Cooldowns: ', '').split(/, | and /).sort(), ['Equita', 'Tempus', 'Toxicum']);
+    assert.strictEqual(lines.find(l => l.ids[0] === 'theme:Debuffs').text, 'Debuffs: Poison');
+});

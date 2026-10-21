@@ -119,11 +119,18 @@
     const FACTOR_TOPIC = { coverage: 'roles', versatility: 'roles', theme: 'theme', durability: 'durability', conflict: 'conflict', matchup: 'matchup', ban: 'ban' };
     const topicOf = r => (r.factor === 'synergy' ? (r.id.startsWith('enabler:') ? 'support' : 'synergy') : FACTOR_TOPIC[r.factor] || 'roles');
 
+    // "Cooldowns: Toxicum and Tempus" (a plan the heroes share) or "Debuffs: Poison, Slowness" (a variety of effects)
+    function themeText(r) {
+        const variety = Draft.THEMES.find(t => t.name === r.theme).variety;
+        return `${r.theme}: ${variety ? r.text.replace(/^[^(]*\(/, '').replace(/\)$/, '') : andList(r.heroes)}`;
+    }
+
     // One line for some reasons: a single relation names the abilities on both sides
     function line(reasons, text) {
         const r = reasons[0];
         const rel = r.relations && r.relations[0];
-        const own = !rel ? r.text
+        const own = r.theme ? themeText(r)
+            : !rel ? r.text
             : r.relations.length === 1 || !r.beneficiary ? describeRelation(rel)
             : `${andList(r.suppliers)} each supply ${rel.need.label} for ${titleCase(rel.needer)}'s ${Synergy.abilityList(rel.need.sources)}`;
         return { ids: reasons.map(x => x.id), reasons, text: text || own, kind: r.kind, topic: topicOf(r), delta: sum(reasons),
