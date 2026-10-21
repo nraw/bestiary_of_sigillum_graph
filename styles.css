@@ -1978,9 +1978,20 @@ kbd {
 }
 button.pop-sec-head { padding: 3px 6px; margin: 0 -6px; width: calc(100% + 12px); border: 1px solid transparent; border-radius: 6px; background: none; cursor: pointer; }
 button.pop-sec-head:hover, button.pop-sec-head:focus-visible { border-color: var(--border-strong); background: var(--surface-2); }
-.pop-inspect { margin-left: auto; font-family: 'Crimson Text', serif; font-size: 0.9rem; letter-spacing: 0; text-transform: none; color: var(--text-muted); }
+.pop-inspect { margin-left: auto; white-space: nowrap; font-family: 'Crimson Text', serif; font-size: 0.9rem; letter-spacing: 0; text-transform: none; color: var(--text-muted); }
 button.pop-sec-head:hover .pop-inspect { color: var(--gold-bright); }
 .pop-section--ban .pop-sec-head { color: #FF7D93; }
+/* General (what the hero brings on its own) reads quieter than the interactions above it */
+.pop-group--general .pop-sec-head { color: var(--text-muted); }
+/* Bullet colour by topic (warnings and counters keep their own marks) */
+.reason--positive.topic--synergy::before, .topic-legend .topic--synergy .topic-dot { color: var(--gold-bright); }
+.reason--positive.topic--support::before, .topic-legend .topic--support .topic-dot { color: #4CC38A; }
+.reason--positive.topic--roles::before, .topic-legend .topic--roles .topic-dot { color: #6FA8E8; }
+.reason--positive.topic--theme::before, .topic-legend .topic--theme .topic-dot { color: #B79BE8; }
+.reason--positive.topic--durability::before, .topic-legend .topic--durability .topic-dot { color: #BFC6CF; }
+.reason--positive.topic--ban::before, .topic-legend .topic--ban .topic-dot { color: #FF7D93; }
+.topic-legend { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--text-muted); font-size: 0.85rem; }
+.topic-dot { margin-right: 4px; }
 .pop-line { padding: 1px 4px; margin-left: -4px; border: 1px solid transparent; border-radius: 5px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .pop-line:hover, .pop-line:focus-visible { border-color: var(--border-strong); background: var(--surface-2); }
 .pop-more, .pop-hint { color: var(--text-muted); font-size: 0.88rem; }
@@ -2000,19 +2011,9 @@ button.pop-sec-head:hover .pop-inspect { color: var(--gold-bright); }
 .tile-pop.is-sheet .pop-close { display: inline-flex; }
 .tile-pop.is-sheet .pop-actions .btn { flex: 1; justify-content: center; padding: 12px; font-size: 1rem; }
 
-/* Analysis rows (each opens the inspector) and "Show N more" */
-.syn-hero { font-family: 'Cinzel', serif; color: var(--gold-bright); letter-spacing: 0.03em; }
-.analysis-row::before { top: 5px; }
-.row-btn {
-    display: flex; flex-direction: column; gap: 1px; width: 100%;
-    padding: 3px 6px; margin-left: -6px; border: 1px solid transparent; border-radius: 6px;
-    background: none; color: inherit; font: inherit; line-height: 1.35; text-align: left; cursor: pointer;
-}
-.row-btn:hover, .row-btn:focus-visible { border-color: var(--border-strong); background: var(--surface-2); }
-.row-head { display: flex; align-items: center; gap: 8px; }
-.row-text { color: var(--text-muted); }
-.row-head .dots { margin-left: auto; flex-shrink: 0; }
-.row-sentence { flex: 1; }
+/* Band analysis: the popover's sections for the whole band, and "Show N more" */
+.analysis-reasons { display: flex; flex-direction: column; gap: 8px; }
+.analysis-reasons .pop-inspect-word { display: none; } /* narrow panel: just the chevron */
 .syn-new { color: var(--gold-bright); font-weight: 600; }
 .more-btn { align-self: flex-start; margin-top: 4px; }
 .analysis-head { display: flex; align-items: center; justify-content: space-between; }
@@ -2142,7 +2143,25 @@ button.pop-sec-head:hover .pop-inspect { color: var(--gold-bright); }
     height: fit-content; max-height: min(92vh, 1000px); width: min(980px, 94vw);
 }
 .inspect-body { overflow-y: auto; padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 12px; }
-.inspect-lines { font-size: 1.02rem; }
+.inspect-items { display: flex; flex-direction: column; gap: 12px; }
+.inspect-item { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.inspect-item-head { display: flex; align-items: flex-start; gap: 10px; }
+.inspect-item-head .reason { flex: 1; font-size: 1.04rem; }
+.inspect-item-head .dots { margin-top: 6px; }
+.ov-sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px 16px; padding-left: 20px; }
+.ov-side { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.ov-hero { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--gold-bright); font: inherit; cursor: pointer; }
+.ov-hero img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; object-position: top; border: 1.5px solid var(--border-strong); }
+.ov-hero strong { font-family: 'Cinzel', serif; font-size: 0.9rem; }
+.ov-hero:hover strong, .ov-hero:focus-visible strong { text-decoration: underline; }
+.ov-side.is-theirs .ov-hero { color: var(--chip-warning); }
+.ov-notes { color: var(--text-muted); font-size: 0.88rem; }
+.ov-abilities { list-style: none; width: 100%; padding-left: 30px; display: grid; gap: 1px; font-size: 0.95rem; }
+.ov-ability { color: var(--text); font-style: italic; }
+.ov-tags { color: var(--text-muted); font-size: 0.88rem; }
+.ov-tags::before { content: '· '; }
+.inspect-cards > summary { padding-left: 20px; color: var(--gold); cursor: pointer; font-size: 0.92rem; }
+.inspect-cards[open] > summary { margin-bottom: 8px; }
 .inspect-sides { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 0; }
 .tt-side--theirs .tt-side-head strong { color: var(--chip-warning); }
 .side-tag { font-size: 0.78rem; padding: 0 6px; border-radius: 8px; border: 1px solid var(--chip-warning); color: var(--chip-warning); }

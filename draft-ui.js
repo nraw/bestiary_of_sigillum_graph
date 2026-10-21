@@ -3,7 +3,7 @@
 // this file draws (both unit tested). Only DOM, events and persistence live here.
 (function () {
     const Draft = window.Draft;
-    const { draftView, referenceSides, graphAction, rollFrames, inspectView, percentLabel, percentExplain, ROLE_INFO, collapse } = window.DraftView;
+    const { draftView, referenceSides, graphAction, rollFrames, inspectView, percentLabel, percentExplain, ROLE_INFO, TOPICS, collapse } = window.DraftView;
     const { encodeDraft, decodeDraft, isDraftLink } = window.DraftShare;
     const { escapeHtml, vitalityTokensSvg } = window.GraphLogic;
     const { titleCase } = window.Synergy;
@@ -73,6 +73,38 @@
     // How much a section or row weighs: up to 5 dots (draft-view.js strength), or a warning
     const dots = st => (st.warning ? '<span class="dots dots--warning" title="Costs points">⚠</span>'
         : st.dots ? `<span class="dots" title="Weight ${st.dots} of 5" aria-label="Weight ${st.dots} of 5">${'●'.repeat(st.dots)}<span class="dots-off">${'●'.repeat(5 - st.dots)}</span></span>` : '');
+
+    // One reason line; its bullet is coloured by topic (synergy, support, roles…)
+    const lineItem = (l, inner) => `<li class="reason reason--${l.kind} topic--${l.topic}${l.preview ? ' is-changed' : ''}"
+        title="${escapeHtml(TOPICS[l.topic].label)}">${inner}${l.preview ? ' <span class="syn-new">(preview)</span>' : ''}</li>`;
+
+    // A section of reasons (draft-view.js popoverSections), drawn the same in the tile popover and the band analysis.
+    // `interactive`: the heading and each line open the inspector; `limit`: lines shown before "+N more" (a "Show N more"
+    // button when `moreKey` is set); `heading`: the heading element when not interactive
+    function sectionHtml(x, { interactive, limit = Infinity, moreKey = null, heading = 'h4' }) {
+        const c = collapse(x.lines, limit, Boolean(moreKey && ui.expanded[moreKey]));
+        const head = `<span class="pop-sec-label">${escapeHtml(x.label)}</span>${dots(x.strength)}`;
+        const id = moreKey ? ` id="more-${moreKey}"` : '';
+        return `<section class="pop-section pop-section--${x.kind} pop-group--${x.group}">
+            ${interactive ? `<button type="button" class="pop-sec-head" data-inspect="${escapeHtml(x.key)}"
+                aria-label="Inspect: ${escapeHtml(x.title)}">${head}<span class="pop-inspect"><span class="pop-inspect-word">Inspect </span>›</span></button>`
+                : `<${heading} class="pop-sec-head">${head}</${heading}>`}
+            <ul class="reason-list"${id}>${c.items.map((l, i) => lineItem(l, interactive
+                ? `<button type="button" class="pop-line" data-inspect="${escapeHtml(x.key)}" data-line="${i}">${escapeHtml(l.text)}</button>`
+                : escapeHtml(l.text))).join('')}</ul>
+            ${!c.hidden ? '' : moreKey
+                ? `<button class="link-btn more-btn" type="button" data-more="${moreKey}" aria-controls="more-${moreKey}" aria-expanded="${c.expanded}">
+                    ${c.expanded ? 'Show fewer' : `Show ${c.hidden} more`}</button>`
+                : `<p class="pop-more">+${c.hidden} more</p>`}
+        </section>`;
+    }
+
+    // Which bullet colours mean what, for the topics on screen
+    const topicLegend = sections => {
+        const topics = [...new Set(sections.flatMap(x => x.lines.filter(l => l.kind === 'positive').map(l => l.topic)))];
+        return topics.length > 1 ? `<p class="topic-legend">${topics.map(t =>
+            `<span class="topic--${t}"><span class="topic-dot" aria-hidden="true">✦</span>${escapeHtml(TOPICS[t].label)}</span>`).join('')}</p>` : '';
+    };
     const banner = attribute =>
         `<span class="attr-banner attr--${attribute}" title="${attribute}">${icon(attribute)}<span class="sr-only">${attribute}</span></span>`;
 
@@ -685,19 +717,6 @@
         const interactive = sheet || pinned;
         ui.pinned = pinned;
         const canFill = interactive && solo() && !ban && s.bestWith.length > 0;
-        const section = x => {
-            const c = collapse(x.lines, interactive ? Infinity : HOVER_LINES, false);
-            const head = `<span class="pop-sec-label">${escapeHtml(x.label)}</span>${dots(x.strength)}`;
-            return `<section class="pop-section pop-section--${x.kind}">
-                ${interactive ? `<button type="button" class="pop-sec-head" data-inspect="${escapeHtml(x.key)}"
-                    aria-label="Inspect: ${escapeHtml(x.title)}">${head}<span class="pop-inspect">Inspect ›</span></button>`
-                    : `<h4 class="pop-sec-head">${head}</h4>`}
-                <ul class="reason-list">${c.items.map((l, i) => `<li class="reason reason--${l.kind}">${interactive
-                    ? `<button type="button" class="pop-line" data-inspect="${escapeHtml(x.key)}" data-line="${i}">${escapeHtml(l.text)}</button>`
-                    : escapeHtml(l.text)}</li>`).join('')}</ul>
-                ${c.hidden ? `<p class="pop-more">+${c.hidden} more</p>` : ''}
-            </section>`;
-        };
         pop.innerHTML = `
             <div class="pop-head">
                 <span class="pop-rank">#${s.rank}</span>
@@ -708,7 +727,8 @@
                 <strong>${s.percentLabel}</strong>
                 <small class="pop-explain">${escapeHtml(percentExplain(s.topPercent, { facing: Draft.bands(state())[ban ? p : rival].length > 0 }))}</small></p>
             ${s.bestWith.length ? `<p class="pop-best">Best with: <strong>${s.bestWith.map(display).map(escapeHtml).join(' + ')}</strong></p>` : ''}
-            ${s.sections.map(section).join('') || '<p class="muted">No specific reasons.</p>'}
+            ${s.sections.map(x => sectionHtml(x, { interactive, limit: interactive ? Infinity : HOVER_LINES })).join('') || '<p class="muted">No specific reasons.</p>'}
+            ${interactive ? topicLegend(s.sections) : ''}
             ${interactive ? '' : '<p class="pop-hint">Right-click or press <kbd>I</kbd> to inspect the card text behind these</p>'}
             <div class="pop-actions">
                 ${entry.available && view.step.action ? `<button class="btn ${ban ? 'btn-crimson' : 'btn-gold'} pop-primary" type="button" data-pop="primary">${verb}${escapeHtml(forWhom)}</button>` : ''}
@@ -1091,11 +1111,10 @@
             ? `Preview: ${a.score.change.from === null ? '—' : percentLabel(a.score.change.from)} → ${percentLabel(a.score.change.to)}` : '';
         $('scoreDetail').classList.toggle('is-changed', Boolean(a.score.change));
 
-        $('analysisSections').innerHTML = a.sections.map(x => `
-            <section class="analysis-block" aria-label="${escapeHtml(x.label)}">
-                <h3 class="mini-heading">${escapeHtml(x.label)}</h3>
-                ${moreList(x.key, x.rows, row => analysisRow(x.key, row))}
-            </section>`).join('');
+        // The same sections as the tile popover, for the whole band
+        $('analysisSections').innerHTML = a.sections.length ? `<div class="analysis-block analysis-reasons">
+            ${a.sections.map(x => sectionHtml(x, { interactive: true, limit: LIST_LIMIT, moreKey: x.key })).join('')}
+            ${topicLegend(a.sections)}</div>` : '';
         const most = Math.max(1, ...a.breakdown.map(f => Math.abs(f.delta)));
         $('scoreBreakdown').innerHTML = a.breakdown.map(f => `
             <li class="${f.delta < 0 ? 'is-loss' : ''}"><span class="bd-label">${f.label}</span>
@@ -1104,34 +1123,34 @@
         $('viewInGraph').disabled = !Draft.bands(state())[v.focus].length;
     }
 
-    // A sentence ("Arborus keeps Toxicum and Magnus alive ●○○○○") or a labelled row ("Cooldowns ●●●○○ / Toxicum, Tempus");
-    // the row opens the inspector
-    const analysisRow = (section, r) => `<li class="reason reason--${r.kind} analysis-row${r.preview ? ' is-changed' : ''}">
-        <button type="button" class="row-btn" data-row="${section}" data-key="${escapeHtml(r.key)}" aria-label="Inspect: ${escapeHtml(r.label || r.text)}">
-            ${r.label ? `<span class="row-head"><strong class="syn-hero">${escapeHtml(r.label)}</strong>${dots(r.strength)}</span>
-            <span class="row-text">${escapeHtml(r.text)}</span>`
-            : `<span class="row-head"><span class="row-sentence">${escapeHtml(r.text)}</span>${dots(r.strength)}</span>`}${
-            r.preview ? ' <span class="syn-new">(preview)</span>' : ''}</button></li>`;
-
-    // A list showing LIST_LIMIT items, then one "Show N more" button that expands in place
-    function moreList(key, items, row) {
-        const c = collapse(items, LIST_LIMIT, Boolean(ui.expanded[key]));
-        const id = `more-${key}`;
-        return `<ul class="reason-list" id="${id}">${c.items.map(row).join('')}</ul>${c.hidden
-            ? `<button class="link-btn more-btn" type="button" data-more="${key}" aria-controls="${id}" aria-expanded="${c.expanded}">
-                ${c.expanded ? 'Show fewer' : `Show ${c.hidden} more`}</button>` : ''}`;
-    }
-
     // ---- Inspector: the card text behind a popover section or analysis row ---------------------
+
+    // One hero's part in a line: who, its role or Vitality, and which abilities with what they do here
+    const overviewSide = side => `<div class="ov-side${side.theirs ? ' is-theirs' : ''}">
+        <button type="button" class="ov-hero" data-card="${side.hero}" title="Open ${escapeHtml(side.display)}'s card">
+            <img src="${side.image}" alt="" width="24" height="24"><strong>${escapeHtml(side.display)}</strong></button>${
+        side.theirs ? '<span class="side-tag">Opponent</span>' : ''}${
+        side.notes.length ? `<span class="ov-notes">${side.notes.map(escapeHtml).join(' · ')}</span>` : ''}
+        <ul class="ov-abilities">${side.overview.map(o => `<li><span class="ov-ability">${escapeHtml(o.name)}</span>${
+            o.tags.length ? ` <span class="ov-tags">${o.tags.map(escapeHtml).join(', ')}</span>` : ''}</li>`).join('')}</ul></div>`;
 
     function openInspect(reasons, { title, sub = '', opponents = [] }) {
         const v = inspectView(reasons, ctx, { title, opponents });
-        ui.inspect = { mine: v.sides.filter(x => !x.theirs).map(x => x.hero), theirs: v.sides.filter(x => x.theirs).map(x => x.hero) };
+        const sides = v.items.flatMap(i => i.sides);
+        ui.inspect = { mine: [...new Set(sides.filter(x => !x.theirs).map(x => x.hero))], theirs: [...new Set(sides.filter(x => x.theirs).map(x => x.hero))] };
         $('inspectTitle').textContent = title;
         $('inspectSub').textContent = sub;
-        $('inspectLines').innerHTML = v.lines.map(l => `<li class="reason reason--${l.kind}">${escapeHtml(l.text)}</li>`).join('');
         const ready = window.BestiaryGraph && window.BestiaryGraph.ready;
-        $('inspectSides').innerHTML = ready ? window.BestiaryGraph.evidence(v.sides) : '<p class="muted">Loading the cards…</p>';
+        const single = v.items.length === 1;
+        $('inspectItems').innerHTML = v.items.map(item => `
+            <article class="inspect-item">
+                <header class="inspect-item-head"><p class="reason reason--${item.kind} topic--${item.topic}" title="${escapeHtml(TOPICS[item.topic].label)}">${
+                    escapeHtml(item.text)}</p>${dots(item.strength)}</header>
+                ${item.sides.length ? `<div class="ov-sides">${item.sides.map(overviewSide).join('')}</div>
+                <details class="inspect-cards"${single ? ' open' : ''}><summary>Card text</summary>
+                    <div class="tt-sides inspect-sides">${ready ? window.BestiaryGraph.evidence(item.sides) : '<p class="muted">Loading the cards…</p>'}</div>
+                </details>` : ''}
+            </article>`).join('');
         $('inspectInGraph').hidden = !ui.inspect.mine.length;
         if (!$('inspectDialog').open) $('inspectDialog').showModal();
     }
@@ -1151,13 +1170,13 @@
 
     function setupInspect() {
         $('analysisSections').addEventListener('click', event => {
-            const button = event.target.closest('[data-row]');
+            const button = event.target.closest('[data-inspect]');
             if (!button) return;
-            const x = (shown || view).analysis.sections.find(sec => sec.key === button.dataset.row);
-            const row = x?.rows.find(r => r.key === button.dataset.key);
-            if (row) openInspect(row.reasons, { title: row.title, sub: row.label ? x.label : row.text, opponents: row.opponents });
+            const x = (shown || view).analysis.sections.find(sec => sec.key === button.dataset.inspect);
+            const one = button.dataset.line === undefined ? null : x?.lines[Number(button.dataset.line)];
+            if (x) openInspect(one ? one.reasons : x.reasons, { title: x.title, sub: one ? one.text : x.label, opponents: x.opponents });
         });
-        $('inspectSides').addEventListener('click', event => {
+        $('inspectItems').addEventListener('click', event => {
             const card = event.target.closest('[data-card]');
             if (card) openCards({ hero: card.dataset.card });
         });

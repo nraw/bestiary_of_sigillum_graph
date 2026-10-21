@@ -111,6 +111,14 @@
     const sum = reasons => reasons.reduce((t, r) => t + r.delta, 0);
     const andList = list => list.map(titleCase).join(', ').replace(/, ([^,]*)$/, ' and $1');
 
+    // What a line is about; each topic has its own bullet colour in the UI
+    const TOPICS = {
+        synergy: { label: 'Synergy' }, support: { label: 'Support' }, conflict: { label: 'Conflict' }, matchup: { label: 'Matchup' },
+        roles: { label: 'Roles' }, theme: { label: 'Theme' }, durability: { label: 'Durability' }, ban: { label: 'Ban' }
+    };
+    const FACTOR_TOPIC = { coverage: 'roles', versatility: 'roles', theme: 'theme', durability: 'durability', conflict: 'conflict', matchup: 'matchup', ban: 'ban' };
+    const topicOf = r => (r.factor === 'synergy' ? (r.id.startsWith('enabler:') ? 'support' : 'synergy') : FACTOR_TOPIC[r.factor] || 'roles');
+
     // One line for some reasons: a single relation names the abilities on both sides
     function line(reasons, text) {
         const r = reasons[0];
@@ -118,7 +126,8 @@
         const own = !rel ? r.text
             : r.relations.length === 1 || !r.beneficiary ? describeRelation(rel)
             : `${andList(r.suppliers)} each supply ${rel.need.label} for ${titleCase(rel.needer)}'s ${Synergy.abilityList(rel.need.sources)}`;
-        return { ids: reasons.map(x => x.id), reasons, text: text || own, kind: r.kind, delta: sum(reasons) };
+        return { ids: reasons.map(x => x.id), reasons, text: text || own, kind: r.kind, topic: topicOf(r), delta: sum(reasons),
+            preview: reasons.some(x => x.preview) };
     }
     const byWeight = (a, b) => (b.delta >= 0) - (a.delta >= 0) || Math.abs(b.delta) - Math.abs(a.delta);
 
@@ -137,87 +146,39 @@
             : l));
     }
 
-    // The tile popover's reasons by who they are with: the ban (ban steps), the hero with its teammates
-    // (synergy, support, conflicts), the band as a whole (roles, themes, durability), then the matchup.
-    // `band`: the picks of whoever would play `name`; `own`: what to call that band; `vs`: who they face.
-    // Info lines are left out.
-    function popoverSections(reasons, name, { band = [], own = 'your band', vs = 'Against' } = {}) {
+    // Reasons in sections, for a tile popover (`name`: the hero) or the band analysis (`name` null): the ban
+    // (ban steps), then interactions, where an ability or trait meets another hero's (within the band: synergy,
+    // support, conflicts; vs the opponent: the matchup), then what the hero or band brings in general (roles,
+    // themes, durability). `group`: 'interaction' | 'general' | 'ban'. `band`: the picks of whoever would play
+    // `name`; `own`: what to call that band; `vs`: who they face; `opponents`: their heroes. Info lines are left out.
+    function popoverSections(reasons, name, { band = [], own = 'your band', vs = 'Against', opponents = [] } = {}) {
         const sections = new Map();
         const put = (key, reason, make) => {
             if (!sections.has(key)) sections.set(key, { key, reasons: [], ...make() });
             sections.get(key).reasons.push(reason);
         };
         const kept = reasons.filter(r => r.kind !== 'info');
-        const isTeam = r => (r.factor === 'synergy' || r.factor === 'conflict') && r.heroes.some(h => h !== name && band.includes(h));
+        const interacts = r => r.factor === 'synergy' || r.factor === 'conflict';
+        const isTeam = r => interacts(r) && (!name || r.heroes.some(h => h !== name && band.includes(h)));
         const teammates = band.filter(h => h !== name && kept.some(r => isTeam(r) && r.heroes.includes(h)));
+        const who = name ? titleCase(name) : own.charAt(0).toUpperCase() + own.slice(1);
         kept.forEach(r => {
-            if (r.factor === 'ban') put('ban', r, () => ({ kind: 'ban', label: 'Ban', title: r.text }));
-            else if (r.factor === 'matchup') put('matchup', r, () => ({ kind: 'matchup', label: `vs ${vs}`, title: `${titleCase(name)} vs ${vs}` }));
-            else if (isTeam(r)) put('team', r, () => ({ kind: 'team', label: `With ${own}`, title: `${titleCase(name)} with ${andList(teammates)}`, heroes: teammates }));
-            else put('band', r, () => ({ kind: 'band', label: 'Band', title: `${titleCase(name)} in the band` }));
+            if (r.factor === 'ban') put('ban', r, () => ({ kind: 'ban', group: 'ban', label: 'Ban', title: r.text }));
+            else if (r.factor === 'matchup') put('matchup', r, () => ({ kind: 'matchup', group: 'interaction', label: `Interactions vs ${vs}`, title: `${who} vs ${vs}` }));
+            else if (isTeam(r)) {
+                put('team', r, () => ({ kind: 'team', group: 'interaction', label: name ? `Interactions with ${own}` : `Interactions within ${own}`,
+                    title: name ? `${who} with ${andList(teammates)}` : who, heroes: teammates }));
+            } else put('general', r, () => ({ kind: 'general', group: 'general', label: 'General', title: `${who} in general` }));
         });
-        const ORDER = ['ban', 'team', 'band', 'matchup'];
+        const ORDER = ['ban', 'team', 'matchup', 'general'];
         return [...sections.values()].map(x => {
             const delta = sum(x.reasons);
             const lines = x.key === 'team' ? mergedLines(x.reasons) : x.reasons.map(r => line([r]));
-            return { ...x, delta, strength: strength(delta), lines: lines.sort(byWeight) };
+            return { ...x, delta, strength: strength(delta), opponents, lines: lines.sort(byWeight) };
         }).sort((a, b) => ORDER.indexOf(a.key) - ORDER.indexOf(b.key));
     }
 
-    // ---- Band analysis rows --------------------------------------------------------------------
-
-    const ANALYSIS_SECTIONS = [
-        { key: 'synergy', label: 'Synergy in band', test: r => r.factor === 'synergy' },
-        { key: 'conflict', label: 'Careful with', test: r => r.factor === 'conflict' && r.kind === 'warning' },
-        { key: 'theme', label: 'Themes', test: r => r.factor === 'theme' },
-        { key: 'matchup', label: 'Matchup', test: r => r.factor === 'matchup' },
-        { key: 'durability', label: 'Durability', test: r => r.factor === 'durability' }
-    ];
-
-    // Rows of one analysis section: { key, label, text, title, kind, strength, preview, reasons }. Synergy and
-    // conflicts are one sentence per fact (no label); matchup rows are per pair, themes and durability per reason.
-    function rowsFor(key, reasons, opponents) {
-        const finish = row => {
-            const delta = sum(row.reasons);
-            return { ...row, title: row.title || row.label, delta, strength: strength(delta), preview: row.reasons.some(r => r.preview), opponents };
-        };
-        if (key === 'synergy' || key === 'conflict') {
-            return mergedLines(reasons).map(l => finish({
-                key: l.ids.join('+'), label: '', text: l.text, kind: l.kind, reasons: l.reasons,
-                title: andList([...new Set(l.reasons.flatMap(r => r.heroes))])
-            })).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
-        }
-        const rows = new Map();
-        const put = (rowKey, r, make) => {
-            if (!rows.has(rowKey)) rows.set(rowKey, { key: rowKey, reasons: [], ...make() });
-            rows.get(rowKey).reasons.push(r);
-        };
-        reasons.forEach(r => {
-            if (key === 'matchup') {
-                const ours = r.kind === 'counter' ? r.attacker : r.victim;
-                const theirs = r.kind === 'counter' ? r.victim : r.attacker;
-                put(`${r.kind}:${ours}|${theirs}`, r, () => ({ kind: r.kind,
-                    label: r.kind === 'counter' ? `${titleCase(ours)} counters ${titleCase(theirs)}` : `${titleCase(theirs)} threatens ${titleCase(ours)}` }));
-            } else {
-                put(r.id, r, () => ({ kind: r.kind,
-                    label: key === 'theme' ? r.theme : r.id === 'durability:fragile' ? 'Fragile' : 'Frontline' }));
-            }
-        });
-        return [...rows.values()].map(row => {
-            const rs = row.reasons;
-            const text = key === 'matchup' ? [...new Set(rs.map(r => r.supply.label))].join(', ')
-                : key === 'theme' ? rs[0].text.replace(/^Theme: [^(]*\(/, '').replace(/\)$/, '')
-                : rs[0].text.replace(/^(Frontline|Fragile): /, '');
-            return finish({ ...row, text });
-        }).sort((a, b) => b.delta - a.delta);
-    }
-
-    function analysisSections(reasons, { vs = 'Against', opponents = [] } = {}) {
-        return ANALYSIS_SECTIONS.map(({ key, label, test }) => ({
-            key, label: key === 'matchup' ? `${label} vs ${vs}` : label,
-            rows: rowsFor(key, reasons.filter(test), opponents)
-        })).filter(x => x.rows.length);
-    }
+    // ---- Band analysis --------------------------------------------------------------------------
 
     // Points per scoring factor (they add up to the band's value)
     const FACTORS = [['coverage', 'Roles'], ['synergy', 'Synergy'], ['theme', 'Themes'], ['durability', 'Durability'], ['conflict', 'Conflicts'], ['matchup', 'Matchup']];
@@ -227,17 +188,13 @@
 
     // ---- Inspector: the reasons in words and the card text behind them ------------------------------
 
-    // A single relation reads as its sentence, several as one sentence each; enablers merge as in the popover
-    const inspectLines = reasons => mergedLines(reasons).flatMap(l => (l.reasons.length === 1 && l.reasons[0].relations
-        ? l.reasons[0].relations.map(rel => ({ text: describeRelation(rel), kind: l.kind }))
-        : [{ text: l.text, kind: l.kind }]));
+    const VERB = { has: 'has', inflicts: 'inflicts', grants: 'grants', gains: 'gains', places: 'places', benefits_from: 'benefits from', hindered_by: 'hindered by' };
+    const tagOf = l => `${VERB[l.role] || l.role} ${l.label}`;
+    const abilityName = (g, hero) => (g.ability.name ? titleCase(g.ability.name) : g.index === 0 ? 'Core ability' : `Support ability ${g.index}`);
 
-    // `reasons`: a popover section or analysis row. Sides: one per hero in card order of appearance,
-    // with the abilities to mark ({ ability, index, links }), card-level links and notes (Vitality, curated roles)
-    function inspectView(reasons, ctx, { title = '', opponents = [] } = {}) {
-        const all = reasons.flatMap(r => (r.band ? [r, ...Draft.scoreTeam(r.band, ctx).reasons.filter(x => x.kind !== 'info')] : [r]));
-        const lines = [];
-        inspectLines(all).forEach(l => { if (!lines.some(x => x.text === l.text)) lines.push(l); });
+    // One hero's side of some reasons: the abilities to mark ({ ability, index, links }), card-level links, notes
+    // (role, Vitality) and an overview naming each ability with what it does here
+    function sidesFor(reasons, ctx, opponents) {
         const merged = new Map();
         reasons.forEach(r => Draft.reasonEvidence(r, ctx).forEach(e => {
             if (!merged.has(e.hero)) merged.set(e.hero, { links: [], abilities: [], notes: [] });
@@ -246,11 +203,25 @@
             e.abilities.forEach(i => { if (!m.abilities.includes(i)) m.abilities.push(i); });
             e.notes.forEach(n => { if (!m.notes.includes(n)) m.notes.push(n); });
         }));
-        const sides = [...merged.entries()].map(([hero, m]) => ({
-            ...heroAbilities(ctx.byName.get(hero), m.links, { abilities: m.abilities }),
-            display: titleCase(hero), image: image(hero), theirs: opponents.includes(hero), notes: m.notes
-        }));
-        return { title, lines, sides };
+        return [...merged.entries()].map(([hero, m]) => {
+            const side = heroAbilities(ctx.byName.get(hero), m.links, { abilities: m.abilities });
+            return { ...side, display: titleCase(hero), image: image(hero), theirs: opponents.includes(hero), notes: m.notes,
+                overview: [...side.abilities.map(g => ({ name: abilityName(g, hero), tags: [...new Set(g.links.map(tagOf))] })),
+                    ...(side.cardLevel.length ? [{ name: 'Card trait', tags: [...new Set(side.cardLevel.map(tagOf))] }] : [])] };
+        });
+    }
+
+    // The inspector for a popover section, one of its lines, or an analysis row: one item per line (the same
+    // lines as the popover), each with only its own heroes and abilities. A ban lists the band it denies, line by line.
+    function inspectView(reasons, ctx, { title = '', opponents = [] } = {}) {
+        const item = l => ({ text: l.text, kind: l.kind, topic: l.topic, delta: l.delta, strength: strength(l.delta), sides: sidesFor(l.reasons, ctx, opponents) });
+        const items = [];
+        reasons.filter(r => r.band).forEach(ban => {
+            items.push({ text: ban.text, kind: ban.kind, topic: 'ban', delta: ban.delta, strength: strength(0), sides: [] });
+            mergedLines(Draft.scoreTeam(ban.band, ctx).reasons.filter(r => r.kind !== 'info')).sort(byWeight).forEach(l => items.push(item(l)));
+        });
+        mergedLines(reasons.filter(r => !r.band)).sort(byWeight).forEach(l => items.push(item(l)));
+        return { title, items };
     }
 
     // The first `limit` items unless expanded, and exactly how many are hidden
@@ -294,8 +265,10 @@
         };
     }
 
-    // Rows and breakdown, once the reasons carry their preview flags
-    const withSections = (a, options) => ({ ...a, sections: analysisSections(a.reasons, options), breakdown: breakdown(a.reasons) });
+    // The popover's sections for the whole band (role coverage is Team balance's) and the score breakdown,
+    // once the reasons carry their preview flags
+    const withSections = (a, options) => ({ ...a, breakdown: breakdown(a.reasons),
+        sections: popoverSections(a.reasons.filter(r => r.factor !== 'coverage'), null, options) });
 
     // Heroes a preview adds to the acting player's band (one candidate, or a whole suggested band)
     function previewHeroes(state, band, preview) {
@@ -346,7 +319,7 @@
         const available = poolEntries.filter(p => p.available).length;
 
         // Analysis of the focus band against the other; a preview shows when it's the focus band's turn
-        const rowOptions = { vs: solo ? 'Against' : `Player ${other}`, opponents: bands[other] };
+        const rowOptions = { own: solo ? 'your band' : `Player ${focus}'s band`, vs: solo ? 'Against' : `Player ${other}`, opponents: bands[other] };
         const base = withSections(analysis(bands[focus], bands[other], pool, ctx), rowOptions);
         let result = base;
         if (added[focus].length) {
@@ -425,7 +398,7 @@
         return { label: `${step.action === 'ban' ? 'Ban' : 'Pick'} for Player ${step.player}`, enabled: true };
     }
 
-    const api = { draftView, referenceSides, graphAction, rollFrames, chipsFor, chipKind, shortReason, strength, popoverSections, inspectView,
+    const api = { draftView, referenceSides, graphAction, rollFrames, chipsFor, chipKind, shortReason, strength, popoverSections, inspectView, topicOf, TOPICS,
         collapse, percentLabel, percentExplain, ROLE_INFO, MAX_CHIPS };
 
     if (typeof module !== 'undefined' && module.exports) {

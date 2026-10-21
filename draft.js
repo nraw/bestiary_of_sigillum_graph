@@ -330,7 +330,9 @@
     const TERRAIN = ['Mountain', 'Water', 'Forest'];
     
     // General team effects from the strategy guide and rulebook, beyond one hero's need meeting another's supply
-    const attackerEvidence = (h, roles) => (roles.includes('Attacker') ? roleEvidence(h, 'Attacker') : null);
+    // Role evidence that says which role it proves ("Attacker" first in the notes)
+    const asRole = (e, role) => (e ? { ...e, notes: [role, ...e.notes] } : null);
+    const attackerEvidence = (h, roles) => (roles.includes('Attacker') ? asRole(roleEvidence(h, 'Attacker'), 'Attacker') : null);
     const benefitLinks = (h, label, on) => h.trait_links.filter(l => l.role === 'benefits_from' && l.label === label && (!on || l.on === on));
     const cooldownAbilities = h => [h.core_ability, ...h.support_abilities].map((a, i) => (a.cooldown ? i : -1)).filter(i => i >= 0);
     const enabler = (id, detail, supply, need, text) => ({ id, detail, supply, need, text,
@@ -341,7 +343,7 @@
         enabler('attack-boost', 'attack boost', h => grantLinks(h, ['Attack increase']), attackerEvidence,
             (s, t, v) => `${s} ${v('boosts', 'boost')} ${t}'s attack`),
         enabler('cooldowns', 'cooldowns', h => grantLinks(h, ['Cooldown-Manipulation']),
-            h => evidence([], cooldownAbilities(h), cooldownAbilities(h).length ? [] : ['Every ability can be cooled down']),
+            h => evidence([], cooldownAbilities(h), [cooldownAbilities(h).length ? 'Abilities with a cooldown' : 'Every ability can be cooled down']),
             (s, t, v) => `${s} ${v('shortens', 'shorten')} ${t}'s cooldowns`),
         enabler('protection', 'protection',
             h => [...grantLinks(h, ['Defense increase', 'Resistance', 'Vampirism']), ...h.trait_links.filter(l => l.label === 'Healing' && l.role === 'has')],
@@ -460,7 +462,7 @@
             e.notes.forEach(n => f.notes.add(n));
         };
         const hero = name => ctx.byName.get(name);
-        const roles = (name, list) => list.forEach(role => put(name, roleEvidence(hero(name), role)));
+        const roles = (name, list) => list.forEach(role => put(name, asRole(roleEvidence(hero(name), role), role)));
         if (reason.relations) {
             reason.relations.forEach(r => { put(r.supplier, evidence([r.supply])); put(r.needer, evidence([r.need])); });
         } else if (reason.rule && reason.beneficiary) {

@@ -520,9 +520,12 @@ test('enabler evidence: what the supplier grants and why the target gains from i
     const cooldowns = team.find(r => r.id === 'enabler:cooldowns:TOXICUM');
     assert.deepStrictEqual(linkTags(evidenceOf(cooldowns, 'TEMPUS')), ['grants:Cooldown-Manipulation']);
     assert.deepStrictEqual(evidenceOf(cooldowns, 'TOXICUM').abilities, [1, 2], 'the abilities with a cooldown');
+    assert.deepStrictEqual(evidenceOf(cooldowns, 'TOXICUM').notes, ['Abilities with a cooldown']);
     const swift = team.find(r => r.id === 'enabler:swiftness:TOXICUM');
     assert.deepStrictEqual(linkTags(evidenceOf(swift, 'TEMPUS')), ['grants:Swiftness']);
-    assert.deepStrictEqual(evidenceOf(swift, 'TOXICUM'), { hero: 'TOXICUM', ...D.roleEvidence(byName.TOXICUM, 'Attacker') });
+    const attacker = D.roleEvidence(byName.TOXICUM, 'Attacker');
+    assert.deepStrictEqual(evidenceOf(swift, 'TOXICUM'), { hero: 'TOXICUM', ...attacker, notes: ['Attacker', ...attacker.notes] },
+        'the target\'s evidence says which role it proves');
 });
 
 test('theme evidence: the abilities each member brings to the plan', () => {
@@ -557,4 +560,13 @@ test('enabler texts read as sentences: "and" between heroes, the verb agreeing w
     assert.strictEqual(D.enablerText('protection', ['ARBORUS'], ['TOXICUM', 'MAGNUS']), 'Arborus keeps Toxicum and Magnus alive');
     assert.strictEqual(D.enablerText('swiftness', ['TEMPUS', 'IGNIFER'], ['EQUITA']), 'Tempus and Ignifer\'s Swiftness lets Equita move and still attack');
     assert.strictEqual(D.enablerText('cooldowns', ['A', 'B', 'C'], ['D']), 'A, B and C shorten D\'s cooldowns');
+});
+
+test('role evidence in reasons names the role it proves', () => {
+    const s = D.applyAction(D.createDraft('solo'), 'TOXICUM');
+    const tempus = D.suggestPick(s, ctx, Infinity).find(x => x.name === 'TEMPUS');
+    const fills = tempus.reasons.find(r => r.id === 'fills');
+    assert.ok(fills.roles.every(role => evidenceOf(fills, 'TEMPUS').notes.includes(role)));
+    const protect = D.scoreTeam(['ARBORUS', 'TOXICUM', 'MAGNUS'], ctx).reasons.find(r => r.id === 'enabler:protection:TOXICUM');
+    assert.deepStrictEqual(evidenceOf(protect, 'TOXICUM').notes, ['Attacker', `Vitality ${byName.TOXICUM.vitality}`]);
 });
