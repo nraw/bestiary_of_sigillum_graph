@@ -601,8 +601,7 @@ kbd {
 .card-banner.attr--Intelligence { background: var(--int); }
 .card-number { font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.05rem; line-height: 1; }
 .card-banner-glyph { width: 26px; height: 26px; }
-.card-banner-glyph path { fill: none; stroke: #fff; stroke-width: 1.6; stroke-linejoin: round; }
-.card-banner-glyph .sym { fill: #fff; stroke-width: 1.4; } /* "times" is a stroked symbol */
+.card-banner-glyph path { fill: none; stroke: #fff; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 
 .card-title { grid-area: title; min-width: 0; }
 .card-name {
@@ -624,10 +623,7 @@ kbd {
     font-weight: 700;
     line-height: 1;
 }
-.card-vitality svg {
-    width: 24px; height: 24px;
-    fill: none; stroke: var(--card-red); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
-}
+.card-vitality svg { width: 24px; height: 24px; fill: var(--card-red); }
 .card-type { margin-top: 2px; font-style: italic; color: var(--ink-soft); font-size: 0.92rem; }
 
 .card-portrait {
@@ -686,12 +682,8 @@ kbd {
     width: 20px;
     height: 20px;
     margin-top: 1px;
-    fill: none;
-    stroke: var(--card-red);
-    stroke-width: 1.8;
-    stroke-linecap: round;
+    fill: var(--card-red);
 }
-.card-icon .fill { fill: var(--card-red); stroke: none; }
 .card-art { flex: none; width: 64px; height: 64px; object-fit: contain; }
 
 /* Trait chips stay dark, like stamped tags on the parchment */
@@ -725,7 +717,7 @@ kbd {
 .trait-chip:hover { border-color: var(--gold); background: var(--surface-3); }
 
 .glyph { flex: none; vertical-align: middle; }
-.glyph path { fill: #1A120C; stroke: #1A120C; stroke-width: 1.6; stroke-linejoin: round; }
+.glyph path { fill: none; stroke: #1A120C; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .glyph-trait path { fill: #4A3A2D; stroke: var(--bronze); stroke-width: 1.2; }
 .glyph-img { border-radius: 50%; }
 
@@ -834,14 +826,12 @@ kbd {
 .hero-ring { fill: none; stroke-width: 3; }
 .halo, .focus-ring { fill: none; stroke: transparent; transition: stroke 0.2s; }
 .type-badge circle { stroke: var(--surface); stroke-width: 1.5; }
-.type-badge path { fill: #1A120C; stroke: #1A120C; stroke-width: 1.6; stroke-linejoin: round; }
+.type-badge path { fill: none; stroke: #1A120C; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .svg-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 .vitality-tokens, .vitality-stack { pointer-events: none; }
 .token-rim { fill: url(#token-rim); stroke: #0D0B09; stroke-width: 0.8; }
 .token-face { fill: url(#token-ember); }
-.token-heart {
-    fill: none; stroke: #FFE0A3; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
-}
+.token-heart { fill: #FFE0A3; }
 
 .label-shape {
     fill: #4A3A2D;
@@ -1666,7 +1656,6 @@ kbd {
         var(--parchment);
     box-shadow: inset 0 0 30px rgba(110, 72, 30, 0.35), 0 6px 18px rgba(0, 0, 0, 0.5);
 }
-.slot .attr-banner { left: 34px; }
 .slot.is-empty {
     justify-content: center;
     background: none;

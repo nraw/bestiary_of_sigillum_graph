@@ -5,7 +5,7 @@ const {
     buildGraph, buildAdjacency, computeHighlight, focusIds, linkState, bandView, bandSprings, bandAnchors, arcPath,
     filterNodes, fitTransform, effectIcon, nearestInDirection, escapeHtml, abilityRange, abilityImage,
     ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, linkAbilities, traitHeroesByRole, filterByRole, trimSegment, gradientVector,
-    vitalityTokens, TOKEN_RADIUS
+    vitalityTokens, TOKEN_RADIUS, ATTRIBUTE_GLYPHS, GLYPHS, attributeGlyph, glyphSymbol
 } = window.GraphLogic;
 const { encodeRoute, decodeRoute, isGraphRoute } = window.GraphRoute;
 const { computeSynergies, heroSynergies, synergySummary, synergyArcs, arcAbilities, describeRelation, titleCase, abilityList, formationVerb } = window.Synergy;
@@ -58,11 +58,11 @@ const CATEGORY_CHIPS = ['All', 'Melee', 'Ranged', 'AoE', 'Displacement'];
 
 // Hero ring colour = card attribute: the card banner's red / green / blue, re-stepped so all
 // pairs stay apart under colour-blind simulation on the dark surface (dataviz validator, all pairs
-// ΔE ≥ 11). Every attribute also has its own glyph so colour is never the only cue.
+// ΔE ≥ 11). Every attribute also has its card-banner emblem (GraphLogic.ATTRIBUTE_GLYPHS) so colour is never the only cue.
 const HERO_ATTRIBUTES = {
-    Strength:     { color: '#D9483B', symbol: 'plus',     label: 'Strength' },
-    Agility:      { color: '#2CAA95', symbol: 'triangle', label: 'Agility' },
-    Intelligence: { color: '#5B7FE0', symbol: 'star',     label: 'Intelligence' }
+    Strength:     { color: '#D9483B', label: 'Strength' },
+    Agility:      { color: '#2CAA95', label: 'Agility' },
+    Intelligence: { color: '#5B7FE0', label: 'Intelligence' }
 };
 
 // Trait nodes share one neutral colour; shape carries the category
@@ -91,10 +91,7 @@ const ROLE_STYLE = {
 const SUBJECT_LABEL = { self: 'self', ally: 'allies', enemy: 'enemies' };
 
 const SYMBOLS = {
-    times: d3.symbolTimes,
     triangle: d3.symbolTriangle,
-    star: d3.symbolStar,
-    plus: d3.symbolPlus,
     circle: d3.symbolCircle,
     diamond: d3.symbolDiamond,
     wye: d3.symbolWye,
@@ -258,7 +255,8 @@ function setupGraph() {
         .attr('class', 'type-badge')
         .attr('transform', d => `translate(${d.radius * 0.72},${d.radius * 0.72})`);
     badge.append('circle').attr('r', 7).attr('fill', d => HERO_ATTRIBUTES[d.attribute].color);
-    badge.append('path').attr('d', d => symbolPath(HERO_ATTRIBUTES[d.attribute].symbol, 40));
+    badge.append('path').attr('transform', 'translate(-4.5 -4.5) scale(0.375)')
+        .attr('d', d => ATTRIBUTE_GLYPHS[d.attribute]);
     const tokens = heroes.append('g').attr('class', 'vitality-tokens')
         .selectAll('g')
         .data(d => vitalityTokens(d.vitality, d.radius))
@@ -724,33 +722,20 @@ function updateHeaderState(filterSet) {
 // Details panel
 // ---------------------------------------------------------------------------
 
+// Attribute emblem on an attribute-coloured disc (graph badge, legend, tooltips)
 function heroGlyph(attribute, size = 16) {
-    const t = HERO_ATTRIBUTES[attribute];
     return `<svg class="glyph" width="${size}" height="${size}" viewBox="-8 -8 16 16" aria-hidden="true">
-        <circle r="7.5" fill="${t.color}"/><path d="${symbolPath(t.symbol, 40)}"/></svg>`;
+        <circle r="7.5" fill="${HERO_ATTRIBUTES[attribute].color}"/>
+        <path transform="translate(-5 -5) scale(0.4167)" d="${ATTRIBUTE_GLYPHS[attribute]}"/></svg>`;
 }
 
-// Reference-card row markers: target crosshair, effect burst, cooldown arrow
-const BURST_POINTS = Array.from({ length: 16 }, (_, i) => {
-    const r = i % 2 ? 4 : 11, a = i * Math.PI / 8;
-    return `${(12 + r * Math.sin(a)).toFixed(1)},${(12 - r * Math.cos(a)).toFixed(1)}`;
-}).join(' ');
-const CARD_ICONS = {
-    target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.2"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/>',
-    effect: `<polygon class="fill" points="${BURST_POINTS}"/>`,
-    cooldown: '<path d="M19.5 13.5A7.6 7.6 0 1 1 16.4 5.6"/><path class="fill" d="M14 2.2l6.4 2.3-3.2 5.6z"/>'
-};
-
+// Reference-card row markers (target, effect, cooldown), as on the official card
 function cardIcon(kind, title) {
-    return `<svg class="card-icon" viewBox="0 0 24 24" role="img" aria-label="${title}"><title>${title}</title>${CARD_ICONS[kind]}</svg>`;
+    return `<svg class="card-icon" viewBox="0 0 24 24" role="img" aria-label="${title}"><title>${title}</title><path d="${GLYPHS[kind]}"/></svg>`;
 }
 
-// White shield with the attribute symbol, for the attribute-coloured card banner
-function bannerGlyph(attribute) {
-    return `<svg class="card-banner-glyph" viewBox="-12 -12 24 24" aria-hidden="true">
-        <path d="M-9 -10H9V0C9 5.5 4.5 9 0 11C-4.5 9-9 5.5-9 0Z"/>
-        <path class="sym" d="${symbolPath(HERO_ATTRIBUTES[attribute].symbol, 46)}"/></svg>`;
-}
+// The vitality heart, shared by the graph tokens, draft portraits and the reference card
+document.querySelector('.svg-defs defs').insertAdjacentHTML('afterbegin', glyphSymbol('heart-glyph', 'heart'));
 
 function labelGlyph(category, size = 16, name = null) {
     const icon = name && effectIcon(name);
@@ -929,7 +914,7 @@ function heroCardParts(node, { traits = true, focusLinks = [] } = {}) {
                 <header class="card-top">
                     <div class="card-banner attr--${node.attribute}" title="${escapeHtml(attribute.label)}">
                         <span class="card-number">${node.originalId}</span>
-                        ${bannerGlyph(node.attribute)}
+                        ${attributeGlyph(node.attribute, 'card-banner-glyph')}
                     </div>
                     <h3 class="card-name">${escapeHtml(node.name)}</h3>
                     <div class="card-title">

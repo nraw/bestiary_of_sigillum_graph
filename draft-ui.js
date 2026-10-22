@@ -5,12 +5,11 @@
     const Draft = window.Draft;
     const { draftView, referenceSides, graphAction, rollFrames, inspectView, sortPool, percentLabel, percentExplain, ROLE_INFO, TOPICS, collapse } = window.DraftView;
     const { encodeDraft, decodeDraft, isDraftLink } = window.DraftShare;
-    const { escapeHtml, vitalityTokensSvg } = window.GraphLogic;
+    const { escapeHtml, vitalityTokensSvg, ATTRIBUTES, attributeGlyph } = window.GraphLogic;
     const { titleCase } = window.Synergy;
     const { isGraphRoute } = window.GraphRoute;
 
     const STORAGE_KEY = 'bestiary-draft-v1';
-    const ATTRIBUTES = ['Strength', 'Agility', 'Intelligence'];
     const FORMAT_INFO = {
         standard: { label: 'Standard', hint: 'Alternate picks until each player has 3' },
         'ban-first': { label: 'Ban phase first', hint: 'Each player bans 3, alternating, then picks' },
@@ -22,15 +21,14 @@
     const REASON_BADGE = { picked: 'Picked', facing: 'Facing', excluded: 'Excluded', banned: 'Banned', player1: 'Player 1', player2: 'Player 2' };
 
     const ICON = {
-        Strength: '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M12 8v8M8.5 12h7"/>',
-        Agility: '<path d="M12 3 21 20H3z"/><path d="M12 8.5v8M10 14.5h4"/>',
-        Intelligence: '<path d="M3 6c3-1 6-1 9 1 3-2 6-2 9-1v13c-3-1-6-1-9 1-3-2-6-2-9-1z"/><path d="M12 7v13"/>',
         Controller: '<path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>',
         Attacker: '<path d="M5 5l11 11M19 5 8 16"/><path d="M14 18l4-4M6 14l4 4"/>',
         Supporter: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M7.5 12h9"/>',
         Dice: '<rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><g fill="currentColor" stroke="none"><circle cx="8.3" cy="8.3" r="1.5"/><circle cx="15.7" cy="8.3" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="8.3" cy="15.7" r="1.5"/><circle cx="15.7" cy="15.7" r="1.5"/></g>'
     };
-    const icon = (name, cls = 'ico') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICON[name]}</svg>`;
+    // Attributes draw the official card-banner emblem (graph-logic.js), the rest come from ICON
+    const icon = (name, cls = 'ico') => ATTRIBUTES.includes(name) ? attributeGlyph(name, cls)
+        : `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICON[name]}</svg>`;
 
     let ctx = null;
     let view = null;
