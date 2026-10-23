@@ -54,6 +54,11 @@
     };
 
     const $ = id => document.getElementById(id);
+    // Google Analytics events (analytics.js, plan: docs/analytics-tracking-plan.md)
+    const analytics = window.Analytics.pageTracker();
+    const track = analytics.track;
+    const popoverDelay = window.Analytics.createDelay({ wait: 700 });
+    const startedAt = {}; // per mode: when the current draft's first pick / ban was made
     const state = () => ui.states[ui.mode];
     const solo = () => ui.mode === 'solo';
     const display = name => titleCase(name);
@@ -121,18 +126,18 @@
             setupTabs();
             setupStatic();
             render();
-            setTab(shared || hash === '#draft' ? 'draft' : 'graph', { focus: false });
+            setTab(shared || hash === '#draft' ? 'draft' : 'graph', { focus: false, via: 'init' });
             if (shared) openSharedLink(hash);
             setupIntro(hash);
             window.addEventListener('hashchange', () => {
                 const link = location.hash;
                 if (!isDraftLink(link)) return;
-                setTab('draft', { focus: false });
+                setTab('draft', { focus: false, via: 'link' });
                 openSharedLink(link);
             });
             // Back / forward onto a graph selection shows the graph (script.js applies the selection)
             window.addEventListener('popstate', () => {
-                if (ui.tab === 'draft' && (!location.hash || isLegacyRoute(location.hash))) setTab('graph', { focus: false });
+                if (ui.tab === 'draft' && (!location.hash || isLegacyRoute(location.hash))) setTab('graph', { focus: false, via: 'history' });
             });
             document.addEventListener('bestiary:selection', event => {
                 ui.graphHero = event.detail.hero;
@@ -144,6 +149,7 @@
             document.addEventListener('bestiary:graph-ready', () => { if ($('cardsDialog').open) renderCards(); });
         } catch (error) {
             console.error('Draft assistant failed to load:', error);
+            track('draft_load_error', { error: error.message });
         }
     }
 
@@ -170,6 +176,8 @@
     function openSharedLink(hash) {
         const { state: shared, error } = decodeDraft(hash, ctx.heroes);
         const problem = error || (Draft.isComplete(shared) ? null : 'This shared draft is not finished yet.');
+        track('shared_link_open', problem ? { result: 'error', error: problem }
+            : { result: 'ok', format: shared.format, band: window.Analytics.bandKey(Draft.myBand(shared)) });
         if (problem) {
             history.replaceState(history.state, '', `${location.pathname}#draft`);
             toast(`Could not open the shared draft: ${problem}`);
@@ -177,12 +185,14 @@
         }
         ui.shared = { state: shared, code: hash.replace(/^#/, '') };
         history.replaceState(history.state, '', `${location.pathname}#${ui.shared.code}`);
-        openCards();
+        openCards({ source: 'shared_link' });
     }
 
     // ---- Tabs ----------------------------------------------------------------------------
 
-    function setTab(tab, { focus = true } = {}) {
+    // `via`: how the tab was reached, for analytics ('init' is the page opening, not a switch)
+    function setTab(tab, { focus = true, via = 'other' } = {}) {
+        if (ui.tab !== tab && via !== 'init') track('tab_view', { tab, method: via });
         ui.tab = tab;
         document.body.dataset.tab = tab;
         $('graphView').hidden = tab !== 'graph';
@@ -206,17 +216,17 @@
     }
 
     function setupTabs() {
-        $('tabGraph').addEventListener('click', () => setTab('graph'));
-        $('tabDraft').addEventListener('click', () => setTab('draft'));
+        $('tabGraph').addEventListener('click', () => setTab('graph', { via: 'click' }));
+        $('tabDraft').addEventListener('click', () => setTab('draft', { via: 'click' }));
         document.querySelector('.tabs').addEventListener('keydown', event => {
             if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
             event.preventDefault();
-            setTab(ui.tab === 'graph' ? 'draft' : 'graph');
+            setTab(ui.tab === 'graph' ? 'draft' : 'graph', { via: 'keyboard' });
         });
         $('addToDraft').addEventListener('click', addFromGraph);
         $('backToDraft').addEventListener('click', () => {
             window.BestiaryGraph?.clearBand();
-            setTab('draft');
+            setTab('draft', { via: 'back_to_draft' });
         });
     }
 
@@ -234,7 +244,7 @@
             if (event.target === dialog && outside) dialog.close(); // backdrop click
             if (!tab) return;
             dialog.close();
-            setTab(tab);
+            setTab(tab, { via: 'intro' });
         });
         if (Intro.shouldShowIntro({ seen: Intro.introSeen(storage), hash, search: location.search })) dialog.showModal();
     }
@@ -279,6 +289,7 @@
             const button = event.target.closest('[data-mode]');
             if (button && button.dataset.mode !== ui.mode) {
                 ui.mode = button.dataset.mode;
+                track('draft_mode_change', { mode: ui.mode });
                 render();
             }
         });
@@ -301,7 +312,8 @@
             if (button) { ui.focus = Number(button.dataset.focus); render(); }
         });
         $('viewInGraph').addEventListener('click', () => {
-            setTab('graph');
+            track('view_in_graph', { source: 'analysis' });
+            setTab('graph', { via: 'view_in_graph' });
             const bands = Draft.bands(state());
             window.BestiaryGraph?.showBand(bands[view.focus], bands[view.focus === 1 ? 2 : 1]);
         });
@@ -309,12 +321,12 @@
         // A hero in a band (or Against) opens its reference card; its own buttons keep their actions
         $('draftMain').addEventListener('click', event => {
             const card = event.target.closest('[data-card]');
-            if (card && !event.target.closest('button')) openCards({ hero: card.dataset.card });
+            if (card && !event.target.closest('button')) openCards({ hero: card.dataset.card, source: 'band_slot' });
         });
         $('draftMain').addEventListener('keydown', event => {
             if ((event.key === 'Enter' || event.key === ' ') && event.target.dataset.card) {
                 event.preventDefault();
-                openCards({ hero: event.target.dataset.card });
+                openCards({ hero: event.target.dataset.card, source: 'band_slot' });
             }
         });
 
@@ -325,7 +337,7 @@
             if ($('analysisPanel').classList.contains('is-open')
                 && !event.target.closest('#analysisPanel, #draftBar, dialog')) setSheet(false);
         });
-        $('openMatch').addEventListener('click', () => openCards());
+        $('openMatch').addEventListener('click', () => openCards({ source: 'complete_button' }));
         $('draftView').addEventListener('click', event => {
             const more = event.target.closest('[data-more]');
             if (!more) return;
@@ -364,12 +376,47 @@
         }
     }
 
-    function primaryAction(name) {
+    // `method`: what the user did to pick (tile, popover, menu, drag, random, graph, picker), for analytics
+    function primaryAction(name, { method } = {}) {
         const step = Draft.currentStep(state());
         if (!step) return;
         const done = step.action === 'ban' ? 'banned' : 'selected';
         const verb = solo() ? done[0].toUpperCase() + done.slice(1) : `Player ${step.player} ${done}`;
+        const before = state();
+        const extra = pickContext(name, method); // the pool as the user saw it when choosing
         attempt(s => Draft.applyAction(s, name), () => `${verb} ${display(name)}. ${summary()}`);
+        trackDraft(before, extra);
+    }
+
+    function pickContext(name, method) {
+        const rank = view.pool.find(p => p.name === name)?.suggestion?.rank;
+        const f = ui.filters;
+        return { method, pool_sort: ui.sort, pool_rank: rank, top_suggestion: rank === undefined ? undefined : rank === 1,
+            filters_active: Boolean(f.term.trim() || f.pills.length || f.attribute !== 'All' || f.roles.length || f.fills) };
+    }
+
+    // Pick / ban / start events for one user action, and the finished band once the draft completes
+    function trackDraft(before, extra) {
+        const after = state();
+        const events = window.Analytics.draftEvents(before, after, extra);
+        events.forEach(e => {
+            if (e.name === 'draft_start') startedAt[ui.mode] = Date.now();
+            track(e.name, e.params);
+        });
+        if (events.length && Draft.isComplete(after)) trackComplete(after);
+    }
+
+    function trackComplete(s) {
+        const bands = Draft.bands(s);
+        if (!analytics.once(`complete|${window.Analytics.completionKey(s, bands)}`)) return;
+        const { analysis } = draftView(s, ctx, { player: s.me });
+        const percent = analysis.score.percent;
+        window.Analytics.completionEvents(s, {
+            bands, bans: Draft.bans(s),
+            topPercent: typeof percent === 'number' ? Math.round(percent * 100) / 100 : undefined,
+            scoreLabel: analysis.score.label, rolesCovered: analysis.coveredCount,
+            durationSec: startedAt[ui.mode] ? Math.round((Date.now() - startedAt[ui.mode]) / 1000) : undefined
+        }).forEach(e => track(e.name, e.params));
     }
 
     // The graph's button for its selected hero: pick / ban it at the current step, then back to the draft
@@ -386,8 +433,9 @@
     function addFromGraph() {
         const name = ui.graphHero;
         if (!name || !Draft.currentStep(state())) return;
-        primaryAction(name);
-        if (!Draft.isAvailable(state(), name)) setTab('draft'); // otherwise refused: primaryAction reported why
+        track('graph_add_to_draft', { hero: name, draft_action: Draft.currentStep(state()).action });
+        primaryAction(name, { method: 'graph' });
+        if (!Draft.isAvailable(state(), name)) setTab('draft', { via: 'graph_add' }); // otherwise refused: primaryAction reported why
     }
 
     function summary() {
@@ -515,6 +563,7 @@
             </fieldset>`;
         el.onchange = event => {
             const format = el.querySelector('[name=format]:checked').value;
+            track('draft_format_change', { format });
             commit(Draft.createDraft(format, { carryOverBans: state().carryOverBans }));
             if (event.target.name) el.querySelector(`[name=${event.target.name}]:checked`).focus();
         };
@@ -766,7 +815,7 @@
                 // Touch / small screens: the first tap explains the hero, the sheet's button acts
                 if (view.pool.find(p => p.name === name)?.suggestion) showPopover(name, tile, { sheet: true });
                 else openMenu(name, tile.querySelector('.tile-menu-btn'));
-            } else if (act === 'primary' && Draft.isAvailable(state(), name)) primaryAction(name);
+            } else if (act === 'primary' && Draft.isAvailable(state(), name)) primaryAction(name, { method: 'tile' });
         });
         // Long-press opens the ⋯ menu
         let pressTimer = null;
@@ -868,6 +917,10 @@
             </div>`;
         pop.dataset.hero = name;
         pop.hidden = false;
+        const mode = sheet ? 'sheet' : pinned ? 'pinned' : 'hover';
+        const seen = () => { if (analytics.once(`pop|${mode}|${name}`)) track('hero_popover_view', { hero: name, popover_mode: mode, pool_rank: s.rank }); };
+        if (mode === 'hover') popoverDelay.start(seen); // a glance on the way across the pool doesn't count
+        else { popoverDelay.cancel(); seen(); }
         pop.classList.toggle('is-sheet', sheet);
         pop.classList.toggle('is-pinned', pinned);
         document.querySelectorAll('#poolGrid .hero-tile').forEach(t => {
@@ -900,6 +953,7 @@
 
     function hidePopover() {
         const pop = $('tilePopover');
+        popoverDelay.cancel();
         if (pop.hidden) return;
         pop.hidden = true;
         pop.classList.remove('is-sheet', 'is-pinned');
@@ -912,7 +966,9 @@
         const s = view.pool.find(p => p.name === name)?.suggestion;
         if (!s) return;
         const missing = s.bestBand.filter(n => !state().band.includes(n));
+        const before = state();
         attempt(st => Draft.fillBand(st, missing), () => `Band filled: ${s.bestBand.map(display).join(', ')}. ${summary()}`);
+        trackDraft(before, { method: 'fill' });
     }
 
     function setupPopover() {
@@ -925,9 +981,9 @@
             if (!act) return;
             const tile = document.querySelector(`#poolGrid [data-hero="${name}"] .tile-main`);
             hidePopover();
-            if (act === 'primary') primaryAction(name);
+            if (act === 'primary') primaryAction(name, { method: 'popover' });
             else if (act === 'fill') fillBand(name);
-            else if (act === 'card') openCards({ hero: name });
+            else if (act === 'card') openCards({ hero: name, source: 'popover' });
             else tile?.focus();
         });
         document.addEventListener('click', event => {
@@ -1037,7 +1093,7 @@
             light(null);
             $('poolGrid').classList.remove('is-rolling');
             if (state() !== start) return;
-            primaryAction(name);
+            primaryAction(name, { method: 'random' });
             document.querySelector(`.slot[data-hero="${name}"]`)?.classList.add('is-arrived');
         };
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { land(); return; }
@@ -1121,7 +1177,7 @@
                 const to = Number(target.dataset.slot);
                 if (to !== Number(data.slot)) attempt(s => Draft.movePick(s, Number(data.slot), to), 'Band reordered.');
             } else if (data.hero && view.step.action === 'pick') {
-                primaryAction(data.hero);
+                primaryAction(data.hero, { method: 'drag' });
             }
         });
     }
@@ -1188,7 +1244,7 @@
         setupDrop($('againstRow'), (event, data) => {
             if (!data.hero) return;
             if (solo()) attempt(s => Draft.setEnemies(s, [...s.enemies, data.hero]), `Facing ${display(data.hero)}.`);
-            else if (view.step.player === 2 && view.step.action === 'pick') primaryAction(data.hero);
+            else if (view.step.player === 2 && view.step.action === 'pick') primaryAction(data.hero, { method: 'drag' });
         });
         setupDrop($('excludedChips'), (event, data) => {
             if (data.hero && solo()) attempt(s => Draft.setExcluded(s, [...s.excluded, data.hero]), `Excluded ${display(data.hero)}.`);
@@ -1306,6 +1362,7 @@
         const x = entry?.suggestion?.sections.find(sec => sec.key === key);
         if (!x) return;
         const one = lineIndex === undefined ? null : x.lines[Number(lineIndex)];
+        track('analysis_inspect', { section: key, line_index: lineIndex, source: 'popover' });
         const p = view.suggestions.player;
         const bands = Draft.bands(state());
         // On a ban step the hero would play for the rival, against the acting player
@@ -1326,6 +1383,7 @@
             if (!button) return;
             const x = (shown || view).analysis.sections.find(sec => sec.key === button.dataset.inspect);
             const one = button.dataset.line === undefined ? null : x?.lines[Number(button.dataset.line)];
+            if (x) track('analysis_inspect', { section: x.key, line_index: button.dataset.line, source: 'analysis' });
             if (x) openInspect(one ? one.reasons : x.reasons, { title: x.title, sub: one ? one.text : x.label, opponents: x.opponents });
         });
         $('scoreBreakdown').addEventListener('click', event => {
@@ -1333,6 +1391,7 @@
             const v = shown || view;
             const f = v.analysis.breakdown.find(x => x.factor === factor);
             if (!f) return;
+            track('score_factor_open', { factor: f.factor });
             const whose = solo() ? 'Your band' : `Player ${v.focus}'s band`;
             const total = `${f.delta > 0 ? '+' : f.delta < 0 ? '−' : ''}${Math.abs(f.delta).toFixed(1)} points`;
             openInspect(f.reasons, { title: `${f.label}: ${whose}`, sub: `Band score · ${total}`,
@@ -1349,12 +1408,13 @@
         });
         $('inspectItems').addEventListener('click', event => {
             const card = event.target.closest('[data-card]');
-            if (card) openCards({ hero: card.dataset.card });
+            if (card) openCards({ hero: card.dataset.card, source: 'inspect' });
         });
         $('inspectInGraph').addEventListener('click', () => {
             $('inspectDialog').close();
             hidePopover();
-            setTab('graph');
+            track('view_in_graph', { source: 'inspect' });
+            setTab('graph', { via: 'view_in_graph' });
             window.BestiaryGraph?.showBand(ui.inspect.mine, ui.inspect.theirs);
         });
     }
@@ -1364,7 +1424,9 @@
     const cardsState = () => (ui.shared ? ui.shared.state : state());
     const cardsMode = () => (cardsState().format === 'solo' ? 'solo' : 'two-player');
 
-    function openCards({ hero = null } = {}) {
+    // `source`: what opened the cards, for analytics
+    function openCards({ hero = null, source } = {}) {
+        track('cards_open', { source, hero });
         ui.cardHero = hero;
         renderCards();
         if (!$('cardsDialog').open) $('cardsDialog').showModal();
@@ -1427,6 +1489,9 @@
         });
         $('shareLink').addEventListener('click', () => {
             const url = shareUrl(cardsState());
+            const method = navigator.share && narrow() ? 'native' : navigator.clipboard ? 'clipboard' : 'fallback';
+            track('share', { method, content_type: 'draft', format: cardsState().format,
+                band: window.Analytics.bandKey(Draft.myBand(cardsState())) });
             if (navigator.share && narrow()) navigator.share({ title: 'Bestiary of Sigillum draft', url }).catch(() => {});
             else if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => toast('Link copied. Opening it shows these cards.'), () => toast(url));
             else toast(url);
@@ -1436,7 +1501,8 @@
         $('cardInGraph').addEventListener('click', () => {
             const name = ui.cardHero; // closing the dialog forgets it
             dialog.close();
-            setTab('graph');
+            track('view_in_graph', { source: 'cards' });
+            setTab('graph', { via: 'view_in_graph' });
             window.BestiaryGraph?.selectHero(name);
         });
         $('cardsExit').addEventListener('click', () => setCardsOnly(false));
@@ -1463,7 +1529,7 @@
             run: n => attempt(s => Draft.setExcluded(s, [...s.excluded, n]), `Excluded ${display(n)}.`) },
         carry: { title: 'Add an extra ban', can: n => !state().carryOverBans.includes(n),
             run: n => setCarryOver([...state().carryOverBans, n]) },
-        pick: { title: 'Choose a hero', can: n => Draft.isAvailable(state(), n), run: n => primaryAction(n) }
+        pick: { title: 'Choose a hero', can: n => Draft.isAvailable(state(), n), run: n => primaryAction(n, { method: 'picker' }) }
     };
 
     function openPicker(mode) {
@@ -1550,15 +1616,19 @@
             const name = menu.dataset.hero;
             if (!act) return;
             closeMenu(false);
-            if (act === 'primary') primaryAction(name);
+            if (act === 'primary') primaryAction(name, { method: 'menu' });
             else if (act === 'fill') fillBand(name);
             else if (act === 'inspect') pinPopover(name);
             else if (act === 'enemy') attempt(s => Draft.setEnemies(s, [...s.enemies, name]), `Facing ${display(name)}.`);
             else if (act === 'exclude') attempt(s => Draft.setExcluded(s, [...s.excluded, name]), `Excluded ${display(name)}.`);
             else if (act === 'unface') attempt(s => Draft.setEnemies(s, s.enemies.filter(n => n !== name)), `No longer facing ${display(name)}.`);
             else if (act === 'unexclude') attempt(s => Draft.setExcluded(s, s.excluded.filter(n => n !== name)), `${display(name)} is available again.`);
-            else if (act === 'card') openCards({ hero: name });
-            else if (act === 'graph') { setTab('graph'); window.BestiaryGraph?.selectHero(name); }
+            else if (act === 'card') openCards({ hero: name, source: 'menu' });
+            else if (act === 'graph') {
+                track('view_in_graph', { source: 'card_menu' });
+                setTab('graph', { via: 'card_menu' });
+                window.BestiaryGraph?.selectHero(name);
+            }
         });
         menu.addEventListener('keydown', event => {
             const buttons = [...menu.querySelectorAll('button')];

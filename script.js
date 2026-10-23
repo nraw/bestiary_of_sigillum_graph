@@ -104,12 +104,21 @@ function symbolPath(name, size) {
     return d3.symbol().type(SYMBOLS[name]).size(size)();
 }
 
-// Google Analytics helper function
-function trackEvent(action, category = 'Bestiary', label = null, value = null) {
-    if (typeof gtag !== 'undefined') {
-        gtag('event', action, { event_category: category, event_label: label, value });
-    }
+// Google Analytics events (analytics.js, plan: docs/analytics-tracking-plan.md)
+const analytics = window.Analytics.pageTracker();
+const track = analytics.track;
+const ENTRY = window.Analytics.entryOf({ search: location.search, hash: location.hash }); // before routing rewrites it
+// Tooltips count as seen once they stay open a moment, each target once per page load
+const hoverDelay = window.Analytics.createDelay({ wait: 700 });
+function trackHover(key, name, params) {
+    hoverDelay.start(() => { if (analytics.once(key)) track(name, params); });
 }
+const graphSearch = window.Analytics.createSettledSearch({
+    send: term => {
+        const { nodeIds } = currentFilter();
+        track('search', { search_term: term, result_count: nodeIds ? nodeIds.size : nodesData.length, surface: 'graph' });
+    }
+});
 
 async function init() {
     try {
@@ -134,10 +143,10 @@ async function init() {
         setupRouting();
         document.dispatchEvent(new Event('bestiary:graph-ready'));
 
-        trackEvent('app_loaded', 'Application', `${heroesData.length} heroes loaded`);
+        track('app_loaded', { entry: ENTRY, hero_count: heroesData.length });
     } catch (error) {
         console.error('Error initializing application:', error);
-        trackEvent('app_error', 'Application', error.message);
+        track('app_error', { error: error.message });
     }
 }
 
@@ -470,30 +479,33 @@ function setupToolbar() {
         const button = event.target.closest('[data-action]');
         if (button) runAction(button.dataset.action);
     });
-    document.getElementById('clearAllBtn').addEventListener('click', clearAll);
-    document.getElementById('synergyToggle').addEventListener('click', toggleSynergies);
+    document.getElementById('clearAllBtn').addEventListener('click', () => clearAll('button'));
+    document.getElementById('synergyToggle').addEventListener('click', () => toggleSynergies('button'));
     document.getElementById('opponentToggle').addEventListener('click', () => {
         state.showOpponent = !state.showOpponent;
+        track('opponent_toggle', { state: state.showOpponent ? 'on' : 'off' });
         render();
     });
     document.getElementById('namesToggle').addEventListener('click', () => {
         state.showAllNames = !state.showAllNames;
+        track('names_toggle', { state: state.showAllNames ? 'on' : 'off' });
         render();
     });
 }
 
-function toggleSynergies() {
+function toggleSynergies(method) {
     state.showSynergies = !state.showSynergies;
     if (state.showSynergies) state.role = null; // its legend control is hidden while synergies show
     else state.synergyCategory = null;
     hideTooltip();
-    trackEvent('synergy_toggle', 'View', state.showSynergies ? 'on' : 'off');
+    track('synergy_toggle', { state: state.showSynergies ? 'on' : 'off', method,
+        hero_selected: nodesById.get(state.selectedId)?.type === 'hero' });
     render();
     const selected = nodesById.get(state.selectedId);
     if (state.showSynergies && selected?.type === 'hero') fitToSynergies(selected);
 }
 
-function runAction(action) {
+function runAction(action, method = 'button') {
     const selected = nodesById.get(state.selectedId);
     switch (action) {
         case 'zoom-in': svg.transition().duration(250).call(zoom.scaleBy, 1.35); break;
@@ -501,7 +513,7 @@ function runAction(action) {
         case 'fit': fitView(nodesData); break;
         case 'center': if (selected) centerOn(selected); break;
     }
-    trackEvent('graph_control', 'View', action);
+    track('graph_control', { control: action, method });
 }
 
 // ---------------------------------------------------------------------------
@@ -515,7 +527,7 @@ function selectNode(id, { source = 'graph', center = true, picked = null } = {})
     state.selectedId = id;
     state.picked = picked;
     state.bandFocus = null;
-    trackEvent('node_selected', 'Interaction', `${source}: ${node.name}`);
+    track('node_select', { node_type: node.type, node_name: node.name, source });
     render();
     if (state.showSynergies && node.type === 'hero') fitToSynergies(node);
     else if (center) fitToFocus(node);
@@ -535,6 +547,7 @@ function selectPicked(heroId, key, links) {
 
 // Clicking an edge opens its hero's card with the abilities behind that trait marked
 function selectEdge(d) {
+    track('edge_click', { hero: d.source.name, trait: d.target.name, edge_role: d.kind });
     selectPicked(d.source.id, edgeKey(d), d.source.trait_links.filter(l => l.label === d.target.name));
 }
 
@@ -543,6 +556,7 @@ function selectEdge(d) {
 function selectArc(event, d) {
     const [x, y] = d3.pointer(event, viewport.node());
     const selected = state.selectedId && [d.source, d.target].find(n => n.id === state.selectedId);
+    track('arc_click', { hero_a: d.a, hero_b: d.b, synergy_category: d.category, hero_selected: Boolean(selected) });
     const near = selected || (Math.hypot(x - d.source.x, y - d.source.y) <= Math.hypot(x - d.target.x, y - d.target.y)
         ? d.source : d.target);
     hideTooltip();
@@ -569,11 +583,12 @@ function clearSelection() {
     render();
 }
 
-function clearAll() {
+function clearAll(method) {
+    const active = !document.getElementById('clearAllBtn').disabled; // Esc on a clear graph clears nothing
     Object.assign(state, { selectedId: null, picked: null, term: '', category: 'All', labelCategory: null, attribute: null, role: null, synergyCategory: null, bandFocus: null });
     document.getElementById('searchInput').value = '';
     closeSuggestions();
-    trackEvent('filter_cleared', 'Filter', 'Clear All');
+    if (active) track('filter_clear', { method });
     render();
 }
 
@@ -1016,14 +1031,35 @@ function renderDetails() {
 // Delegated clicks for everything rendered inside the details panel
 document.addEventListener('click', event => {
     const nodeButton = event.target.closest('.details-body [data-node]');
-    if (nodeButton) selectNode(nodeButton.dataset.node, { source: 'panel' });
+    if (!nodeButton) return;
+    const from = nodesById.get(state.selectedId);
+    const target = nodesById.get(nodeButton.dataset.node);
+    track('panel_link_click', { link_kind: PANEL_LINKS.find(k => nodeButton.classList.contains(k))?.replace(/-/g, '_'),
+        from_node: from?.name, target_type: target?.type, target_name: target?.name, panel_section: panelSection(nodeButton) });
+    selectNode(nodeButton.dataset.node, { source: 'panel' });
 });
+
+// Most specific first: the arc panel's hero headings are also .tt-side-head
+const PANEL_LINKS = ['pair-side-head', 'hero-chip', 'hero-link', 'trait-chip'];
+
+// Where in the panel a link sits: an ability box, the synergy pair, or a section (its sub-heading if it has one)
+function panelSection(el) {
+    if (el.closest('.card-ability')) return 'ability';
+    if (el.closest('.pair-body')) return 'synergy_pair';
+    const section = el.closest('.detail-section');
+    if (!section) return null;
+    let row = el;
+    while (row.parentElement && row.parentElement !== section) row = row.parentElement;
+    for (let s = row; s; s = s.previousElementSibling) if (s.matches('.syn-title')) return window.Analytics.slug(s.textContent);
+    return window.Analytics.slug(section.querySelector('.section-title')?.textContent);
+}
 
 // ---------------------------------------------------------------------------
 // Tooltip (hover / focus preview)
 // ---------------------------------------------------------------------------
 
 function showTooltip(d) {
+    trackHover(`node|${d.id}`, 'node_tooltip_view', { node_type: d.type, node_name: d.name });
     const tooltip = document.getElementById('tooltip');
     setTooltipKind(tooltip, null);
     if (d.type === 'hero') {
@@ -1072,6 +1108,7 @@ function setTooltipKind(tooltip, kind) {
 
 // Edge preview: what the hero does with the trait, and the full card text of the abilities that do it
 function showLinkTooltip(d) {
+    trackHover(edgeKey(d), 'edge_tooltip_view', { hero: d.source.name, trait: d.target.name, edge_role: d.kind });
     const tooltip = document.getElementById('tooltip');
     const hero = d.source;
     const groups = linkAbilities(hero, d.roles);
@@ -1106,6 +1143,7 @@ function arcPairHtml(d, sideHead) {
 
 // Arc preview
 function showArcTooltip(d) {
+    trackHover(arcKey(d), 'arc_tooltip_view', { hero_a: d.a, hero_b: d.b, synergy_category: d.category });
     const tooltip = document.getElementById('tooltip');
     setTooltipKind(tooltip, 'arc');
     tooltip.innerHTML = `
@@ -1164,6 +1202,7 @@ function tooltipSynergies(name) {
 }
 
 function hideTooltip() {
+    hoverDelay.cancel();
     document.getElementById('tooltip').hidden = true;
 }
 
@@ -1186,7 +1225,7 @@ function setupSearch() {
         searchTyping = true;
         updateSuggestions();
         render();
-        if (input.value.trim().length >= 3) trackEvent('search_used', 'Search', input.value.trim());
+        graphSearch.input(input.value);
     });
 
     input.addEventListener('keydown', event => {
@@ -1214,7 +1253,10 @@ function setupSearch() {
     });
 
     input.addEventListener('focus', () => { if (input.value.trim()) updateSuggestions(); });
-    input.addEventListener('blur', () => setTimeout(closeSuggestions, 120));
+    input.addEventListener('blur', () => {
+        graphSearch.flush();
+        setTimeout(closeSuggestions, 120);
+    });
 
     list.addEventListener('mousedown', event => {
         const item = event.target.closest('[data-index]');
@@ -1293,7 +1335,7 @@ function setupChips() {
         state.attribute = null;
         state.role = null;
         state.selectedId = null;
-        trackEvent('category_filter', 'Filter', state.category);
+        track('category_filter', { filter_value: state.category });
         render();
         fitToFilter();
     });
@@ -1399,7 +1441,7 @@ function renderLegend() {
             // Keeps the selection: a selected hero then shows only its lines of this kind
             state.synergyCategory = state.synergyCategory === item.dataset.synergy ? null : item.dataset.synergy;
             state.picked = null;
-            trackEvent('legend_filter', 'Filter', `synergy: ${item.dataset.synergy}`);
+            track('legend_filter', { filter_type: 'synergy', filter_value: item.dataset.synergy, state: state.synergyCategory ? 'on' : 'off' });
             hideTooltip();
             render();
             const selected = nodesById.get(state.selectedId);
@@ -1415,7 +1457,7 @@ function renderLegend() {
             state.role = state.role === item.dataset.role ? null : item.dataset.role;
             Object.assign(state, { labelCategory: null, attribute: null, category: 'All', term: '', selectedId: null, path: null });
             document.getElementById('searchInput').value = '';
-            trackEvent('legend_filter', 'Filter', `role: ${item.dataset.role}`);
+            track('legend_filter', { filter_type: 'edge_role', filter_value: item.dataset.role, state: state.role ? 'on' : 'off' });
             render();
             fitToFilter();
             return;
@@ -1426,7 +1468,7 @@ function renderLegend() {
             Object.assign(state, { attribute: state.attribute === attribute ? null : attribute, labelCategory: null,
                 category: 'All', term: '', selectedId: null });
             document.getElementById('searchInput').value = '';
-            trackEvent('legend_filter', 'Filter', `attribute: ${attribute}`);
+            track('legend_filter', { filter_type: 'attribute', filter_value: attribute, state: state.attribute ? 'on' : 'off' });
             render();
             fitToFilter();
             return;
@@ -1436,7 +1478,7 @@ function renderLegend() {
         state.labelCategory = state.labelCategory === category ? null : category;
         state.category = 'All';
         state.selectedId = null;
-        trackEvent('legend_filter', 'Filter', category);
+        track('legend_filter', { filter_type: 'trait_group', filter_value: category, state: state.labelCategory ? 'on' : 'off' });
         render();
         fitToFilter();
     });
@@ -1456,7 +1498,9 @@ function setupPanels() {
     document.querySelectorAll('.collapse-toggle').forEach(toggle => {
         toggle.addEventListener('click', () => {
             const body = document.getElementById(toggle.getAttribute('aria-controls'));
-            expandPanel(body, toggle.getAttribute('aria-expanded') !== 'true');
+            const open = toggle.getAttribute('aria-expanded') !== 'true';
+            expandPanel(body, open);
+            if (body.id === 'legendBody') track('legend_panel_toggle', { state: open ? 'open' : 'closed', control: 'collapse' });
         });
     });
 
@@ -1471,6 +1515,7 @@ function setupPanels() {
         const open = !sidePanel.classList.contains('open');
         sidePanel.classList.toggle('open', open);
         legendToggle.setAttribute('aria-expanded', String(open));
+        track('legend_panel_toggle', { state: open ? 'open' : 'closed', control: 'legend_button' });
     });
 }
 
@@ -1529,7 +1574,7 @@ function setupKeyboard() {
         if (event.key === 'Escape') {
             hideTooltip();
             if (state.selectedId) clearSelection();
-            else clearAll();
+            else clearAll('keyboard');
             return;
         }
         if (typing || event.metaKey || event.ctrlKey || event.altKey) return;
@@ -1538,15 +1583,15 @@ function setupKeyboard() {
             event.preventDefault();
             document.getElementById('searchInput').focus();
         } else if (event.key === '+' || event.key === '=') {
-            runAction('zoom-in');
+            runAction('zoom-in', 'keyboard');
         } else if (event.key === '-' || event.key === '_') {
-            runAction('zoom-out');
+            runAction('zoom-out', 'keyboard');
         } else if (event.key.toLowerCase() === 'f') {
-            runAction('fit');
+            runAction('fit', 'keyboard');
         } else if (event.key.toLowerCase() === 'c') {
-            runAction('center');
+            runAction('center', 'keyboard');
         } else if (event.key.toLowerCase() === 's') {
-            toggleSynergies();
+            toggleSynergies('keyboard');
         }
     });
 }
@@ -1697,7 +1742,7 @@ function syncRoute() {
     updateNavButtons();
 }
 
-function applyRoute(route) {
+function applyRoute(route, source = 'link') {
     searchTyping = false;
     restoringRoute = true;
     try {
@@ -1709,7 +1754,7 @@ function applyRoute(route) {
         } else {
             const type = route.type === 'hero' ? 'hero' : 'label';
             const node = nodesData.find(n => n.type === type && n.name === route.name);
-            if (node) selectNode(node.id, { source: 'link' });
+            if (node) selectNode(node.id, { source });
         }
     } finally {
         restoringRoute = false;
@@ -1751,7 +1796,7 @@ function setupRouting() {
             navTop = ++navIndex;
             history.replaceState({ ...history.state, graphNav: navIndex }, '');
         }
-        applyRoute(next);
+        applyRoute(next, 'history');
         updateNavButtons();
     });
     document.getElementById('navBack').addEventListener('click', () => history.back());

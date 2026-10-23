@@ -79,7 +79,8 @@
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', 'G-GQ4HDYYETG');
+        // A local server stays out of the numbers (analytics.js shouldTrack sends no events there either)
+        if (!/^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])?$/.test(location.hostname)) gtag('config', 'G-GQ4HDYYETG');
     </script>
 </head>
 <body>
@@ -487,6 +488,7 @@
     <script src="draft.js"></script>
     <script src="draft-view.js"></script>
     <script src="draft-share.js"></script>
+    <script src="analytics.js"></script>
     <script src="script.js"></script>
     <script src="intro.js"></script>
     <script src="draft-ui.js"></script>
