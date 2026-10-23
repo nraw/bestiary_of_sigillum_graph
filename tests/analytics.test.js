@@ -215,3 +215,65 @@ test('trackingMode: GA on the live site, the console with ?analytics_debug, othe
     assert.strictEqual(A.trackingMode({ hostname: 'bos.nraw.eu', search: '?hero=saxum&analytics_debug=1' }), 'console');
     assert.strictEqual(A.trackingMode({}), 'off');
 });
+
+// ---- P2 / P3 helpers -----------------------------------------------------------------------
+
+const solo = (over = {}) => ({ ...Draft.createDraft('solo'), ...over });
+
+test('draftChanges: enemies, exclusions and removals in a solo draft, with the method', () => {
+    assert.deepStrictEqual(A.draftChanges(solo(), solo({ enemies: ['saxum'] }), { method: 'menu' }), [
+        { name: 'draft_side_change', params: { control: 'enemy_add', hero: 'saxum', method: 'menu' } }]);
+    assert.deepStrictEqual(A.draftChanges(solo({ excluded: ['aqus', 'brewus'] }), solo({ excluded: ['brewus'] })), [
+        { name: 'draft_side_change', params: { control: 'exclude_remove', hero: 'aqus' } }]);
+    assert.deepStrictEqual(A.draftChanges(solo({ band: ['aqus', 'brewus'] }), solo({ band: ['brewus'] })), [
+        { name: 'draft_remove', params: { hero: 'aqus', format: 'solo' } }]);
+});
+
+test('draftChanges: a reorder is one event; picks are left to draftEvents', () => {
+    assert.deepStrictEqual(A.draftChanges(solo({ band: ['aqus', 'brewus'] }), solo({ band: ['brewus', 'aqus'] }), { method: 'drag' }), [
+        { name: 'draft_reorder', params: { method: 'drag' } }]);
+    assert.deepStrictEqual(A.draftChanges(solo({ band: ['aqus'] }), solo({ band: ['aqus', 'brewus'] })), []);
+    assert.deepStrictEqual(A.draftChanges(solo(), solo()), []);
+});
+
+test('draftChanges: carried-over bans in a two-player draft', () => {
+    const s = Draft.createDraft('standard');
+    assert.deepStrictEqual(A.draftChanges(s, Draft.createDraft('standard', { carryOverBans: ['mortum'] }), { method: 'picker' }), [
+        { name: 'draft_side_change', params: { control: 'carry_over_add', hero: 'mortum', method: 'picker' } }]);
+    assert.deepStrictEqual(A.draftChanges(s, Draft.createDraft('solo')), []);
+});
+
+test('navDirection compares history positions', () => {
+    assert.strictEqual(A.navDirection(3, 2), 'back');
+    assert.strictEqual(A.navDirection(2, 3), 'forward');
+    assert.strictEqual(A.navDirection(2, 2), null);
+    assert.strictEqual(A.navDirection(2, undefined), null);
+});
+
+test('gestureOf names a zoom / pan gesture from its source event, and ignores programmatic zooms', () => {
+    assert.deepStrictEqual(A.gestureOf({ type: 'wheel' }), { control: 'zoom', method: 'wheel' });
+    assert.deepStrictEqual(A.gestureOf({ type: 'touchmove', touches: { length: 2 } }), { control: 'zoom', method: 'touch' });
+    assert.deepStrictEqual(A.gestureOf({ type: 'touchmove', touches: { length: 1 } }), { control: 'pan', method: 'touch' });
+    assert.deepStrictEqual(A.gestureOf({ type: 'mousemove' }), { control: 'pan', method: 'mouse' });
+    assert.strictEqual(A.gestureOf(null), null);
+    assert.strictEqual(A.gestureOf(undefined), null);
+});
+
+test('the P2 / P3 events are in the catalogue', () => {
+    ['selection_clear', 'node_drag', 'graph_zoom_gesture', 'history_nav', 'search_suggestion_select', 'search_no_results',
+        'draft_reset', 'draft_undo', 'draft_fill_band', 'draft_random', 'draft_remove', 'draft_reorder', 'draft_side_change',
+        'draft_blocked', 'pool_filter', 'pool_sort', 'pool_filters_toggle', 'popover_action', 'card_menu_open',
+        'card_menu_action', 'score_info_open', 'role_help_open', 'analysis_more', 'analysis_focus_switch',
+        'analysis_sheet_toggle', 'inspect_card_text', 'cards_side_switch', 'cards_only', 'tutorial_begin', 'intro_tab',
+        'tutorial_complete'].forEach(name => assert.ok(A.EVENTS[name], name));
+});
+
+test('the plan\'s event tables (§3) and EVENTS list the same events', () => {
+    const doc = require('node:fs').readFileSync(require('node:path').join(__dirname, '../docs/analytics-tracking-plan.md'), 'utf8');
+    const catalogue = doc.slice(doc.indexOf('## 3. Event catalogue'), doc.indexOf('## 4. GA4 setup'));
+    const documented = new Set(catalogue.split('\n').filter(l => l.startsWith('| `'))
+        .flatMap(l => [...l.split('|')[1].replace(/\*\(.*?\)\*/g, '').matchAll(/`([a-z_]+)`/g)].map(m => m[1])));
+    documented.delete('click'); // outbound clicks: GA4 Enhanced Measurement, not analytics.js
+    assert.deepStrictEqual([...documented].filter(e => !A.EVENTS[e]), [], 'documented but never sent');
+    assert.deepStrictEqual(Object.keys(A.EVENTS).filter(e => !documented.has(e)), [], 'sent but not documented');
+});

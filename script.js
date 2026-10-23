@@ -116,7 +116,9 @@ function trackHover(key, name, params) {
 const graphSearch = window.Analytics.createSettledSearch({
     send: term => {
         const { nodeIds } = currentFilter();
-        track('search', { search_term: term, result_count: nodeIds ? nodeIds.size : nodesData.length, surface: 'graph' });
+        const count = nodeIds ? nodeIds.size : nodesData.length;
+        track('search', { search_term: term, result_count: count, surface: 'graph' });
+        if (!count) track('search_no_results', { search_term: term, surface: 'graph' });
     }
 });
 
@@ -186,12 +188,14 @@ function setupGraph() {
             viewport.attr('transform', event.transform);
             svg.classed('zoomed-out', event.transform.k < 0.6);
             hideTooltip();
+            const gesture = window.Analytics.gestureOf(event.sourceEvent); // the user's, not fit / centre
+            if (gesture && analytics.once(`zoom|${gesture.control}`)) track('graph_zoom_gesture', gesture);
         });
     svg.call(zoom).on('dblclick.zoom', null);
 
     svg.on('click', event => {
         if (event.target === svg.node()) {
-            clearSelection();
+            clearSelection('background_click');
         }
     });
 
@@ -420,6 +424,7 @@ function dragstarted(event, d) {
 }
 
 function dragged(event, d) {
+    if (analytics.once('drag')) track('node_drag', { node_type: d.type });
     d.fx = event.x;
     d.fy = event.y;
     hideTooltip();
@@ -577,7 +582,8 @@ function fitToSynergies(node) {
     fitView(nodesData.filter(n => n.type === 'hero' && names.has(n.name)));
 }
 
-function clearSelection() {
+function clearSelection(method) {
+    if (method && state.selectedId) track('selection_clear', { method });
     state.selectedId = null;
     state.picked = null;
     render();
@@ -1309,6 +1315,8 @@ function setActiveSuggestion(index) {
 
 function chooseSuggestion(node) {
     const input = document.getElementById('searchInput');
+    track('search_suggestion_select', { surface: 'graph', search_term: input.value.trim(), node_type: node.type,
+        node_name: node.name, position: currentSuggestions.indexOf(node) + 1 || undefined });
     input.value = '';
     state.term = '';
     closeSuggestions();
@@ -1573,7 +1581,7 @@ function setupKeyboard() {
         const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(event.target.tagName);
         if (event.key === 'Escape') {
             hideTooltip();
-            if (state.selectedId) clearSelection();
+            if (state.selectedId) clearSelection('keyboard');
             else clearAll('keyboard');
             return;
         }
@@ -1790,6 +1798,8 @@ function setupRouting() {
             if (!next) return;
         }
         if (typeof event.state?.graphNav === 'number') {
+            const control = window.Analytics.navDirection(navIndex, event.state.graphNav);
+            if (control) track('history_nav', { control, method: navVia });
             navIndex = event.state.graphNav;
         } else {
             // A link typed or pasted into the address bar: a new entry after the current one
@@ -1798,9 +1808,12 @@ function setupRouting() {
         }
         applyRoute(next, 'history');
         updateNavButtons();
+        navVia = 'browser';
     });
-    document.getElementById('navBack').addEventListener('click', () => history.back());
-    document.getElementById('navForward').addEventListener('click', () => history.forward());
+    // The ↶ / ↷ buttons go through popstate too; it reports them as buttons
+    let navVia = 'browser';
+    document.getElementById('navBack').addEventListener('click', () => { navVia = 'button'; history.back(); });
+    document.getElementById('navForward').addEventListener('click', () => { navVia = 'button'; history.forward(); });
 }
 
 // The graph was hidden (Draft tab): re-measure and frame it again

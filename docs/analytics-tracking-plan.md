@@ -5,12 +5,19 @@ features get used at all (synergy lines, All names, legend filters, the links in
 
 Property: `G-GQ4HDYYETG` (gtag.js in `index.html`).
 
-**Status:** the P1 events are built (`analytics.js`, wired into `script.js` / `draft-ui.js`; see §5). So are the old
-events rewritten in the new form (`graph_control`, `category_filter`, `filter_clear`, `search`) and a few cheap P2
-events (`node_tooltip_view`, `opponent_toggle`, `score_factor_open`, `view_in_graph`). The rest of P2 / P3 is still a plan.
-`analytics.js` `EVENTS` is the source of truth for what is sent. §1 describes the tracking as it was before this work.
+**Status:** every event in §3 is built (`analytics.js`, wired into `script.js` / `draft-ui.js`; see §5). The one
+exception is outbound clicks, which GA4's Enhanced Measurement records by itself. `analytics.js` `EVENTS` is the
+source of truth for what is sent. `tests/analytics.test.js` fails if the §3 tables and `EVENTS` list different
+events, or if a registered param is missing here. Param values and descriptions are kept up to date by hand.
+§1 describes the tracking as it was before this work.
 
-## 1. What is tracked today, and what's wrong with it
+To stay inside GA4's 50 custom dimensions, some events reuse a shared param instead of adding their own.
+`control` is "which button or option" within its event: popover and menu actions, `history_nav`'s back / forward,
+the zoom gesture, and `draft_side_change`'s `enemy_add` / `exclude_remove` / `carry_over_add` / …. Also:
+`surface` says where (`draft_random`'s pool / slot / against dice), `target_type` is the kind of pool suggestion
+(hero, trait, role, range, attribute, size), and `error` carries `draft_blocked`'s rule message.
+
+## 1. Before this work: what was tracked, and what was wrong with it
 
 | Event | Where | Problem |
 |---|---|---|
@@ -37,14 +44,16 @@ events" switched on (the default), every graph selection (`history.pushState` to
   recommended names where one fits (`search`, `share`, `tutorial_begin`).
 - Parameters: stick to a fixed set (§3.3) so the custom-dimension list stays under GA4's free limit of 50
   event-scoped dimensions. Values are capped at 100 characters, and an event can carry at most 25 parameters.
-- **Bands are sent as one key: the hero names sorted alphabetically and joined with commas** (`aqus,brewus,saxum`),
-  so the same band always gives the same string no matter what order it was picked in. 36 heroes give at most 7,140
+- **Bands are sent as one key: the hero names sorted alphabetically and joined with commas** (`AQUS,BREWUS,SAXUM`),
+  so the same band always gives the same string no matter what order it was picked in. Names are as in the data
+  (upper case, e.g. `AQUS,BREWUS,SAXUM`). 36 heroes give at most 7,140
   three-hero bands, which GA4 can report on without lumping rows into "(other)" as long as the date range is sensible.
 - GA4 can't split one event into several rows, so "how often is each hero in a finished band" gets **one event per
   hero** (`draft_complete_hero`) in addition to the band event.
 - Toggles always send `state: on|off`. Filters send `state: on|off` too, so turning a filter off can be counted
   separately from turning it on.
-- `method` says how something was triggered: `click | keyboard | drag | long_press | right_click | url | history`.
+- `method` says how something was triggered, e.g. `button | click | keyboard | drag | menu | picker | chip | tap |
+  long_press | right_click | link | history`. Each event's table row lists its own values.
 - Hovers are noisy. A tooltip counts as viewed only after it stays open **≥ 700 ms**, and each target (hero, edge
   or arc) is sent **once per page load**.
 
@@ -58,13 +67,13 @@ Priority: **P1** answers the questions you asked; **P2** covers the rest of the 
 
 | Event | P | When | Parameters |
 |---|---|---|---|
-| `node_select` *(replaces `node_selected`)* | P1 | `selectNode` | `node_type` (hero/trait), `node_name`, `source` (graph, keyboard, search, panel, edge, arc, url, history, draft) |
+| `node_select` *(replaces `node_selected`)* | P1 | `selectNode` | `node_type` (hero/trait), `node_name`, `source` (graph, keyboard, search, panel, edge, arc, draft; `link` when the page opened on it, `history` for back / forward) |
 | `edge_click` | P1 | `selectEdge` | `hero`, `trait`, `edge_role` (has/inflicts/grants/…) |
 | `arc_click` | P1 | `selectArc` | `hero_a`, `hero_b` (sorted), `synergy_category`, `hero_selected` (true if a hero was already selected) |
 | `selection_clear` | P3 | background click / Esc | `method` |
-| `node_drag` | P3 | `dragended`, once per page load | `node_type` |
-| `graph_zoom_gesture` | P3 | the first wheel / pinch zoom or pan of the page load | `gesture` (zoom/pan) |
-| `history_nav` | P2 | ↶ / ↷ buttons, browser back/forward on a graph selection | `direction`, `method` (button/browser) |
+| `node_drag` | P3 | the first node drag of the page load | `node_type` |
+| `graph_zoom_gesture` | P3 | the first user zoom and the first pan of the page load (not fit / centre) | `control` (zoom/pan), `method` (wheel, touch, mouse) |
+| `history_nav` | P2 | ↶ / ↷ buttons, browser back/forward on a graph selection | `control` (back/forward), `method` (button/browser) |
 
 #### Hover discovery (do people find the tooltips?)
 
@@ -98,7 +107,7 @@ Whether people read the static legend sections (Highlight, Edges, Trait size) ca
 | Event | P | When | Parameters |
 |---|---|---|---|
 | `search` *(replaces `search_used`)* | P2 | once the user stops typing for 1 s, or the box loses focus; send only if the term changed since the last send | `search_term`, `result_count`, `surface: graph` |
-| `search_suggestion_select` | P2 | `chooseSuggestion` | `surface`, `search_term`, `node_type`, `node_name`, `position` |
+| `search_suggestion_select` | P2 | `chooseSuggestion` | `surface`, `search_term`, `node_type`, `node_name`, `position` (1-based) |
 | `search_no_results` | P2 | the debounced `search` came back with 0 matches | `surface`, `search_term` |
 | `category_filter` | P2 | category chips (radio-like, so no `state`) | `filter_value` |
 | `filter_clear` | P3 | Clear Filters / Esc, only when something was active | `method` |
@@ -107,9 +116,8 @@ Whether people read the static legend sections (Highlight, Edges, Trait size) ca
 
 | Event | P | When | Parameters |
 |---|---|---|---|
-| `panel_link_click` | P1 | the delegated `.details-body [data-node]` click in `script.js` | `link_kind` (hero_link, hero_chip, trait_chip, pair_side_head), `from_node`, `target_type`, `target_name`, `panel_section` (traits, synergy, counters, arc_pair, …, from the closest section heading) |
+| `panel_link_click` | P1 | the delegated `.details-body [data-node]` click in `script.js` | `link_kind` (hero_link, hero_chip, trait_chip, pair_side_head), `from_node`, `target_type`, `target_name`, `panel_section`: `ability` (an ability box), `synergy_pair` (a clicked synergy line), else the heading above the link as a slug (`card_traits`, `helped_by`, `helps`, `careful_with`, `counters`, `countered_by`, `self_combo`, a trait's edge role …) |
 | `graph_add_to_draft` | P1 | `#addToDraft` | `hero`, `draft_action` (pick/ban) |
-| `back_to_draft` | P2 | `#backToDraft` | |
 
 ### 3.2 Draft tab
 
@@ -117,11 +125,11 @@ Whether people read the static legend sections (Highlight, Edges, Trait size) ca
 
 | Event | P | When | Parameters |
 |---|---|---|---|
-| `tab_view` | P1 | `setTab` (skip calls that don't change the tab) | `tab`, `method` (click, keyboard, url, view_in_graph, back_to_draft, card_menu, …) |
+| `tab_view` | P1 | `setTab`, only when the tab changes (not on page load) | `tab`, `method` (click, keyboard, link, history, intro, view_in_graph, back_to_draft (the graph's "← Back to draft"), graph_add, card_menu) |
 | `draft_mode_change` | P1 | `.mode-switch` | `mode` (two-player/solo) |
 | `draft_format_change` | P1 | the format radio cards | `format` |
 | `draft_start` | P1 | the first pick/ban on an empty state | `format` |
-| `draft_complete` | **P1, key event** | the first time a state becomes complete (`Draft.isComplete`, or 3 heroes in the solo band); see the note below | `format`, `band`, `opponent_band`, `bans_mine`, `bans_theirs`, `band_top_percent` (the band's "Top N%", lower is better), `score_label`, `roles_covered`, `duration_sec` (since the first pick / ban). How many picks were the #1 suggestion comes from `draft_pick.top_suggestion` |
+| `draft_complete` | **P1, key event** | a pick / ban / fill completes the draft (`Draft.isComplete`), once per band per page load; see the note below | `format`, `band`, `opponent_band`, `bans_mine`, `bans_theirs`, `band_top_percent` (the band's "Top N%", lower is better), `score_label`, `roles_covered`, `duration_sec` (since the first pick / ban). How many picks were the #1 suggestion comes from `draft_pick.top_suggestion` |
 | `draft_complete_hero` | P1 | once per hero in each finished band | `hero`, `side` (mine/opponent), `format`, `pick_number` |
 | `draft_reset` | P2 | `doReset` | `format`, `picks_made` |
 | `draft_undo` | P2 | `doUndo` | `method` (button, keyboard, toast) |
@@ -137,19 +145,19 @@ each different band key in a page load. Stronger signs that the user meant it ar
 |---|---|---|---|
 | `draft_pick` / `draft_ban` | P1 | `primaryAction` succeeds | `hero`, `format`, `player` (1/2), `pick_number`, `method` (tile, popover, menu, drag, random, graph, picker), `pool_sort`, `pool_rank` (position in the recommended order), `top_suggestion` (true/false), `filters_active` (true/false) |
 | `draft_fill_band` | P2 | `fillBand` | `hero`, `band` |
-| `draft_random` | P2 | `rollRandom` | `target` (pool/slot/against), `hero` |
-| `draft_remove` | P2 | removing from a slot | `hero` |
-| `draft_reorder` | P3 | `moveSlot` / slot drag | `method` |
-| `draft_side_change` | P2 | add/remove an enemy, exclusion or carry-over ban | `list` (enemies/excluded/carry_over), `op` (add/remove), `hero`, `method` (menu, picker, drag, chip) |
-| `draft_blocked` | P2 | `attempt` catches a rule violation | `reason` (the error message, trimmed to 100 characters) |
+| `draft_random` | P2 | `rollRandom` | `surface` (pool/slot/against), `hero` |
+| `draft_remove` | P2 | removing from a slot | `hero`, `format` |
+| `draft_reorder` | P3 | `moveSlot` / slot drag | `method` (button, keyboard, drag) |
+| `draft_side_change` | P2 | add/remove an enemy, exclusion or carry-over ban | `control` (`enemy_add`, `enemy_remove`, `exclude_add`, `exclude_remove`, `carry_over_add`, `carry_over_remove`), `hero`, `method` (menu, picker, drag, chip) |
+| `draft_blocked` | P2 | `attempt` catches a rule violation | `error` (the rule message, trimmed to 100 characters) |
 
 #### Hero pool
 
 | Event | P | When | Parameters |
 |---|---|---|---|
 | `search` | P2 | pool search, sent the same way as the graph search | `search_term`, `result_count`, `surface: pool` |
-| `search_suggestion_select` | P2 | `choosePoolSuggestion` | `surface: pool`, `pill_type` (hero, trait, role, attribute), `node_name` |
-| `pool_filter` | P2 | attribute, role, "Fills a missing role", "Show unavailable" | `filter_type`, `filter_value`, `state` |
+| `search_suggestion_select` | P2 | `choosePoolSuggestion` | `surface: pool`, `search_term`, `target_type` (hero, trait, role, range, attribute, size), `node_name`, `position` |
+| `pool_filter` | P2 | attribute, role, "Fills a missing role", "Show unavailable", removing a search pill, "clear filters" | `filter_type` (attribute, role, fills_missing_role, show_unavailable, pill, clear_all), `filter_value`, `state` |
 | `pool_sort` | P2 | `.sort-switch` | `pool_sort` |
 | `pool_filters_toggle` | P3 | `#filtersToggle` (narrow screens) | `state` |
 
@@ -157,10 +165,10 @@ each different band key in a page load. Stronger signs that the user meant it ar
 
 | Event | P | When | Parameters |
 |---|---|---|---|
-| `hero_popover_view` | P1 | the tile popover stays open ≥ 700 ms, or is pinned or opened as a sheet; once per hero per page load | `hero`, `popover_mode` (hover/pinned/sheet), `pool_rank` |
-| `popover_action` | P2 | a `[data-pop]` button in the popover | `popover_action` (primary, fill, card), `hero` |
-| `card_menu_open` | P2 | `openMenu` | `method` (button, right_click, long_press), `hero` |
-| `card_menu_action` | P2 | a `[data-menu]` item | `menu_action`, `hero` |
+| `hero_popover_view` | P1 | the tile popover stays open ≥ 700 ms, or is pinned or opened as a sheet; once per hero and mode per page load | `hero`, `popover_mode` (hover/pinned/sheet), `pool_rank` |
+| `popover_action` | P2 | a `[data-pop]` button in the popover | `control` (primary, fill, card, close), `hero` |
+| `card_menu_open` | P2 | `openMenu` | `method` (button, tap, right_click, long_press), `hero` |
+| `card_menu_action` | P2 | a `[data-menu]` item | `control` (primary, fill, inspect, enemy, exclude, unface, unexclude, card, graph), `hero` |
 | `analysis_inspect` | P1 | an analysis section or line, or a popover `[data-inspect]` | `section`, `line_index`, `source` (analysis/popover) |
 | `score_factor_open` | P1 | `#scoreBreakdown` | `factor` |
 | `score_info_open` | P2 | the (i) button | |
@@ -168,7 +176,7 @@ each different band key in a page load. Stronger signs that the user meant it ar
 | `analysis_more` | P3 | `[data-more]` | `section`, `state` |
 | `analysis_focus_switch` | P3 | `#focusSwitch` | `player` |
 | `analysis_sheet_toggle` | P3 | `#draftBar` (phone) | `state` |
-| `inspect_card_text` | P3 | `toggle` on `details.inspect-cards` | `state` |
+| `inspect_card_text` | P3 | a click on a "Card text" summary in the inspector (a single item starts open, so its first click is `closed`) | `state` |
 | `view_in_graph` | P1 | `#viewInGraph`, `#inspectInGraph`, `#cardInGraph`, card menu "graph" | `source` |
 
 #### Reference cards and sharing
@@ -190,21 +198,20 @@ each different band key in a page load. Stronger signs that the user meant it ar
 | `intro_tab` | P3 | `[data-intro-tab]` in the intro | `tab` |
 | `tutorial_complete` | P2 | the intro closes | `open_sec` (how long it was open) |
 | `click` (outbound) | P2 | automatic with Enhanced Measurement (Steam guide, BGG, Intaglyph) | built in: `link_url`, `link_domain`, `outbound` |
-| `app_error` / `draft_load_error` | P2 | the existing catch blocks (`draft-ui.js` currently only logs to the console) | `error` |
+| `app_error` / `draft_load_error` | P2 | the graph's / the Draft tab's load failing (the catch blocks in `init`) | `error` |
 
-**Parameters to register now** (the events that are built; `analytics.js` `DIMENSIONS` / `METRICS`, and a test
-keeps this list in step with the code):
+**Parameters to register** (`analytics.js` `DIMENSIONS` / `METRICS`; a test keeps this list in step with the code):
 
 - Custom dimensions (event-scoped, 43 of the 50 allowed): `entry, error, node_type, node_name, source, hero, trait,
   edge_role, hero_a, hero_b, synergy_category, hero_selected, state, method, control, filter_type, filter_value,
   surface, link_kind, from_node, target_type, target_name, panel_section, draft_action, tab, mode, format, player,
   pool_sort, top_suggestion, filters_active, band, opponent_band, bans_mine, bans_theirs, score_label, side,
   popover_mode, section, line_index, factor, content_type, result`
-- Custom metrics: `hero_count, result_count, pick_number, pool_rank, band_top_percent, roles_covered, duration_sec`
+- Custom metrics: `hero_count, result_count, pick_number, pool_rank, band_top_percent, roles_covered, duration_sec,
+  position, picks_made, open_sec`
 - `search_term` is built in.
 
-The P2 / P3 events would add `popover_action, menu_action, list, op, reason` (48 of 50 dimensions) and
-`position, open_sec` as metrics. If the dimensions run out, low-value ones (`line_index`, `from_node`) can go.
+That leaves 7 free dimensions. If they run out, low-value ones (`line_index`, `from_node`) can go.
 
 Custom dimensions only fill in **from the day they are registered** and never retroactively, so register them
 before the release goes out.
@@ -297,5 +304,7 @@ GROUP BY 1, 2 ORDER BY bands DESC;
    (`trackDraft`), so a pick is tracked the same way whatever started it. `setTab(tab, { via })`,
    `openCards({ source })` and the popover dwell were added.
 4. **`index.html`**: loads `analytics.js` and skips `gtag('config')` on localhost.
-5. Before deploying: register the dimensions and metrics above, set retention to 14 months, mark the key events and
-   turn off history-based page views (§4.1). Then add P2 / P3 once the first numbers come in.
+5. P2 / P3 helpers: `draftChanges(before, after, { method })` (in `attempt` and `setCarryOver`) turns side changes,
+   removals and reorders into events, `navDirection` gives back / forward, and `gestureOf` names a d3-zoom gesture.
+6. Before deploying: register the dimensions and metrics above (the three new metrics are `position`, `picks_made`
+   and `open_sec`), set retention to 14 months, mark the key events and turn off history-based page views (§4.1).

@@ -59,6 +59,13 @@
     const track = analytics.track;
     const popoverDelay = window.Analytics.createDelay({ wait: 700 });
     const startedAt = {}; // per mode: when the current draft's first pick / ban was made
+    const poolSearchTrack = window.Analytics.createSettledSearch({
+        send: term => {
+            const count = view.pool.filter(poolFilter).length;
+            track('search', { search_term: term, result_count: count, surface: 'pool' });
+            if (!count) track('search_no_results', { search_term: term, surface: 'pool' });
+        }
+    });
     const state = () => ui.states[ui.mode];
     const solo = () => ui.mode === 'solo';
     const display = name => titleCase(name);
@@ -235,18 +242,30 @@
     function setupIntro(hash) {
         const dialog = $('introDialog');
         const storage = (() => { try { return window.localStorage; } catch (error) { return null; } })();
-        $('introOpen').addEventListener('click', () => dialog.showModal());
-        dialog.addEventListener('close', () => Intro.markIntroSeen(storage));
+        let openedAt = null;
+        const open = method => {
+            if (dialog.open) return;
+            openedAt = Date.now();
+            track('tutorial_begin', { method });
+            dialog.showModal();
+        };
+        $('introOpen').addEventListener('click', () => open('help_button'));
+        dialog.addEventListener('close', () => {
+            Intro.markIntroSeen(storage);
+            if (openedAt) track('tutorial_complete', { open_sec: Math.round((Date.now() - openedAt) / 1000) });
+            openedAt = null;
+        });
         dialog.addEventListener('click', event => {
             const tab = event.target.closest('[data-intro-tab]')?.dataset.introTab;
             const r = dialog.getBoundingClientRect();
             const outside = event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom;
             if (event.target === dialog && outside) dialog.close(); // backdrop click
             if (!tab) return;
+            track('intro_tab', { tab });
             dialog.close();
             setTab(tab, { via: 'intro' });
         });
-        if (Intro.shouldShowIntro({ seen: Intro.introSeen(storage), hash, search: location.search })) dialog.showModal();
+        if (Intro.shouldShowIntro({ seen: Intro.introSeen(storage), hash, search: location.search })) open('auto_first_visit');
     }
 
     // ---- Static controls -----------------------------------------------------------------
@@ -265,6 +284,7 @@
             const chip = event.target.closest('[data-attribute]');
             if (!chip) return;
             ui.filters.attribute = chip.dataset.attribute;
+            track('pool_filter', { filter_type: 'attribute', filter_value: chip.dataset.attribute, state: 'on' });
             renderPool();
         });
         $('roleFilter').addEventListener('click', event => {
@@ -273,17 +293,24 @@
             const role = chip.dataset.role;
             const roles = ui.filters.roles;
             ui.filters.roles = roles.includes(role) ? roles.filter(r => r !== role) : [...roles, role];
+            track('pool_filter', { filter_type: 'role', filter_value: role, state: roles.includes(role) ? 'off' : 'on' });
             renderPool();
         });
         setupPoolSearch();
         $('filtersToggle').addEventListener('click', () => {
             const open = $('poolFilters').classList.toggle('is-open');
             $('filtersToggle').setAttribute('aria-expanded', String(open));
+            track('pool_filters_toggle', { state: open ? 'open' : 'closed' });
         });
         $('randomHero').innerHTML = icon('Dice');
-        $('randomHero').addEventListener('click', rollRandom);
-        $('fillsToggle').addEventListener('change', event => { ui.filters.fills = event.target.checked; renderPool(); });
-        $('unavailableToggle').addEventListener('change', event => { ui.filters.showUnavailable = event.target.checked; renderPool(); });
+        $('randomHero').addEventListener('click', () => rollRandom('pool'));
+        const toggleFilter = (key, type) => event => {
+            ui.filters[key] = event.target.checked;
+            track('pool_filter', { filter_type: type, state: event.target.checked ? 'on' : 'off' });
+            renderPool();
+        };
+        $('fillsToggle').addEventListener('change', toggleFilter('fills', 'fills_missing_role'));
+        $('unavailableToggle').addEventListener('change', toggleFilter('showUnavailable', 'show_unavailable'));
 
         document.querySelector('.mode-switch').addEventListener('click', event => {
             const button = event.target.closest('[data-mode]');
@@ -294,22 +321,23 @@
             }
         });
 
-        $('undoBtn').addEventListener('click', doUndo);
+        $('undoBtn').addEventListener('click', () => doUndo('button'));
         $('resetBtn').addEventListener('click', doReset);
         $('addEnemy').addEventListener('click', () => openPicker('enemy'));
         $('addExcluded').addEventListener('click', () => openPicker('exclude'));
         $('sequence').addEventListener('click', event => {
             if (event.target.closest('[data-act="add-extra"]')) openPicker('carry');
             const name = event.target.closest('[data-remove-extra]')?.dataset.removeExtra;
-            if (name) setCarryOver(state().carryOverBans.filter(n => n !== name));
+            if (name) setCarryOver(state().carryOverBans.filter(n => n !== name), 'chip');
         });
         document.querySelector('.sort-switch').addEventListener('click', event => {
             const button = event.target.closest('[data-sort]');
+            if (button && button.dataset.sort !== ui.sort) track('pool_sort', { pool_sort: button.dataset.sort });
             if (button) { ui.sort = button.dataset.sort; renderStep(); renderPool(); }
         });
         $('focusSwitch').addEventListener('click', event => {
             const button = event.target.closest('[data-focus]');
-            if (button) { ui.focus = Number(button.dataset.focus); render(); }
+            if (button) { ui.focus = Number(button.dataset.focus); track('analysis_focus_switch', { player: ui.focus }); render(); }
         });
         $('viewInGraph').addEventListener('click', () => {
             track('view_in_graph', { source: 'analysis' });
@@ -338,10 +366,12 @@
                 && !event.target.closest('#analysisPanel, #draftBar, dialog')) setSheet(false);
         });
         $('openMatch').addEventListener('click', () => openCards({ source: 'complete_button' }));
+        $('roleHelp').addEventListener('toggle', () => { if ($('roleHelp').open) track('role_help_open'); });
         $('draftView').addEventListener('click', event => {
             const more = event.target.closest('[data-more]');
             if (!more) return;
             ui.expanded[more.dataset.more] = !ui.expanded[more.dataset.more];
+            track('analysis_more', { section: more.dataset.more, state: ui.expanded[more.dataset.more] ? 'open' : 'closed' });
             renderAnalysis(shown);
             document.querySelector(`[data-more="${more.dataset.more}"]`)?.focus();
         });
@@ -366,14 +396,19 @@
         if (message) announce(message);
     }
 
-    // Run an engine transition; a rule violation (e.g. a hero already taken) is reported, not thrown
-    function attempt(fn, message) {
+    // Run an engine transition; a rule violation (e.g. a hero already taken) is reported, not thrown.
+    // `how.method` (menu, picker, drag, chip, button, keyboard) goes with the edit's analytics event.
+    function attempt(fn, message, how = {}) {
+        const before = state();
         try {
-            commit(fn(state()), typeof message === 'function' ? message() : message);
+            commit(fn(before), typeof message === 'function' ? message() : message);
         } catch (error) {
+            track('draft_blocked', { error: error.message });
             announce(error.message);
             toast(error.message);
+            return;
         }
+        window.Analytics.draftChanges(before, state(), how).forEach(e => track(e.name, e.params));
     }
 
     // `method`: what the user did to pick (tile, popover, menu, drag, random, graph, picker), for analytics
@@ -443,19 +478,22 @@
         return `Band covers ${v.analysis.coveredCount} of 3 roles, ${v.analysis.score.label}.`;
     }
 
-    function doUndo() {
+    function doUndo(method) {
         const before = state();
         const after = Draft.undo(before);
         if (after === before) return;
+        track('draft_undo', { method });
         commit(after, 'Undone.');
     }
 
     // No confirmation: reset is an undo step, so Undo and Ctrl/⌘+Z bring the draft back
     function doReset() {
-        const cleared = Draft.reset(state());
+        const s = state();
+        track('draft_reset', { format: s.format, picks_made: s.format === 'solo' ? s.band.length : s.history.length });
+        const cleared = Draft.reset(s);
         commit(cleared, 'Cleared. Undo restores it.');
         toast('Cleared. Undo (Ctrl/⌘+Z) restores it.', { label: 'Undo', run: () => {
-            if (state() === cleared) doUndo();
+            if (state() === cleared) doUndo('toast');
         } });
     }
 
@@ -531,6 +569,7 @@
     }
 
     function setSheet(open) {
+        if (open !== $('analysisPanel').classList.contains('is-open')) track('analysis_sheet_toggle', { state: open ? 'open' : 'closed' });
         $('analysisPanel').classList.toggle('is-open', open);
         $('draftBar').setAttribute('aria-expanded', String(open));
         if (open) $('analysisClose').focus();
@@ -658,6 +697,9 @@
 
     // A chosen hero is searched by name; a chosen term becomes a pill (the box clears for the next one)
     function choosePoolSuggestion(item) {
+        track('search_suggestion_select', { surface: 'pool', search_term: $('poolSearch').value.trim(),
+            target_type: item.type === 'hero' ? 'hero' : item.kind, node_name: item.type === 'hero' ? item.name : item.label,
+            position: poolSearch.items.indexOf(item) + 1 || undefined });
         if (item.type === 'term') {
             ui.filters.pills = [...ui.filters.pills, item.label];
             announce(`Filter added: ${item.label}`);
@@ -669,6 +711,7 @@
     }
 
     function removePill(label) {
+        track('pool_filter', { filter_type: 'pill', filter_value: label, state: 'off' });
         ui.filters.pills = ui.filters.pills.filter(p => p !== label);
         announce(`Filter removed: ${label}`);
         renderPool();
@@ -688,6 +731,7 @@
             ui.filters.term = input.value;
             renderPool();
             updatePoolSuggestions();
+            poolSearchTrack.input(input.value);
         });
         input.addEventListener('keydown', event => {
             const count = poolSearch.items.length;
@@ -713,7 +757,10 @@
             ($('poolPills').querySelector('[data-pill]') || input).focus();
         });
         input.addEventListener('focus', () => { if (input.value.trim()) updatePoolSuggestions(); });
-        input.addEventListener('blur', () => setTimeout(closePoolSuggestions, 120));
+        input.addEventListener('blur', () => {
+            poolSearchTrack.flush();
+            setTimeout(closePoolSuggestions, 120);
+        });
         $('poolSuggestions').addEventListener('mousedown', event => {
             const li = event.target.closest('[data-index]');
             if (!li) return;
@@ -799,6 +846,7 @@
         const grid = $('poolGrid');
         grid.addEventListener('click', event => {
             if (event.target.closest('[data-act="clear-filters"]')) {
+                track('pool_filter', { filter_type: 'clear_all', state: 'off' });
                 Object.assign(ui.filters, { term: '', pills: [], attribute: 'All', roles: [], fills: false });
                 $('poolSearch').value = '';
                 $('fillsToggle').checked = false;
@@ -810,11 +858,11 @@
             const act = event.target.closest('[data-act]')?.dataset.act;
             const name = tile.dataset.hero;
             if (suppressClick) { suppressClick = false; return; }
-            if (act === 'menu') openMenu(name, event.target.closest('button'));
+            if (act === 'menu') openMenu(name, event.target.closest('button'), 'button');
             else if (act === 'primary' && narrow()) {
                 // Touch / small screens: the first tap explains the hero, the sheet's button acts
                 if (view.pool.find(p => p.name === name)?.suggestion) showPopover(name, tile, { sheet: true });
-                else openMenu(name, tile.querySelector('.tile-menu-btn'));
+                else openMenu(name, tile.querySelector('.tile-menu-btn'), 'tap');
             } else if (act === 'primary' && Draft.isAvailable(state(), name)) primaryAction(name, { method: 'tile' });
         });
         // Long-press opens the ⋯ menu
@@ -823,14 +871,14 @@
         grid.addEventListener('touchstart', event => {
             const tile = event.target.closest('[data-hero]');
             if (!tile) return;
-            pressTimer = setTimeout(() => { suppressClick = true; openMenu(tile.dataset.hero, tile.querySelector('.tile-menu-btn')); }, 550);
+            pressTimer = setTimeout(() => { suppressClick = true; openMenu(tile.dataset.hero, tile.querySelector('.tile-menu-btn'), 'long_press'); }, 550);
         }, { passive: true });
         ['touchend', 'touchmove', 'touchcancel'].forEach(type => grid.addEventListener(type, () => clearTimeout(pressTimer), { passive: true }));
         grid.addEventListener('contextmenu', event => {
             const tile = event.target.closest('[data-hero]');
             if (!tile) return;
             event.preventDefault();
-            openMenu(tile.dataset.hero, tile.querySelector('.tile-menu-btn'));
+            openMenu(tile.dataset.hero, tile.querySelector('.tile-menu-btn'), 'right_click');
         });
         // Hover / focus: the popover explains the hero and only that hero is previewed in the band
         // The desktop popover is a tooltip the mouse passes through. It opens after a short pause (so
@@ -968,6 +1016,7 @@
         const missing = s.bestBand.filter(n => !state().band.includes(n));
         const before = state();
         attempt(st => Draft.fillBand(st, missing), () => `Band filled: ${s.bestBand.map(display).join(', ')}. ${summary()}`);
+        if (state() !== before) track('draft_fill_band', { hero: name, band: window.Analytics.bandKey(state().band) });
         trackDraft(before, { method: 'fill' });
     }
 
@@ -980,6 +1029,7 @@
             const act = event.target.closest('[data-pop]')?.dataset.pop;
             if (!act) return;
             const tile = document.querySelector(`#poolGrid [data-hero="${name}"] .tile-main`);
+            track('popover_action', { control: act, hero: name });
             hidePopover();
             if (act === 'primary') primaryAction(name, { method: 'popover' });
             else if (act === 'fill') fillBand(name);
@@ -1079,11 +1129,13 @@
     // Random hero (respects the pool filters): a highlight hops across the shown tiles, slows, settles with a
     // gold flash, then the hero is picked (or banned) and its slot glows. Any other draft change cancels the roll.
     let rolling = false;
-    function rollRandom() {
+    // `surface`: the dice that rolled (pool, slot, against), for analytics
+    function rollRandom(surface) {
         if (rolling) return;
         const candidates = view.pool.filter(e => e.available && poolFilter(e)).map(e => e.name);
         const name = Draft.randomHero(state(), candidates);
         if (!name) { announce('No available hero matches these filters.'); return; }
+        track('draft_random', { surface, hero: name });
         const start = state();
         const tileOf = n => document.querySelector(`#poolGrid [data-hero="${n}"]`);
         const light = n => document.querySelectorAll('#poolGrid .is-rolled, #poolGrid .is-fated')
@@ -1138,9 +1190,9 @@
         })();
     }
 
-    function moveSlot(index, delta) {
+    function moveSlot(index, delta, method) {
         const to = index + delta;
-        attempt(s => Draft.movePick(s, index, to), 'Band reordered.');
+        attempt(s => Draft.movePick(s, index, to), 'Band reordered.', { method });
         requestAnimationFrame(() => document.querySelector(`#bandSlots [data-slot="${to}"]`)?.focus());
     }
 
@@ -1152,10 +1204,10 @@
             if (!slot || !act) return;
             const index = Number(slot.dataset.slot);
             if (act === 'remove') attempt(s => Draft.removePick(s, slot.dataset.hero), `Removed ${display(slot.dataset.hero)}.`);
-            else if (act === 'left') moveSlot(index, -1);
-            else if (act === 'right') moveSlot(index, 1);
+            else if (act === 'left') moveSlot(index, -1, 'button');
+            else if (act === 'right') moveSlot(index, 1, 'button');
             else if (act === 'choose') choosePrompt();
-            else if (act === 'random') rollRandom();
+            else if (act === 'random') rollRandom('slot');
         });
         slots.addEventListener('keydown', event => {
             const slot = event.target.closest('[data-slot][data-hero]');
@@ -1164,7 +1216,7 @@
                 event.preventDefault();
                 const index = Number(slot.dataset.slot);
                 const to = index + (event.key === 'ArrowLeft' ? -1 : 1);
-                if (to >= 0 && to < state().band.length) moveSlot(index, to - index);
+                if (to >= 0 && to < state().band.length) moveSlot(index, to - index, 'keyboard');
             }
         });
         slots.addEventListener('dragstart', event => {
@@ -1175,7 +1227,7 @@
             const target = event.target.closest('[data-slot]');
             if (data.slot !== undefined && target && target.dataset.hero) {
                 const to = Number(target.dataset.slot);
-                if (to !== Number(data.slot)) attempt(s => Draft.movePick(s, Number(data.slot), to), 'Band reordered.');
+                if (to !== Number(data.slot)) attempt(s => Draft.movePick(s, Number(data.slot), to), 'Band reordered.', { method: 'drag' });
             } else if (data.hero && view.step.action === 'pick') {
                 primaryAction(data.hero, { method: 'drag' });
             }
@@ -1231,29 +1283,30 @@
     function setupAgainst() {
         $('againstRow').addEventListener('click', event => {
             if (event.target.closest('[data-act="choose"]')) { choosePrompt(); return; }
-            if (event.target.closest('[data-act="random"]')) { rollRandom(); return; }
+            if (event.target.closest('[data-act="random"]')) { rollRandom('against'); return; }
             const name = event.target.closest('[data-remove]')?.dataset.remove;
-            if (name) attempt(s => Draft.setEnemies(s, s.enemies.filter(n => n !== name)), `No longer facing ${display(name)}.`);
+            if (name) attempt(s => Draft.setEnemies(s, s.enemies.filter(n => n !== name)), `No longer facing ${display(name)}.`, { method: 'chip' });
         });
         $('excludedChips').addEventListener('click', event => {
             const name = event.target.closest('[data-remove]')?.dataset.remove;
             if (!name) return;
-            if (solo()) attempt(s => Draft.setExcluded(s, s.excluded.filter(n => n !== name)), `${display(name)} is available again.`);
-            else setCarryOver(state().carryOverBans.filter(n => n !== name));
+            if (solo()) attempt(s => Draft.setExcluded(s, s.excluded.filter(n => n !== name)), `${display(name)} is available again.`, { method: 'chip' });
+            else setCarryOver(state().carryOverBans.filter(n => n !== name), 'chip');
         });
         setupDrop($('againstRow'), (event, data) => {
             if (!data.hero) return;
-            if (solo()) attempt(s => Draft.setEnemies(s, [...s.enemies, data.hero]), `Facing ${display(data.hero)}.`);
+            if (solo()) attempt(s => Draft.setEnemies(s, [...s.enemies, data.hero]), `Facing ${display(data.hero)}.`, { method: 'drag' });
             else if (view.step.player === 2 && view.step.action === 'pick') primaryAction(data.hero, { method: 'drag' });
         });
         setupDrop($('excludedChips'), (event, data) => {
-            if (data.hero && solo()) attempt(s => Draft.setExcluded(s, [...s.excluded, data.hero]), `Excluded ${display(data.hero)}.`);
+            if (data.hero && solo()) attempt(s => Draft.setExcluded(s, [...s.excluded, data.hero]), `Excluded ${display(data.hero)}.`, { method: 'drag' });
         });
     }
 
-    function setCarryOver(names) {
+    function setCarryOver(names, method) {
         const s = state();
         commit(Draft.createDraft(s.format, { carryOverBans: names }));
+        window.Analytics.draftChanges(s, state(), { method }).forEach(e => track(e.name, e.params));
     }
 
     // ---- Step header (pool) --------------------------------------------------------------
@@ -1400,6 +1453,7 @@
         // The score's (i): hover or focus shows it, a click pins it open until a click elsewhere or Escape
         $('scoreInfoBtn').addEventListener('click', () => {
             const open = !$('scoreInfo').classList.contains('is-open');
+            if (open) track('score_info_open');
             setScoreInfo(open, { dismiss: !open }); // closing by click hides it even while hovered or focused
         });
         ['mouseenter', 'focusin'].forEach(type => $('scoreInfo').addEventListener(type, () => $('scoreInfo').classList.remove('is-dismissed')));
@@ -1409,6 +1463,9 @@
         $('inspectItems').addEventListener('click', event => {
             const card = event.target.closest('[data-card]');
             if (card) openCards({ hero: card.dataset.card, source: 'inspect' });
+            // Before the browser toggles it: open now means it is closing
+            const details = event.target.closest('summary')?.parentElement;
+            if (details?.matches('details.inspect-cards')) track('inspect_card_text', { state: details.open ? 'closed' : 'open' });
         });
         $('inspectInGraph').addEventListener('click', () => {
             $('inspectDialog').close();
@@ -1476,6 +1533,7 @@
         $('cardsSwitch').addEventListener('click', event => {
             const button = event.target.closest('[data-side]');
             if (!button) return;
+            if (button.dataset.side !== ui.cardSide[cardsMode()]) track('cards_side_switch', { side: button.dataset.side });
             ui.cardSide[cardsMode()] = button.dataset.side;
             renderCards();
             $('cardsSwitch').querySelector(`[data-side="${button.dataset.side}"]`).focus();
@@ -1497,7 +1555,7 @@
             else toast(url);
         });
         dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
-        $('cardsOnly').addEventListener('click', () => setCardsOnly(true));
+        $('cardsOnly').addEventListener('click', () => { track('cards_only'); setCardsOnly(true); });
         $('cardInGraph').addEventListener('click', () => {
             const name = ui.cardHero; // closing the dialog forgets it
             dialog.close();
@@ -1524,11 +1582,11 @@
 
     const PICKER = {
         enemy: { title: 'Add an enemy to face', can: n => Draft.isAvailable(state(), n),
-            run: n => attempt(s => Draft.setEnemies(s, [...s.enemies, n]), `Facing ${display(n)}.`) },
+            run: n => attempt(s => Draft.setEnemies(s, [...s.enemies, n]), `Facing ${display(n)}.`, { method: 'picker' }) },
         exclude: { title: 'Exclude a hero', can: n => Draft.isAvailable(state(), n),
-            run: n => attempt(s => Draft.setExcluded(s, [...s.excluded, n]), `Excluded ${display(n)}.`) },
+            run: n => attempt(s => Draft.setExcluded(s, [...s.excluded, n]), `Excluded ${display(n)}.`, { method: 'picker' }) },
         carry: { title: 'Add an extra ban', can: n => !state().carryOverBans.includes(n),
-            run: n => setCarryOver([...state().carryOverBans, n]) },
+            run: n => setCarryOver([...state().carryOverBans, n], 'picker') },
         pick: { title: 'Choose a hero', can: n => Draft.isAvailable(state(), n), run: n => primaryAction(n, { method: 'picker' }) }
     };
 
@@ -1570,7 +1628,8 @@
     // ---- Card menu (⋯) -------------------------------------------------------------------
 
     let menuReturn = null;
-    function openMenu(name, anchor) {
+    function openMenu(name, anchor, method) {
+        track('card_menu_open', { method, hero: name });
         const s = state();
         const available = Draft.isAvailable(s, name);
         const step = Draft.currentStep(s);
@@ -1609,20 +1668,23 @@
         if (restoreFocus) menuReturn?.focus();
     }
 
+    const menuEdit = { method: 'menu' };
+
     function setupMenu() {
         const menu = $('cardMenu');
         menu.addEventListener('click', event => {
             const act = event.target.closest('[data-menu]')?.dataset.menu;
             const name = menu.dataset.hero;
             if (!act) return;
+            track('card_menu_action', { control: act, hero: name });
             closeMenu(false);
             if (act === 'primary') primaryAction(name, { method: 'menu' });
             else if (act === 'fill') fillBand(name);
             else if (act === 'inspect') pinPopover(name);
-            else if (act === 'enemy') attempt(s => Draft.setEnemies(s, [...s.enemies, name]), `Facing ${display(name)}.`);
-            else if (act === 'exclude') attempt(s => Draft.setExcluded(s, [...s.excluded, name]), `Excluded ${display(name)}.`);
-            else if (act === 'unface') attempt(s => Draft.setEnemies(s, s.enemies.filter(n => n !== name)), `No longer facing ${display(name)}.`);
-            else if (act === 'unexclude') attempt(s => Draft.setExcluded(s, s.excluded.filter(n => n !== name)), `${display(name)} is available again.`);
+            else if (act === 'enemy') attempt(s => Draft.setEnemies(s, [...s.enemies, name]), `Facing ${display(name)}.`, menuEdit);
+            else if (act === 'exclude') attempt(s => Draft.setExcluded(s, [...s.excluded, name]), `Excluded ${display(name)}.`, menuEdit);
+            else if (act === 'unface') attempt(s => Draft.setEnemies(s, s.enemies.filter(n => n !== name)), `No longer facing ${display(name)}.`, menuEdit);
+            else if (act === 'unexclude') attempt(s => Draft.setExcluded(s, s.excluded.filter(n => n !== name)), `${display(name)} is available again.`, menuEdit);
             else if (act === 'card') openCards({ hero: name, source: 'menu' });
             else if (act === 'graph') {
                 track('view_in_graph', { source: 'card_menu' });
@@ -1659,7 +1721,7 @@
             if ($('cardsDialog').open || $('heroPicker').open) return;
             if (!typing && (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
                 event.preventDefault();
-                doUndo();
+                doUndo('keyboard');
             } else if (!typing && !event.metaKey && !event.ctrlKey && !event.altKey && event.key.toLowerCase() === 'i') {
                 // Pin the popover of the focused or hovered tile
                 const name = event.target.closest?.('#poolGrid [data-hero]')?.dataset.hero || (!$('tilePopover').hidden && ui.pop);

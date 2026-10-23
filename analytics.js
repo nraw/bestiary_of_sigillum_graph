@@ -27,6 +27,12 @@
         search: ['search_term', 'result_count', 'surface'],
         panel_link_click: ['link_kind', 'from_node', 'target_type', 'target_name', 'panel_section'],
         graph_add_to_draft: ['hero', 'draft_action'],
+        selection_clear: ['method'],
+        node_drag: ['node_type'],
+        graph_zoom_gesture: ['control', 'method'],
+        history_nav: ['control', 'method'],
+        search_suggestion_select: ['surface', 'search_term', 'target_type', 'node_type', 'node_name', 'position'],
+        search_no_results: ['surface', 'search_term'],
 
         // Draft
         tab_view: ['tab', 'method'],
@@ -44,7 +50,34 @@
         view_in_graph: ['source'],
         cards_open: ['source', 'hero'],
         share: ['method', 'content_type', 'format', 'band'],
-        shared_link_open: ['result', 'format', 'band', 'error']
+        shared_link_open: ['result', 'format', 'band', 'error'],
+        draft_reset: ['format', 'picks_made'],
+        draft_undo: ['method'],
+        draft_fill_band: ['hero', 'band'],
+        draft_random: ['surface', 'hero'],
+        draft_remove: ['hero', 'format'],
+        draft_reorder: ['method'],
+        draft_side_change: ['control', 'hero', 'method'],
+        draft_blocked: ['error'],
+        pool_filter: ['filter_type', 'filter_value', 'state'],
+        pool_sort: ['pool_sort'],
+        pool_filters_toggle: ['state'],
+        popover_action: ['control', 'hero'],
+        card_menu_open: ['method', 'hero'],
+        card_menu_action: ['control', 'hero'],
+        score_info_open: [],
+        role_help_open: [],
+        analysis_more: ['section', 'state'],
+        analysis_focus_switch: ['player'],
+        analysis_sheet_toggle: ['state'],
+        inspect_card_text: ['state'],
+        cards_side_switch: ['side'],
+        cards_only: [],
+
+        // Whole site
+        tutorial_begin: ['method'],
+        intro_tab: ['tab'],
+        tutorial_complete: ['open_sec']
     };
 
     const DIMENSIONS = ['entry', 'error', 'node_type', 'node_name', 'source', 'hero', 'trait', 'edge_role', 'hero_a', 'hero_b',
@@ -52,7 +85,8 @@
         'link_kind', 'from_node', 'target_type', 'target_name', 'panel_section', 'draft_action', 'tab', 'mode', 'format',
         'player', 'pool_sort', 'top_suggestion', 'filters_active', 'band', 'opponent_band', 'bans_mine', 'bans_theirs',
         'score_label', 'side', 'popover_mode', 'section', 'line_index', 'factor', 'content_type', 'result'];
-    const METRICS = ['hero_count', 'result_count', 'pick_number', 'pool_rank', 'band_top_percent', 'roles_covered', 'duration_sec'];
+    const METRICS = ['hero_count', 'result_count', 'pick_number', 'pool_rank', 'band_top_percent', 'roles_covered', 'duration_sec',
+        'position', 'picks_made', 'open_sec'];
     const BUILT_IN = ['search_term'];
 
     const MAX_VALUE = 100; // GA4 truncates longer event param values
@@ -225,7 +259,47 @@
         return page;
     }
 
+    const added = (from, to) => to.filter(h => !from.includes(h));
+
+    // Edits to a draft besides picks and bans (draftEvents): who you face or exclude, carried-over bans, and the
+    // solo band losing a hero or changing order. `extra.method` says how (menu, picker, drag, chip, button, keyboard).
+    function draftChanges(before, after, extra = {}) {
+        if (!before || !after || before.format !== after.format) return [];
+        const events = [];
+        const side = (list, from = [], to = []) => {
+            added(from, to).forEach(hero => events.push({ name: 'draft_side_change', params: { control: `${list}_add`, hero, ...extra } }));
+            added(to, from).forEach(hero => events.push({ name: 'draft_side_change', params: { control: `${list}_remove`, hero, ...extra } }));
+        };
+        if (after.format !== 'solo') {
+            side('carry_over', before.carryOverBans, after.carryOverBans);
+            return events;
+        }
+        side('enemy', before.enemies, after.enemies);
+        side('exclude', before.excluded, after.excluded);
+        const gone = added(after.band, before.band);
+        if (gone.length === 1 && after.band.length === before.band.length - 1) {
+            events.push({ name: 'draft_remove', params: { hero: gone[0], format: after.format } });
+        } else if (!gone.length && after.band.length === before.band.length && after.band.some((h, i) => h !== before.band[i])) {
+            events.push({ name: 'draft_reorder', params: { ...extra } });
+        }
+        return events;
+    }
+
+    // Graph history: moving to a lower position is back
+    const navDirection = (from, to) => (typeof from !== 'number' || typeof to !== 'number' || from === to ? null
+        : to < from ? 'back' : 'forward');
+
+    // A d3-zoom gesture from its source event (null for zooms the app makes itself: fit, centre, buttons)
+    function gestureOf(event) {
+        if (!event || !event.type) return null;
+        if (event.type === 'wheel') return { control: 'zoom', method: 'wheel' };
+        if (event.type.startsWith('touch')) return { control: event.touches && event.touches.length > 1 ? 'zoom' : 'pan', method: 'touch' };
+        if (event.type.startsWith('mouse')) return { control: 'pan', method: 'mouse' };
+        return null;
+    }
+
     const api = {
+        draftChanges, navDirection, gestureOf,
         EVENTS, DIMENSIONS, METRICS, BUILT_IN, payload, createTracker, pageTracker, trackingMode, shouldTrack, bandKey, slug, entryOf,
         createDelay, createSettledSearch, draftEvents, completionKey, completionEvents
     };
