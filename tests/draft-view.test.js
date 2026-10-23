@@ -423,13 +423,19 @@ test('score breakdown: the points per factor, adding up to the band\'s value', (
     const total = D.scoreTeam(band, ctx).total + D.scoreMatchup(band, ['SAXUM', 'AQUS', 'IRATUS'], ctx).total;
     const sum = v.analysis.breakdown.reduce((t, f) => t + f.delta, 0);
     assert.ok(Math.abs(sum - total) < 1e-9);
-    assert.deepStrictEqual(v.analysis.breakdown.map(f => f.label).filter(l => ['Roles', 'Synergy', 'Themes'].includes(l)), ['Roles', 'Synergy', 'Themes']);
+    assert.deepStrictEqual(v.analysis.breakdown.map(f => f.label).sort(), ['Conflicts', 'Durability', 'Matchup', 'Roles', 'Synergy', 'Themes']);
     v.analysis.breakdown.forEach(f => assert.ok(Math.abs(f.delta - f.reasons.reduce((t, r) => t + r.delta, 0)) < 1e-9, f.label));
 });
 
-test('score breakdown: every factor is listed, in a fixed order, even at zero', () => {
+test('score breakdown: every factor is listed, even at zero, the one varying most between bands first, the same for every band', () => {
     const v = V.draftView(drafted(['TOXICUM']), ctx, { player: 1 });
-    assert.deepStrictEqual(v.analysis.breakdown.map(f => f.factor), ['coverage', 'synergy', 'theme', 'durability', 'conflict', 'matchup']);
+    const ranges = D.factorRanges(ctx);
+    const order = v.analysis.breakdown.map(f => f.factor);
+    assert.deepStrictEqual([...order].sort(), ['conflict', 'coverage', 'durability', 'matchup', 'synergy', 'theme']);
+    order.slice(1).forEach((f, i) => assert.ok(ranges[order[i]].sd >= ranges[f].sd, `${order[i]} before ${f}`));
+    assert.deepStrictEqual(order, ['synergy', 'theme', 'matchup', 'conflict', 'coverage', 'durability']);
+    const full = V.draftView(drafted(['TOXICUM', 'TEMPUS', 'EQUITA'], ['SAXUM', 'AQUS', 'IRATUS']), ctx).analysis.breakdown;
+    assert.deepStrictEqual(full.map(f => f.factor), order, 'the order does not follow the band\'s points');
     const matchup = v.analysis.breakdown.find(f => f.factor === 'matchup');
     assert.deepStrictEqual([matchup.delta, matchup.reasons], [0, []]);
     v.analysis.breakdown.forEach(f => f.reasons.forEach(r => assert.notStrictEqual(r.kind, 'info')));

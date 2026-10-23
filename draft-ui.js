@@ -663,11 +663,20 @@
         $('poolSearch').setAttribute('aria-activedescendant', `pool-sugg-${index}`);
     }
 
-    // A chosen hero is searched by name; a chosen term becomes a pill (the box clears for the next one)
+    // A chosen hero is picked / banned (like clicking its tile) when the turn allows it, otherwise searched by
+    // name; a chosen term becomes a pill. The box clears for the next search
     function choosePoolSuggestion(item) {
         track('search_suggestion_select', { surface: 'pool', search_term: $('poolSearch').value.trim(),
             target_type: item.type === 'hero' ? 'hero' : item.kind, node_name: item.type === 'hero' ? item.name : item.label,
             position: poolSearch.items.indexOf(item) + 1 || undefined });
+        if (item.type === 'hero' && Draft.currentStep(state()) && Draft.isAvailable(state(), item.name)) {
+            closePoolSuggestions();
+            primaryAction(item.name, { method: 'search' }); // before clearing, so filters_active sees the search
+            $('poolSearch').value = '';
+            ui.filters.term = '';
+            renderPool();
+            return;
+        }
         if (item.type === 'term') {
             ui.filters.pills = [...ui.filters.pills, item.label];
             announce(`Filter added: ${item.label}`);

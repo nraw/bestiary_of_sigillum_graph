@@ -141,9 +141,10 @@
 
     // ---- Context ---------------------------------------------------------------------------
 
-    // Hand-tuned against the curated bands (tests/draft.test.js), keeping partner synergy the main signal
+    // Hand-tuned against the curated bands (tests/draft.test.js), keeping partner synergy the main signal (themes
+    // stack quickly, so they weigh less: a test checks synergy outweighs them across all bands)
     const DEFAULT_WEIGHTS = {
-        synergy: 3, effect: 1, enabler: 1.5, theme: 3,
+        synergy: 3, effect: 1, enabler: 1.5, theme: 2.5,
         coverage: 1.5, missingRole: 0.5, frontline: 0.5, fragile: 3, conflict: 4, counter: 2,
         versatility: [5, 1, 0],   // by number of heroes already in the band
         lookahead: 10             // completions averaged when judging an early pick
@@ -463,12 +464,15 @@
     const FACTORS = ['coverage', 'synergy', 'theme', 'durability', 'conflict', 'matchup'];
 
     // Each factor's lowest and highest points on its own, over every band the roster allows, with a band
-    // reaching each end (not the best band overall). Matchup is the best and worst of any band against any
-    // other: it adds up hero by hero, so a band's best (worst) opponents are its three best (worst) match-ups.
+    // reaching each end (not the best band overall), and its standard deviation `sd` (how much it separates bands).
+    // Matchup is over every band against every band of other heroes: it adds up hero by hero, so a band's best
+    // (worst) opponents are its three best (worst) match-ups, and its spread over all of them has a closed form.
     function factorRanges(ctx) {
         if (ctx.cache.ranges) return ctx.cache.ranges;
         const names = ctx.heroes.map(h => h.name);
         const ranges = Object.fromEntries(FACTORS.map(f => [f, { min: Infinity, max: -Infinity }]));
+        const moments = Object.fromEntries(FACTORS.map(f => [f, { n: 0, sum: 0, squares: 0 }]));
+        const tally = (f, mean, square) => { const m = moments[f]; m.n += 1; m.sum += mean; m.squares += square; };
         const reach = (f, value, band, opponents) => {
             const r = ranges[f];
             if (value < r.min) Object.assign(r, { min: value, minBand: band }, opponents && { minOpponents: opponents });
@@ -478,13 +482,22 @@
         allBands(names).forEach(band => {
             const points = Object.fromEntries(FACTORS.map(f => [f, 0]));
             scoreTeam(band, ctx).reasons.forEach(r => { points[r.factor] += r.delta; });
-            FACTORS.filter(f => f !== 'matchup').forEach(f => reach(f, points[f], band));
+            FACTORS.filter(f => f !== 'matchup').forEach(f => { reach(f, points[f], band); tally(f, points[f], points[f] ** 2); });
             const against = names.filter(n => !band.includes(n))
                 .map(n => ({ n, v: band.reduce((t, a) => t + vs.get(a).get(n), 0) })).sort((a, b) => b.v - a.v);
+            // Every opponent band is BAND_SIZE of these heroes drawn without replacement: mean and variance of the sum
+            const k = BAND_SIZE, n = against.length;
+            const mean = against.reduce((t, x) => t + x.v, 0) / n;
+            const variance = against.reduce((t, x) => t + (x.v - mean) ** 2, 0) / n * k * (n - k) / (n - 1);
+            tally('matchup', k * mean, variance + (k * mean) ** 2);
             const total = list => list.reduce((t, x) => t + x.v, 0);
             const best = against.slice(0, BAND_SIZE), worst = against.slice(-BAND_SIZE);
             reach('matchup', total(best), band, best.map(x => x.n));
             reach('matchup', total(worst), band, worst.map(x => x.n));
+        });
+        FACTORS.forEach(f => {
+            const m = moments[f], mean = m.sum / m.n;
+            ranges[f].sd = Math.sqrt(Math.max(0, m.squares / m.n - mean ** 2));
         });
         ctx.cache.ranges = ranges;
         return ranges;

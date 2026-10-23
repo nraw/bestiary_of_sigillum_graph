@@ -143,7 +143,7 @@ finished a band every time it reached 3 heroes; its `draft_mode_change`, `draft_
 
 | Event | P | When | Parameters |
 |---|---|---|---|
-| `draft_pick` / `draft_ban` | P1 | `primaryAction` succeeds | `hero`, `format`, `player` (1/2), `pick_number`, `method` (tile, popover, menu, drag, random, graph, picker), `pool_sort`, `pool_rank` (position in the recommended order), `top_suggestion` (true/false), `filters_active` (true/false) |
+| `draft_pick` / `draft_ban` | P1 | `primaryAction` succeeds | `hero`, `format`, `player` (1/2), `pick_number`, `method` (tile, popover, menu, drag, random, graph, picker, search), `pool_sort`, `pool_rank` (position in the recommended order), `top_suggestion` (true/false), `filters_active` (true/false) |
 | `draft_random` | P2 | `rollRandom` | `surface` (pool/slot/against), `hero` |
 | `draft_side_change` | P2 | add/remove a carry-over ban | `control` (`carry_over_add`, `carry_over_remove`), `hero`, `method` (picker, chip) |
 | `draft_blocked` | P2 | `attempt` catches a rule violation | `error` (the rule message, trimmed to 100 characters) |

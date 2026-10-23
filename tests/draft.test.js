@@ -132,14 +132,16 @@ test('there are C(36,3) = 7140 possible bands', () => {
 
 const curatedPercents = data.recommended_bands.map(b => rankPercent(D.scoreTeam(b.heroes, ctx).total));
 
-// Curated bands are fixtures, not gospel: one may fall outside the cutoff (named in the test output), never more
-const MAX_OUTLIERS = 1;
+// Curated bands are fixtures, not gospel: two may fall outside the cutoff (named in the test output), never more.
+// Two since themes weigh less than synergy (theme 2.5): Cornibus/Mortum/Cerberus and the ranged siege band
+// Mechanicus/Catapultus/Ballistarius are themed bands with little synergy.
+const MAX_OUTLIERS = 2;
 const checkOutliers = (t, outliers) => {
     outliers.forEach(o => t.diagnostic(`outlier: ${o}`));
     assert.ok(outliers.length <= MAX_OUTLIERS, `${outliers.length} curated bands miss the cutoff:\n${outliers.join('\n')}`);
 };
 
-test('all but one curated band score in the top 30% of all bands', t => {
+test('all but two curated bands score in the top 30% of all bands', t => {
     checkOutliers(t, data.recommended_bands
         .map((b, i) => [b, curatedPercents[i]])
         .filter(([, pct]) => pct > 30)
@@ -150,6 +152,14 @@ test('the median curated band scores in the top 10% of all bands', () => {
     const sorted = [...curatedPercents].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
     assert.ok(median <= 10, `median curated band is in the top ${median.toFixed(1)}%`);
+});
+
+test('partner synergy is the main signal: it outweighs themes across all bands (mean, 99th percentile, best)', () => {
+    const points = factor => ALL_BANDS.map(b => D.scoreTeam(b, ctx).reasons.filter(r => r.factor === factor)
+        .reduce((t, r) => t + r.delta, 0)).sort((a, b) => a - b);
+    const stats = list => ({ mean: list.reduce((t, x) => t + x, 0) / list.length, p99: list[Math.floor(list.length * 0.99)], max: list.at(-1) });
+    const synergy = stats(points('synergy')), theme = stats(points('theme'));
+    Object.keys(synergy).forEach(k => assert.ok(synergy[k] > theme[k], `${k}: synergy ${synergy[k].toFixed(1)} vs themes ${theme[k].toFixed(1)}`));
 });
 
 test('every non-zero score contribution has a matching reason', () => {
@@ -264,7 +274,7 @@ test('suggestions carry a best-band percentile, matching the finished band on th
     });
 });
 
-test('all but one curated band are in the top 30% of every possible band', t => {
+test('all but two curated bands are in the top 30% of every possible band', t => {
     const all = D.allBands(heroes.map(h => h.name))
         .map(b => ({ heroes: b, score: D.scoreTeam(b, ctx).total }))
         .sort((a, b) => b.score - a.score || a.heroes.join('|').localeCompare(b.heroes.join('|')));
@@ -556,4 +566,22 @@ test('factorRanges: matchup is the best and worst a band can do against any othe
         const v = D.scoreMatchup(a, b, ctx).total;
         assert.ok(v <= matchup.max + 1e-9 && v >= matchup.min - 1e-9);
     }));
+});
+
+const sd = list => { const m = list.reduce((t, x) => t + x, 0) / list.length; return Math.sqrt(list.reduce((t, x) => t + (x - m) ** 2, 0) / list.length); };
+
+test('factorRanges: each factor\'s standard deviation over every band (matchup: over every pair of bands)', () => {
+    const ranges = D.factorRanges(ctx);
+    const bands = D.allBands(heroes.map(h => h.name));
+    FACTOR_KEYS.filter(f => f !== 'matchup').forEach(f => {
+        const expected = sd(bands.map(b => factorOf(D.scoreTeam(b, ctx).reasons, f)));
+        assert.ok(Math.abs(ranges[f].sd - expected) < 1e-9, `${f}: ${ranges[f].sd} vs ${expected}`);
+    });
+    // Matchup against every band of the other heroes, checked in full on a smaller roster
+    const small = D.createContext(heroes.slice(0, 10));
+    const smallBands = D.allBands(small.heroes.map(h => h.name));
+    const pairs = smallBands.flatMap(a => smallBands.filter(b => !b.some(h => a.includes(h))).map(b => D.scoreMatchup(a, b, small).total));
+    assert.ok(pairs.some(v => v !== 0), 'the small roster has some counters');
+    assert.ok(Math.abs(D.factorRanges(small).matchup.sd - sd(pairs)) < 1e-9);
+    assert.ok(ranges.matchup.sd > 0);
 });

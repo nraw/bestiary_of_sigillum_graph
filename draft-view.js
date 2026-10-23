@@ -205,14 +205,14 @@
     // Points per scoring factor (they add up to the band's value)
     const FACTORS = [['coverage', 'Roles'], ['synergy', 'Synergy'], ['theme', 'Themes'], ['durability', 'Durability'], ['conflict', 'Conflicts'], ['matchup', 'Matchup']];
     // Every factor, even at zero, with the reasons behind it (for the inspector); none for an empty band.
-    // Bars share one scale (the widest any factor can reach) with zero in the middle, so the same points draw
+    // Most impactful first: the factor varying most between bands (`sd`, the same order for every band). Bars share one scale (the widest any factor can reach) with zero in the middle, so the same points draw
     // the same bar; `ticks` mark how low and high the factor gets on its own (Draft.factorRanges), in % of the bar.
     function breakdown(reasons, band, ctx) {
         if (!band.length) return [];
         const ranges = Draft.factorRanges(ctx);
         const scale = Math.max(...Object.values(ranges).flatMap(r => [Math.abs(r.min), Math.abs(r.max)])) || 1;
         const at = x => 50 + x / scale * 50;
-        return FACTORS.map(([factor, label]) => {
+        return [...FACTORS].sort(([a], [b]) => ranges[b].sd - ranges[a].sd).map(([factor, label]) => {
             const own = reasons.filter(r => r.factor === factor);
             const delta = sum(own);
             const { min, max, minBand, maxBand, minOpponents, maxOpponents } = ranges[factor];
