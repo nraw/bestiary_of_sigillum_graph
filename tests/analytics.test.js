@@ -143,15 +143,6 @@ test('a two-player pick or ban becomes draft_pick / draft_ban with its player an
     ]);
 });
 
-test('solo picks: each hero added to the band is a pick, numbered by its slot', () => {
-    const s = { ...Draft.createDraft('solo'), band: ['aqus'] };
-    const after = { ...s, band: ['aqus', 'brewus', 'saxum'] };
-    assert.deepStrictEqual(A.draftEvents(s, after, { method: 'fill' }).map(e => [e.name, e.params.hero, e.params.pick_number]),
-        [['draft_pick', 'brewus', 2], ['draft_pick', 'saxum', 3]]);
-    assert.deepStrictEqual(A.draftEvents(Draft.createDraft('solo'), { ...Draft.createDraft('solo'), band: ['aqus'] }).map(e => e.name),
-        ['draft_start', 'draft_pick']);
-});
-
 test('no events for unchanged states, undo, or a different draft', () => {
     const s = add(two('standard'), 'saxum', 1);
     assert.deepStrictEqual(A.draftEvents(s, s), []);
@@ -180,8 +171,8 @@ test('completion follows whose band is "mine" (Player 2 seat)', () => {
     assert.strictEqual(complete.params.bans_mine, 'y');
 });
 
-test('completionKey identifies a band so a solo band re-completed the same way is not sent twice', () => {
-    const s = Draft.createDraft('solo');
+test('completionKey identifies a band so a draft re-completed the same way is not sent twice', () => {
+    const s = Draft.createDraft('standard');
     const a = A.completionKey(s, { 1: ['brewus', 'aqus', 'saxum'], 2: [] });
     const b = A.completionKey(s, { 1: ['aqus', 'saxum', 'brewus'], 2: [] });
     const c = A.completionKey(s, { 1: ['aqus', 'saxum', 'brewus'], 2: ['mortum'] });
@@ -224,29 +215,19 @@ test('index.html loads PostHog (EU) on the live site only, and no Google Analyti
 
 // ---- P2 / P3 helpers -----------------------------------------------------------------------
 
-const solo = (over = {}) => ({ ...Draft.createDraft('solo'), ...over });
-
-test('draftChanges: enemies, exclusions and removals in a solo draft, with the method', () => {
-    assert.deepStrictEqual(A.draftChanges(solo(), solo({ enemies: ['saxum'] }), { method: 'menu' }), [
-        { name: 'draft_side_change', params: { control: 'enemy_add', hero: 'saxum', method: 'menu' } }]);
-    assert.deepStrictEqual(A.draftChanges(solo({ excluded: ['aqus', 'brewus'] }), solo({ excluded: ['brewus'] })), [
-        { name: 'draft_side_change', params: { control: 'exclude_remove', hero: 'aqus' } }]);
-    assert.deepStrictEqual(A.draftChanges(solo({ band: ['aqus', 'brewus'] }), solo({ band: ['brewus'] })), [
-        { name: 'draft_remove', params: { hero: 'aqus', format: 'solo' } }]);
-});
-
-test('draftChanges: a reorder is one event; picks are left to draftEvents', () => {
-    assert.deepStrictEqual(A.draftChanges(solo({ band: ['aqus', 'brewus'] }), solo({ band: ['brewus', 'aqus'] }), { method: 'drag' }), [
-        { name: 'draft_reorder', params: { method: 'drag' } }]);
-    assert.deepStrictEqual(A.draftChanges(solo({ band: ['aqus'] }), solo({ band: ['aqus', 'brewus'] })), []);
-    assert.deepStrictEqual(A.draftChanges(solo(), solo()), []);
+test('the "Build my band" events are gone; opening a band that beats yours is tracked', () => {
+    ['draft_mode_change', 'draft_fill_band', 'draft_remove', 'draft_reorder'].forEach(name => assert.ok(!(name in A.EVENTS), name));
+    assert.deepStrictEqual(A.EVENTS.counter_band_open, ['rank', 'band', 'target_band']);
 });
 
 test('draftChanges: carried-over bans in a two-player draft', () => {
     const s = Draft.createDraft('standard');
     assert.deepStrictEqual(A.draftChanges(s, Draft.createDraft('standard', { carryOverBans: ['mortum'] }), { method: 'picker' }), [
         { name: 'draft_side_change', params: { control: 'carry_over_add', hero: 'mortum', method: 'picker' } }]);
-    assert.deepStrictEqual(A.draftChanges(s, Draft.createDraft('solo')), []);
+    assert.deepStrictEqual(A.draftChanges(s, Draft.createDraft('standard', { carryOverBans: [] })), []);
+    assert.deepStrictEqual(A.draftChanges(s, Draft.createDraft('ban-first')), [], 'a new format is not an edit');
+    const picked = Draft.applyAction(s, 'SAXUM');
+    assert.deepStrictEqual(A.draftChanges(s, picked), [], 'picks are left to draftEvents');
 });
 
 test('navDirection compares history positions', () => {
@@ -267,7 +248,7 @@ test('gestureOf names a zoom / pan gesture from its source event, and ignores pr
 
 test('the P2 / P3 events are in the catalogue', () => {
     ['selection_clear', 'node_drag', 'graph_zoom_gesture', 'history_nav', 'search_suggestion_select', 'search_no_results',
-        'draft_reset', 'draft_undo', 'draft_fill_band', 'draft_random', 'draft_remove', 'draft_reorder', 'draft_side_change',
+        'draft_reset', 'draft_undo', 'draft_random', 'draft_side_change',
         'draft_blocked', 'pool_filter', 'pool_sort', 'pool_filters_toggle', 'popover_action', 'card_menu_open',
         'card_menu_action', 'score_info_open', 'role_help_open', 'analysis_more', 'analysis_focus_switch',
         'analysis_sheet_toggle', 'inspect_card_text', 'cards_side_switch', 'cards_only', 'tutorial_begin', 'intro_tab',

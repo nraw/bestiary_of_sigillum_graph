@@ -19,7 +19,7 @@
     const LIST_LIMIT = 3; // grouped lists show this many before "Show N more"
     const HOVER_LINES = 2; // lines per section in the hover popover (the pinned one shows all)
     const CHIP_ICON = { synergy: '✦', counter: '⚔', warning: '⚠' };
-    const REASON_BADGE = { picked: 'Picked', facing: 'Facing', excluded: 'Excluded', banned: 'Banned', player1: 'Player 1', player2: 'Player 2' };
+    const REASON_BADGE = { banned: 'Banned', player1: 'Player 1', player2: 'Player 2' };
 
     const ICON = {
         Controller: '<path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>',
@@ -36,8 +36,7 @@
     let shown = null; // the view on screen (a hover preview or `view`)
     const ui = {
         tab: 'graph',
-        mode: 'two-player',
-        states: { solo: Draft.createDraft('solo'), 'two-player': Draft.createDraft('standard') },
+        draft: Draft.createDraft('standard'),
         // roles combine with OR; pills: terms chosen from the search dropdown, all required
         filters: { term: '', pills: [], attribute: 'All', roles: [], fills: false, showUnavailable: false },
         sort: 'recommended',
@@ -46,7 +45,7 @@
         expanded: {}, // "Show N more" lists that are open; reset when the band changes
         expandKey: null,
         shared: null, // { state, code }: a draft opened from a shared link (read-only, shown in the cards modal)
-        cardSide: { solo: 'mine', 'two-player': '1' }, // reference cards: whose cards are shown
+        cardSide: '1', // reference cards: whose cards are shown
         cardHero: null, // reference cards: a single hero's card, opened from the pool
         pop: null, // hero shown in the tile popover
         pinned: false, // desktop: the popover was pinned (⋯ menu, right-click, I) and can be clicked
@@ -58,7 +57,7 @@
     const analytics = window.Analytics.pageTracker();
     const track = analytics.track;
     const popoverDelay = window.Analytics.createDelay({ wait: 700 });
-    const startedAt = {}; // per mode: when the current draft's first pick / ban was made
+    let startedAt = null; // when the current draft's first pick / ban was made
     const poolSearchTrack = window.Analytics.createSettledSearch({
         send: term => {
             const count = view.pool.filter(poolFilter).length;
@@ -66,8 +65,7 @@
             if (!count) track('search_no_results', { search_term: term, surface: 'pool' });
         }
     });
-    const state = () => ui.states[ui.mode];
-    const solo = () => ui.mode === 'solo';
+    const state = () => ui.draft;
     const display = name => titleCase(name);
     const portrait = (name, cls = 'portrait') =>
         `<img class="${cls}" src="hero_images/${name.toLowerCase()}.png" alt="" loading="lazy" draggable="false">`;
@@ -163,11 +161,9 @@
     function restore() {
         try {
             const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-            if (!saved) return;
-            if (saved.states?.solo?.format === 'solo') ui.states.solo = saved.states.solo;
-            const two = saved.states?.['two-player'];
-            if (two && Draft.DRAFT_FORMATS.includes(two.format) && two.format !== 'solo') ui.states['two-player'] = two;
-            if (saved.mode === 'solo' || saved.mode === 'two-player') ui.mode = saved.mode;
+            // Older saves kept a "Build my band" band next to the draft (`states`); only the draft carries over
+            const draft = saved?.draft || saved?.states?.['two-player'];
+            if (draft && Draft.DRAFT_FORMATS.includes(draft.format) && Array.isArray(draft.history)) ui.draft = draft;
         } catch (error) {
             localStorage.removeItem(STORAGE_KEY);
         }
@@ -175,7 +171,7 @@
 
     function persist() {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: ui.mode, states: ui.states }));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ draft: ui.draft }));
         } catch (error) { /* storage full or disabled: drafting still works */ }
     }
 
@@ -312,19 +308,8 @@
         $('fillsToggle').addEventListener('change', toggleFilter('fills', 'fills_missing_role'));
         $('unavailableToggle').addEventListener('change', toggleFilter('showUnavailable', 'show_unavailable'));
 
-        document.querySelector('.mode-switch').addEventListener('click', event => {
-            const button = event.target.closest('[data-mode]');
-            if (button && button.dataset.mode !== ui.mode) {
-                ui.mode = button.dataset.mode;
-                track('draft_mode_change', { mode: ui.mode });
-                render();
-            }
-        });
-
         $('undoBtn').addEventListener('click', () => doUndo('button'));
         $('resetBtn').addEventListener('click', doReset);
-        $('addEnemy').addEventListener('click', () => openPicker('enemy'));
-        $('addExcluded').addEventListener('click', () => openPicker('exclude'));
         $('sequence').addEventListener('click', event => {
             if (event.target.closest('[data-act="add-extra"]')) openPicker('carry');
             const name = event.target.closest('[data-remove-extra]')?.dataset.removeExtra;
@@ -346,7 +331,7 @@
             window.BestiaryGraph?.showBand(bands[view.focus], bands[view.focus === 1 ? 2 : 1]);
         });
 
-        // A hero in a band (or Against) opens its reference card; its own buttons keep their actions
+        // A hero in a band opens its reference card; its own buttons keep their actions
         $('draftMain').addEventListener('click', event => {
             const card = event.target.closest('[data-card]');
             if (card && !event.target.closest('button')) openCards({ hero: card.dataset.card, source: 'band_slot' });
@@ -380,7 +365,7 @@
         setupPopover();
         setupInspect();
         setupSlots();
-        setupAgainst();
+        setupBeats();
         setupCards();
         setupPicker();
         setupMenu();
@@ -390,7 +375,7 @@
     // ---- Actions -------------------------------------------------------------------------
 
     function commit(next, message) {
-        ui.states[ui.mode] = next;
+        ui.draft = next;
         ui.focus = null;
         render();
         if (message) announce(message);
@@ -416,7 +401,7 @@
         const step = Draft.currentStep(state());
         if (!step) return;
         const done = step.action === 'ban' ? 'banned' : 'selected';
-        const verb = solo() ? done[0].toUpperCase() + done.slice(1) : `Player ${step.player} ${done}`;
+        const verb = `Player ${step.player} ${done}`;
         const before = state();
         const extra = pickContext(name, method); // the pool as the user saw it when choosing
         attempt(s => Draft.applyAction(s, name), () => `${verb} ${display(name)}. ${summary()}`);
@@ -435,7 +420,7 @@
         const after = state();
         const events = window.Analytics.draftEvents(before, after, extra);
         events.forEach(e => {
-            if (e.name === 'draft_start') startedAt[ui.mode] = Date.now();
+            if (e.name === 'draft_start') startedAt = Date.now();
             track(e.name, e.params);
         });
         if (events.length && Draft.isComplete(after)) trackComplete(after);
@@ -450,7 +435,7 @@
             bands, bans: Draft.bans(s),
             topPercent: typeof percent === 'number' ? Math.round(percent * 100) / 100 : undefined,
             scoreLabel: analysis.score.label, rolesCovered: analysis.coveredCount,
-            durationSec: startedAt[ui.mode] ? Math.round((Date.now() - startedAt[ui.mode]) / 1000) : undefined
+            durationSec: startedAt ? Math.round((Date.now() - startedAt) / 1000) : undefined
         }).forEach(e => track(e.name, e.params));
     }
 
@@ -489,7 +474,7 @@
     // No confirmation: reset is an undo step, so Undo and Ctrl/⌘+Z bring the draft back
     function doReset() {
         const s = state();
-        track('draft_reset', { format: s.format, picks_made: s.format === 'solo' ? s.band.length : s.history.length });
+        track('draft_reset', { format: s.format, picks_made: s.history.length });
         const cleared = Draft.reset(s);
         commit(cleared, 'Cleared. Undo restores it.');
         toast('Cleared. Undo (Ctrl/⌘+Z) restores it.', { label: 'Undo', run: () => {
@@ -519,16 +504,13 @@
         shown = view;
         previewKey = null;
         const bands = Draft.bands(state());
-        const key = `${ui.mode}:${bands[view.focus].join('|')}:${bands[view.focus === 1 ? 2 : 1].join('|')}`;
+        const key = `${bands[view.focus].join('|')}:${bands[view.focus === 1 ? 2 : 1].join('|')}`;
         if (key !== ui.expandKey) { ui.expandKey = key; ui.expanded = {}; }
         hidePopover();
-        renderMode();
         renderSetup();
         renderSequence();
         renderPool();
-        renderExcluded();
         renderSlots(view);
-        renderAgainst();
         renderStep();
         renderGraphAction();
         renderAnalysis(view);
@@ -546,10 +528,6 @@
         shown = heroes ? draftView(state(), ctx, { preview: heroes, player: ui.focus }) : view;
         renderSlots(shown);
         renderAnalysis(shown);
-    }
-
-    function hasProgress(s) {
-        return s.format === 'solo' ? Boolean(s.band.length || s.enemies.length || s.excluded.length) : s.history.length > 0;
     }
 
     // Phones: the sticky bar shows the band at a glance and opens Band Analysis as a bottom sheet
@@ -575,20 +553,10 @@
         if (open) $('analysisClose').focus();
     }
 
-    function renderMode() {
-        document.querySelectorAll('.mode-btn').forEach(button => {
-            const mode = button.dataset.mode;
-            button.setAttribute('aria-checked', String(mode === ui.mode));
-            button.querySelector('.mode-dot').hidden = mode === ui.mode || !hasProgress(ui.states[mode]);
-        });
-    }
-
     function renderSetup() {
         const el = $('twoPlayerSetup');
-        el.hidden = solo();
-        if (solo()) return;
         const s = state();
-        $('draftMain').classList.toggle('is-started', hasProgress(s));
+        $('draftMain').classList.toggle('is-started', s.history.length > 0);
         if (s.history.length) {
             el.innerHTML = `<p class="setup-summary">${FORMAT_INFO[s.format].label} · Player 1 starts${s.carryOverBans.length
                 ? ` · ${s.carryOverBans.length} carried-over ban${s.carryOverBans.length > 1 ? 's' : ''}` : ''}</p>`;
@@ -614,7 +582,7 @@
         if (!view.sequence) return;
         // Extra (carry-over) bans lead the row; they can be changed until the draft starts
         const editable = !state().history.length;
-        const extras = view.excluded.map(n => `
+        const extras = view.carryOverBans.map(n => `
             <li class="seq-step seq--extra" title="Extra ban: ${escapeHtml(display(n))}">
                 <span class="seq-action">Extra ban</span>
                 <span class="seq-who">${escapeHtml(display(n))}${editable
@@ -770,7 +738,7 @@
     }
 
     // Same verbs for both players: Select (pick) and Ban; Player 2's turn is marked in crimson
-    const p2Turn = () => !solo() && view.step.player === 2;
+    const p2Turn = () => view.step.player === 2;
     function poolCorner(entry) {
         if (!entry.available || !view.step.action) return '';
         return `<span class="tile-corner${p2Turn() ? ' tile-corner--p2' : ''}" aria-hidden="true">${view.step.action === 'ban' ? '⊘' : '+'}</span>`;
@@ -780,7 +748,7 @@
         if (!entry.available) return `${entry.display}: ${REASON_BADGE[entry.unavailableReason]}`;
         if (!view.step.action) return entry.display;
         const verb = view.step.action === 'ban' ? 'Ban' : 'Select';
-        return `${verb} ${entry.display}${solo() ? '' : ` for Player ${view.step.player}`}`;
+        return `${verb} ${entry.display} for Player ${view.step.player}`;
     }
 
     const hasRanks = () => view.suggestions.items.length > 0;
@@ -811,7 +779,7 @@
         // Random respects the filters: it picks (or bans) among the available heroes shown
         const action = view.step.action;
         const randomBtn = $('randomHero');
-        const randomLabel = action ? `${action === 'ban' ? 'Ban' : 'Select'} a random hero${solo() ? '' : ` for Player ${view.step.player}`}` : 'Random hero';
+        const randomLabel = action ? `${action === 'ban' ? 'Ban' : 'Select'} a random hero for Player ${view.step.player}` : 'Random hero';
         randomBtn.disabled = !action || !entries.some(e => e.available);
         randomBtn.title = action ? `${randomLabel} from those shown` : 'The draft is complete';
         randomBtn.setAttribute('aria-label', randomLabel);
@@ -939,12 +907,11 @@
         const p = view.suggestions.player;
         const ban = view.suggestions.action === 'ban';
         const rival = p === 1 ? 2 : 1;
-        const forWhom = solo() ? '' : ` for Player ${p}`;
+        const forWhom = ` for Player ${p}`;
         const verb = ban ? 'Ban' : 'Select';
-        // The hover popover can't be clicked: Fill band lives in the ⋯ menu there, the phone sheet and the pinned popover
+        // The hover popover can't be clicked; the phone sheet and the pinned popover can
         const interactive = sheet || pinned;
         ui.pinned = pinned;
-        const canFill = interactive && solo() && !ban && s.bestWith.length > 0;
         pop.innerHTML = `
             <div class="pop-head">
                 <span class="pop-rank">#${s.rank}</span>
@@ -960,7 +927,6 @@
             ${interactive ? '' : '<p class="pop-hint">Right-click or press <kbd>I</kbd> to inspect the card text behind these</p>'}
             <div class="pop-actions">
                 ${entry.available && view.step.action ? `<button class="btn ${ban ? 'btn-crimson' : 'btn-gold'} pop-primary" type="button" data-pop="primary">${verb}${escapeHtml(forWhom)}</button>` : ''}
-                ${canFill ? `<button class="btn btn-ghost" type="button" data-pop="fill">Fill band</button>` : ''}
                 ${interactive ? `<button class="btn btn-ghost" type="button" data-pop="card">View card</button>` : ''}
             </div>`;
         pop.dataset.hero = name;
@@ -1010,16 +976,6 @@
         document.querySelectorAll('#poolGrid .is-popped').forEach(t => t.classList.remove('is-popped'));
     }
 
-    function fillBand(name) {
-        const s = view.pool.find(p => p.name === name)?.suggestion;
-        if (!s) return;
-        const missing = s.bestBand.filter(n => !state().band.includes(n));
-        const before = state();
-        attempt(st => Draft.fillBand(st, missing), () => `Band filled: ${s.bestBand.map(display).join(', ')}. ${summary()}`);
-        if (state() !== before) track('draft_fill_band', { hero: name, band: window.Analytics.bandKey(state().band) });
-        trackDraft(before, { method: 'fill' });
-    }
-
     function setupPopover() {
         const pop = $('tilePopover');
         pop.addEventListener('click', event => {
@@ -1032,7 +988,6 @@
             track('popover_action', { control: act, hero: name });
             hidePopover();
             if (act === 'primary') primaryAction(name, { method: 'popover' });
-            else if (act === 'fill') fillBand(name);
             else if (act === 'card') openCards({ hero: name, source: 'popover' });
             else tile?.focus();
         });
@@ -1046,22 +1001,9 @@
         });
     }
 
-    function renderExcluded() {
-        const list = view.excluded;
-        const editable = solo();
-        $('excludedBox').hidden = !solo(); // two-player extra bans live in the turn tracker
-        $('excludedTitle').textContent = solo() ? 'Excluded' : 'Carry-over bans';
-        $('addExcluded').hidden = !editable;
-        $('addExcluded').textContent = solo() ? '+ Exclude hero' : '+ Add ban';
-        $('excludedChips').innerHTML = list.length
-            ? list.map(n => `<span class="ex-chip">${escapeHtml(display(n))}${editable
-                ? `<button type="button" data-remove="${n}" aria-label="Remove ${escapeHtml(display(n))} from ${solo() ? 'excluded' : 'carry-over bans'}">✕</button>` : ''}</span>`).join('')
-            : `<span class="muted">${solo() ? 'None. Exclude heroes you cannot use.' : 'None. Add heroes banned last game.'}</span>`;
-    }
-
     // ---- Band slots ----------------------------------------------------------------------
 
-    function slotHtml(slot, { editable, choosable, count, fate }) {
+    function slotHtml(slot, { choosable, fate }) {
         if (!slot.hero) {
             return `<div class="slot is-empty" data-slot="${slot.index}" data-drop="slot">
                 <span class="slot-num">${slot.index + 1}</span>
@@ -1072,37 +1014,24 @@
             </div>`;
         }
         const hero = heroOf(slot.hero);
-        const canEdit = editable && !slot.preview;
         return `<div class="slot attr--${hero.attribute}${slot.preview ? ' is-preview' : ''}" data-slot="${slot.index}"
-                    data-hero="${slot.hero}" data-drop="slot" ${canEdit ? 'draggable="true"' : ''}
+                    data-hero="${slot.hero}" data-drop="slot"
                     ${slot.preview ? '' : `data-card="${slot.hero}" tabindex="0" title="View reference card"`}
                     aria-label="${slot.index + 1}. ${escapeHtml(display(slot.hero))}${slot.preview ? ' (preview)' : ', open reference card'}">
             <span class="slot-num slot-num--id" title="Card number">#${hero.id}</span>
             ${banner(hero.attribute)}
             ${slot.preview ? '<span class="slot-ribbon">Preview</span>' : ''}
-            ${canEdit ? `<button class="slot-remove" type="button" data-act="remove" aria-label="Remove ${escapeHtml(display(slot.hero))}">✕</button>` : ''}
             ${tokenPortrait(slot.hero, 'slot-portrait')}
             <span class="slot-name">${escapeHtml(display(slot.hero))}</span>
             ${rolePills(Draft.battleRoles(hero))}
-            ${canEdit ? `<span class="slot-move">
-                <button type="button" data-act="left" aria-label="Move ${escapeHtml(display(slot.hero))} earlier" ${slot.index === 0 ? 'disabled' : ''}>◀</button>
-                <button type="button" data-act="right" aria-label="Move ${escapeHtml(display(slot.hero))} later" ${slot.index >= count - 1 ? 'disabled' : ''}>▶</button>
-            </span>` : ''}
         </div>`;
     }
 
-    // Solo: your band (editable). Two-player: Player 1 here and Player 2 in the second section.
-    // Only the next empty slot offers a random hero
+    // Player 1 in the first section, Player 2 in the second. Only the next empty slot offers a random hero
     const fateIndex = slots => slots.findIndex(x => !x.hero);
     function renderSlots(v) {
         const picking = v.step.action === 'pick';
-        if (v.mode === 'solo') {
-            const count = v.slots.filter(x => x.hero && !x.preview).length;
-            const fate = fateIndex(v.slots);
-            $('bandSlots').innerHTML = v.slots.map(x => slotHtml(x, { editable: true, choosable: picking, count, fate: x.index === fate })).join('');
-            return;
-        }
-        const row = p => p.slots.map(x => slotHtml(x, { editable: false, choosable: picking && p.acting, fate: x.index === fateIndex(p.slots) })).join('');
+        const row = p => p.slots.map(x => slotHtml(x, { choosable: picking && p.acting, fate: x.index === fateIndex(p.slots) })).join('');
         $('bandSlots').innerHTML = row(v.players[0]);
         $('againstRow').innerHTML = row(v.players[1]);
         [['bandSection', 'bandTurn', v.players[0]], ['againstSection', 'againstTurn', v.players[1]]].forEach(([section, tag, p]) => {
@@ -1190,55 +1119,25 @@
         })();
     }
 
-    function moveSlot(index, delta, method) {
-        const to = index + delta;
-        attempt(s => Draft.movePick(s, index, to), 'Band reordered.', { method });
-        requestAnimationFrame(() => document.querySelector(`#bandSlots [data-slot="${to}"]`)?.focus());
-    }
-
+    // Each player's row: an empty slot points at the pool (or rolls a random hero); a pool hero dropped on the
+    // acting player's row picks it
     function setupSlots() {
-        const slots = $('bandSlots');
-        slots.addEventListener('click', event => {
-            const slot = event.target.closest('[data-slot]');
-            const act = event.target.closest('[data-act]')?.dataset.act;
-            if (!slot || !act) return;
-            const index = Number(slot.dataset.slot);
-            if (act === 'remove') attempt(s => Draft.removePick(s, slot.dataset.hero), `Removed ${display(slot.dataset.hero)}.`);
-            else if (act === 'left') moveSlot(index, -1, 'button');
-            else if (act === 'right') moveSlot(index, 1, 'button');
-            else if (act === 'choose') choosePrompt();
-            else if (act === 'random') rollRandom('slot');
-        });
-        slots.addEventListener('keydown', event => {
-            const slot = event.target.closest('[data-slot][data-hero]');
-            if (!slot || !solo() || !event.altKey) return;
-            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-                event.preventDefault();
-                const index = Number(slot.dataset.slot);
-                const to = index + (event.key === 'ArrowLeft' ? -1 : 1);
-                if (to >= 0 && to < state().band.length) moveSlot(index, to - index, 'keyboard');
-            }
-        });
-        slots.addEventListener('dragstart', event => {
-            const slot = event.target.closest('[data-slot][data-hero]');
-            if (slot) event.dataTransfer.setData('text/slot', slot.dataset.slot);
-        });
-        setupDrop(slots, (event, data) => {
-            const target = event.target.closest('[data-slot]');
-            if (data.slot !== undefined && target && target.dataset.hero) {
-                const to = Number(target.dataset.slot);
-                if (to !== Number(data.slot)) attempt(s => Draft.movePick(s, Number(data.slot), to), 'Band reordered.', { method: 'drag' });
-            } else if (data.hero && view.step.action === 'pick') {
-                primaryAction(data.hero, { method: 'drag' });
-            }
+        [[$('bandSlots'), 1], [$('againstRow'), 2]].forEach(([row, player]) => {
+            row.addEventListener('click', event => {
+                const act = event.target.closest('[data-act]')?.dataset.act;
+                if (act === 'choose') choosePrompt();
+                else if (act === 'random') rollRandom(player === 1 ? 'slot' : 'against');
+            });
+            setupDrop(row, hero => {
+                if (view.step.action === 'pick' && view.step.player === player) primaryAction(hero, { method: 'drag' });
+            });
         });
     }
 
-    // Drop zones accept pool heroes (text/hero) and band slots (text/slot)
+    // Drop zones accept pool heroes (text/hero)
     function setupDrop(el, onDrop) {
         el.addEventListener('dragover', event => {
-            const types = [...event.dataTransfer.types];
-            if (types.includes('text/hero') || types.includes('text/slot')) {
+            if ([...event.dataTransfer.types].includes('text/hero')) {
                 event.preventDefault();
                 el.classList.add('is-drop-target');
             }
@@ -1248,60 +1147,11 @@
             event.preventDefault();
             el.classList.remove('is-drop-target');
             const hero = event.dataTransfer.getData('text/hero');
-            const slot = event.dataTransfer.getData('text/slot');
-            onDrop(event, { hero: hero || null, slot: slot === '' ? undefined : slot });
+            if (hero) onDrop(hero);
         });
     }
 
-    // ---- Against row and bans ------------------------------------------------------------
-
-    function renderAgainst() {
-        $('bandHeading').textContent = solo() ? 'Your Band' : 'Player 1';
-        $('againstHeading').textContent = solo() ? 'Against' : 'Player 2';
-        $('againstHeading').classList.toggle('draft-heading--enemy', solo());
-        $('againstHint').textContent = solo() ? 'Heroes you expect to face' : '';
-        $('againstRow').classList.toggle('slots', !solo());
-        $('addEnemy').hidden = !solo() || view.against.length >= 3;
-        if (!solo()) return; // Player 2's band is drawn by renderSlots
-        ['bandSection', 'againstSection'].forEach(id => $(id).classList.remove('is-acting', 'is-p2'));
-        ['bandTurn', 'againstTurn'].forEach(id => { $(id).hidden = true; });
-        $('againstRow').innerHTML = view.against.length
-            ? view.against.map(n => {
-                const hero = heroOf(n);
-                return `<div class="enemy-card attr--${hero.attribute}" data-card="${n}" tabindex="0" title="View reference card"
-                    aria-label="${escapeHtml(display(n))}, open reference card">
-                    ${banner(hero.attribute)}
-                    <button class="slot-remove" type="button" data-remove="${n}" aria-label="Stop facing ${escapeHtml(display(n))}">✕</button>
-                    ${portrait(n, 'enemy-portrait')}
-                    <span class="enemy-name">${icon('Attacker', 'ico enemy-mark')} ${escapeHtml(display(n))}</span>
-                    ${rolePills(Draft.battleRoles(hero))}
-                </div>`;
-            }).join('')
-            : '<p class="empty-note">Add heroes you expect to face to get counter-picks.</p>';
-    }
-
-    function setupAgainst() {
-        $('againstRow').addEventListener('click', event => {
-            if (event.target.closest('[data-act="choose"]')) { choosePrompt(); return; }
-            if (event.target.closest('[data-act="random"]')) { rollRandom('against'); return; }
-            const name = event.target.closest('[data-remove]')?.dataset.remove;
-            if (name) attempt(s => Draft.setEnemies(s, s.enemies.filter(n => n !== name)), `No longer facing ${display(name)}.`, { method: 'chip' });
-        });
-        $('excludedChips').addEventListener('click', event => {
-            const name = event.target.closest('[data-remove]')?.dataset.remove;
-            if (!name) return;
-            if (solo()) attempt(s => Draft.setExcluded(s, s.excluded.filter(n => n !== name)), `${display(name)} is available again.`, { method: 'chip' });
-            else setCarryOver(state().carryOverBans.filter(n => n !== name), 'chip');
-        });
-        setupDrop($('againstRow'), (event, data) => {
-            if (!data.hero) return;
-            if (solo()) attempt(s => Draft.setEnemies(s, [...s.enemies, data.hero]), `Facing ${display(data.hero)}.`, { method: 'drag' });
-            else if (view.step.player === 2 && view.step.action === 'pick') primaryAction(data.hero, { method: 'drag' });
-        });
-        setupDrop($('excludedChips'), (event, data) => {
-            if (data.hero && solo()) attempt(s => Draft.setExcluded(s, [...s.excluded, data.hero]), `Excluded ${display(data.hero)}.`, { method: 'drag' });
-        });
-    }
+    // ---- Carry-over bans -------------------------------------------------------------------
 
     function setCarryOver(names, method) {
         const s = state();
@@ -1322,15 +1172,13 @@
         document.querySelectorAll('.sort-switch [data-sort]').forEach(b =>
             b.setAttribute('aria-checked', String(b.dataset.sort === sortBy())));
         $('completeNote').hidden = !view.complete;
-        $('completeText').textContent = solo() ? 'Band complete.' : 'Draft complete.';
     }
 
     // ---- Analysis ------------------------------------------------------------------------
 
     function renderAnalysis(v) {
         const a = v.analysis;
-        const whose = solo() ? 'Your band' : `Player ${v.focus}'s band`;
-        $('focusSwitch').hidden = solo();
+        const whose = `Player ${v.focus}'s band`;
         document.querySelectorAll('#focusSwitch [data-focus]').forEach(b =>
             b.setAttribute('aria-checked', String(Number(b.dataset.focus) === v.focus)));
         $('balanceSummary').textContent = `${whose} covers ${a.coveredCount} of 3 roles`;
@@ -1365,6 +1213,52 @@
                 <span class="bd-val">${f.delta > 0 ? '+' : f.delta < 0 ? '−' : ''}${Math.abs(f.delta).toFixed(1)}</span>
                 <span class="bd-go" aria-hidden="true">›</span></button></li>`).join('');
         $('viewInGraph').disabled = !Draft.bands(state())[v.focus].length;
+        renderBeats(a.beats);
+    }
+
+    // Finished drafts end the analysis with the strongest bands against the analysed one (draft-view.js beatsView):
+    // how each fares against it, opening the inspector, or the graph with both bands
+    function renderBeats(beats) {
+        $('beatsBlock').hidden = !beats;
+        if (!beats) return;
+        $('beatsHeading').textContent = beats.title;
+        $('beatsSub').textContent = beats.counteredBy.length
+            ? `Scored like any band, plus the matchup. On the cards, ${listText(beats.counteredBy)} counter${beats.counteredBy.length > 1 ? '' : 's'} it.`
+            : 'No hero\'s card counters this band directly, so these are simply the strongest bands against it.';
+        $('beatsList').innerHTML = beats.bands.map((b, i) => `
+            <li class="beats-band">
+                <button type="button" class="beats-open" data-beats="${i}" aria-label="Inspect ${escapeHtml(b.label)} against ${escapeHtml(beats.vs)}'s band">
+                    <span class="beats-faces" aria-hidden="true">${b.heroes.map(n =>
+                        `<span class="beats-face attr--${heroOf(n).attribute}">${portrait(n, 'beats-portrait')}</span>`).join('')}</span>
+                    <span class="beats-name">${escapeHtml(b.label)}</span>
+                    <span class="pop-inspect" aria-hidden="true">›</span>
+                </button>
+                <ul class="reason-list">${b.lines.slice(0, LIST_LIMIT - 1).map(l => lineItem(l, escapeHtml(l.text))).join('')
+                    || '<li class="muted beats-none">No counters either way: strong on its own</li>'}</ul>
+                ${b.lines.length > LIST_LIMIT - 1 ? `<p class="pop-more">+${b.lines.length - LIST_LIMIT + 1} more in the inspector</p>` : ''}
+                <button class="link-btn beats-graph" type="button" data-beats-graph="${i}">View both bands in graph →</button>
+            </li>`).join('');
+    }
+
+    const listText = list => list.join(', ').replace(/, ([^,]*)$/, ' and $1');
+
+    function setupBeats() {
+        $('beatsList').addEventListener('click', event => {
+            const beats = (shown || view).analysis.beats;
+            const open = event.target.closest('[data-beats]');
+            const graph = event.target.closest('[data-beats-graph]');
+            const index = Number(open ? open.dataset.beats : graph?.dataset.beatsGraph);
+            const band = beats?.bands[index];
+            if (!band) return;
+            if (graph) {
+                track('view_in_graph', { source: 'counter_band' });
+                setTab('graph', { via: 'view_in_graph' });
+                window.BestiaryGraph?.showBand(band.heroes, beats.target);
+                return;
+            }
+            track('counter_band_open', { rank: index + 1, band: window.Analytics.bandKey(band.heroes), target_band: window.Analytics.bandKey(beats.target) });
+            openInspect(band.reasons, { title: `${band.label} vs ${beats.vs}`, sub: `${beats.title} · #${index + 1}`, opponents: beats.target });
+        });
     }
 
     // ---- Inspector: the card text behind a popover section or analysis row ---------------------
@@ -1445,7 +1339,7 @@
             const f = v.analysis.breakdown.find(x => x.factor === factor);
             if (!f) return;
             track('score_factor_open', { factor: f.factor });
-            const whose = solo() ? 'Your band' : `Player ${v.focus}'s band`;
+            const whose = `Player ${v.focus}'s band`;
             const total = `${f.delta > 0 ? '+' : f.delta < 0 ? '−' : ''}${Math.abs(f.delta).toFixed(1)} points`;
             openInspect(f.reasons, { title: `${f.label}: ${whose}`, sub: `Band score · ${total}`,
                 opponents: Draft.bands(state())[v.focus === 1 ? 2 : 1], empty: EMPTY_FACTOR[f.factor] });
@@ -1479,7 +1373,6 @@
     // ---- Reference cards modal (finished draft, or a shared link) ---------------------------
 
     const cardsState = () => (ui.shared ? ui.shared.state : state());
-    const cardsMode = () => (cardsState().format === 'solo' ? 'solo' : 'two-player');
 
     // `source`: what opened the cards, for analytics
     function openCards({ hero = null, source } = {}) {
@@ -1493,9 +1386,8 @@
     function renderCards() {
         const hero = ui.cardHero;
         const sides = referenceSides(cardsState(), { hero });
-        const mode = cardsMode();
-        if (!hero && !sides.some(x => x.key === ui.cardSide[mode])) ui.cardSide[mode] = sides[0].key;
-        const side = hero ? sides[0] : sides.find(x => x.key === ui.cardSide[mode]);
+        if (!hero && !sides.some(x => x.key === ui.cardSide)) ui.cardSide = sides[0].key;
+        const side = hero ? sides[0] : sides.find(x => x.key === ui.cardSide);
         $('cardsTitle').textContent = hero ? `${display(hero)} · reference card`
             : ui.shared ? 'Shared draft · reference cards' : 'Reference cards';
         $('cardsSwitch').hidden = sides.length < 2;
@@ -1533,8 +1425,8 @@
         $('cardsSwitch').addEventListener('click', event => {
             const button = event.target.closest('[data-side]');
             if (!button) return;
-            if (button.dataset.side !== ui.cardSide[cardsMode()]) track('cards_side_switch', { side: button.dataset.side });
-            ui.cardSide[cardsMode()] = button.dataset.side;
+            if (button.dataset.side !== ui.cardSide) track('cards_side_switch', { side: button.dataset.side });
+            ui.cardSide = button.dataset.side;
             renderCards();
             $('cardsSwitch').querySelector(`[data-side="${button.dataset.side}"]`).focus();
         });
@@ -1578,13 +1470,9 @@
         });
     }
 
-    // ---- Hero picker dialog (Against, Excluded, carry-over bans) --------------------------
+    // ---- Hero picker dialog (carry-over bans, or a pick when the pool shows no one) --------
 
     const PICKER = {
-        enemy: { title: 'Add an enemy to face', can: n => Draft.isAvailable(state(), n),
-            run: n => attempt(s => Draft.setEnemies(s, [...s.enemies, n]), `Facing ${display(n)}.`, { method: 'picker' }) },
-        exclude: { title: 'Exclude a hero', can: n => Draft.isAvailable(state(), n),
-            run: n => attempt(s => Draft.setExcluded(s, [...s.excluded, n]), `Excluded ${display(n)}.`, { method: 'picker' }) },
         carry: { title: 'Add an extra ban', can: n => !state().carryOverBans.includes(n),
             run: n => setCarryOver([...state().carryOverBans, n], 'picker') },
         pick: { title: 'Choose a hero', can: n => Draft.isAvailable(state(), n), run: n => primaryAction(n, { method: 'picker' }) }
@@ -1636,17 +1524,9 @@
         const items = [];
         if (available && step) {
             const verb = step.action === 'ban' ? 'Ban' : 'Select';
-            items.push(['primary', solo() ? verb : `${verb} for Player ${step.player}`]);
+            items.push(['primary', `${verb} for Player ${step.player}`]);
         }
-        const suggestion = view.pool.find(p => p.name === name)?.suggestion;
-        if (solo() && available && step && suggestion && suggestion.bestWith.length) {
-            items.push(['fill', `Fill band: + ${suggestion.bestWith.map(display).join(' + ')}`]);
-        }
-        if (suggestion) items.push(['inspect', 'Why? Inspect reasons']);
-        if (solo() && available && s.enemies.length < 3) items.push(['enemy', 'Add to Against']);
-        if (solo() && available) items.push(['exclude', 'Exclude']);
-        if (solo() && s.enemies.includes(name)) items.push(['unface', 'Stop facing']);
-        if (solo() && s.excluded.includes(name)) items.push(['unexclude', 'Make available']);
+        if (view.pool.find(p => p.name === name)?.suggestion) items.push(['inspect', 'Why? Inspect reasons']);
         items.push(['card', 'View reference card']);
         items.push(['graph', 'View in graph']);
         const menu = $('cardMenu');
@@ -1668,8 +1548,6 @@
         if (restoreFocus) menuReturn?.focus();
     }
 
-    const menuEdit = { method: 'menu' };
-
     function setupMenu() {
         const menu = $('cardMenu');
         menu.addEventListener('click', event => {
@@ -1679,12 +1557,7 @@
             track('card_menu_action', { control: act, hero: name });
             closeMenu(false);
             if (act === 'primary') primaryAction(name, { method: 'menu' });
-            else if (act === 'fill') fillBand(name);
             else if (act === 'inspect') pinPopover(name);
-            else if (act === 'enemy') attempt(s => Draft.setEnemies(s, [...s.enemies, name]), `Facing ${display(name)}.`, menuEdit);
-            else if (act === 'exclude') attempt(s => Draft.setExcluded(s, [...s.excluded, name]), `Excluded ${display(name)}.`, menuEdit);
-            else if (act === 'unface') attempt(s => Draft.setEnemies(s, s.enemies.filter(n => n !== name)), `No longer facing ${display(name)}.`, menuEdit);
-            else if (act === 'unexclude') attempt(s => Draft.setExcluded(s, s.excluded.filter(n => n !== name)), `${display(name)} is available again.`, menuEdit);
             else if (act === 'card') openCards({ hero: name, source: 'menu' });
             else if (act === 'graph') {
                 track('view_in_graph', { source: 'card_menu' });

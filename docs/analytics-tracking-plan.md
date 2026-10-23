@@ -14,7 +14,7 @@ Until October 2026 the events went to Google Analytics 4 (property `G-GQ4HDYYETG
 Some events reuse a shared param instead of adding their own (a leftover of GA4's 50-dimension limit, kept so the
 property list stays short).
 `control` is "which button or option" within its event: popover and menu actions, `history_nav`'s back / forward,
-the zoom gesture, and `draft_side_change`'s `enemy_add` / `exclude_remove` / `carry_over_add` / …. Also:
+the zoom gesture, and `draft_side_change`'s `carry_over_add` / `carry_over_remove`. Also:
 `surface` says where (`draft_random`'s pool / slot / against dice), `target_type` is the kind of pool suggestion
 (hero, trait, role, range, attribute, size), and `error` carries `draft_blocked`'s rule message.
 
@@ -126,17 +126,17 @@ Whether people read the static legend sections (Highlight, Edges, Trait size) ca
 | Event | P | When | Parameters |
 |---|---|---|---|
 | `tab_view` | P1 | `setTab`, only when the tab changes (not on page load) | `tab`, `method` (click, keyboard, link, history, intro, view_in_graph, back_to_draft (the graph's "← Back to draft"), graph_add, card_menu) |
-| `draft_mode_change` | P1 | `.mode-switch` | `mode` (two-player/solo) |
 | `draft_format_change` | P1 | the format radio cards | `format` |
 | `draft_start` | P1 | the first pick/ban on an empty state | `format` |
-| `draft_complete` | **P1, key event** | a pick / ban / fill completes the draft (`Draft.isComplete`), once per band per page load; see the note below | `format`, `band`, `opponent_band`, `bans_mine`, `bans_theirs`, `band_top_percent` (the band's "Top N%", lower is better), `score_label`, `roles_covered`, `duration_sec` (since the first pick / ban). How many picks were the #1 suggestion comes from `draft_pick.top_suggestion` |
+| `draft_complete` | **P1, key event** | a pick / ban completes the draft (`Draft.isComplete`), once per band per page load; see the note below | `format`, `band`, `opponent_band`, `bans_mine`, `bans_theirs`, `band_top_percent` (the band's "Top N%", lower is better), `score_label`, `roles_covered`, `duration_sec` (since the first pick / ban). How many picks were the #1 suggestion comes from `draft_pick.top_suggestion` |
 | `draft_complete_hero` | P1 | once per hero in each finished band | `hero`, `side` (mine/opponent), `format`, `pick_number` |
 | `draft_reset` | P2 | `doReset` | `format`, `picks_made` |
 | `draft_undo` | P2 | `doUndo` | `method` (button, keyboard, toast) |
 
-**When a draft counts as finished:** two-player drafts finish once the sequence is done. A solo band "finishes" every
-time it reaches 3 heroes, so remove-and-replace would send one finish per variant. Send `draft_complete` once for
-each different band key in a page load. Stronger signs that the user meant it are `cards_open` with
+**When a draft counts as finished:** once the sequence is done. Undo and re-pick can finish the same draft again, so
+`draft_complete` is sent once for each different band key in a page load. ("Build my band", removed in October 2026,
+finished a band every time it reached 3 heroes; its `draft_mode_change`, `draft_fill_band`, `draft_remove` and
+`draft_reorder` events are gone, and `draft_complete` rows with `format: solo` are from it.) Stronger signs that the user meant it are `cards_open` with
 `source: complete_button` and `share`.
 
 #### Picks and bans
@@ -144,11 +144,8 @@ each different band key in a page load. Stronger signs that the user meant it ar
 | Event | P | When | Parameters |
 |---|---|---|---|
 | `draft_pick` / `draft_ban` | P1 | `primaryAction` succeeds | `hero`, `format`, `player` (1/2), `pick_number`, `method` (tile, popover, menu, drag, random, graph, picker), `pool_sort`, `pool_rank` (position in the recommended order), `top_suggestion` (true/false), `filters_active` (true/false) |
-| `draft_fill_band` | P2 | `fillBand` | `hero`, `band` |
 | `draft_random` | P2 | `rollRandom` | `surface` (pool/slot/against), `hero` |
-| `draft_remove` | P2 | removing from a slot | `hero`, `format` |
-| `draft_reorder` | P3 | `moveSlot` / slot drag | `method` (button, keyboard, drag) |
-| `draft_side_change` | P2 | add/remove an enemy, exclusion or carry-over ban | `control` (`enemy_add`, `enemy_remove`, `exclude_add`, `exclude_remove`, `carry_over_add`, `carry_over_remove`), `hero`, `method` (menu, picker, drag, chip) |
+| `draft_side_change` | P2 | add/remove a carry-over ban | `control` (`carry_over_add`, `carry_over_remove`), `hero`, `method` (picker, chip) |
 | `draft_blocked` | P2 | `attempt` catches a rule violation | `error` (the rule message, trimmed to 100 characters) |
 
 #### Hero pool
@@ -166,18 +163,19 @@ each different band key in a page load. Stronger signs that the user meant it ar
 | Event | P | When | Parameters |
 |---|---|---|---|
 | `hero_popover_view` | P1 | the tile popover stays open ≥ 700 ms, or is pinned or opened as a sheet; once per hero and mode per page load | `hero`, `popover_mode` (hover/pinned/sheet), `pool_rank` |
-| `popover_action` | P2 | a `[data-pop]` button in the popover | `control` (primary, fill, card, close), `hero` |
+| `popover_action` | P2 | a `[data-pop]` button in the popover | `control` (primary, card, close), `hero` |
 | `card_menu_open` | P2 | `openMenu` | `method` (button, tap, right_click, long_press), `hero` |
-| `card_menu_action` | P2 | a `[data-menu]` item | `control` (primary, fill, inspect, enemy, exclude, unface, unexclude, card, graph), `hero` |
+| `card_menu_action` | P2 | a `[data-menu]` item | `control` (primary, inspect, card, graph), `hero` |
 | `analysis_inspect` | P1 | an analysis section or line, or a popover `[data-inspect]` | `section`, `line_index`, `source` (analysis/popover) |
 | `score_factor_open` | P1 | `#scoreBreakdown` | `factor` |
+| `counter_band_open` | P1 | a band under "What beats this band" (end of Band Analysis, finished drafts), opening its inspector | `rank` (1–3), `band` (the band that beats it), `target_band` (the analysed band) |
 | `score_info_open` | P2 | the (i) button | |
 | `role_help_open` | P2 | `toggle` event on `<details id="roleHelp">` ("what do the roles mean") | |
 | `analysis_more` | P3 | `[data-more]` | `section`, `state` |
 | `analysis_focus_switch` | P3 | `#focusSwitch` | `player` |
 | `analysis_sheet_toggle` | P3 | `#draftBar` (phone) | `state` |
 | `inspect_card_text` | P3 | a click on a "Card text" summary in the inspector (a single item starts open, so its first click is `closed`) | `state` |
-| `view_in_graph` | P1 | `#viewInGraph`, `#inspectInGraph`, `#cardInGraph`, card menu "graph" | `source` |
+| `view_in_graph` | P1 | `#viewInGraph`, `#inspectInGraph`, `#cardInGraph`, card menu "graph", a band under "What beats this band" | `source` (analysis, inspect, cards, card_menu, counter_band) |
 
 #### Reference cards and sharing
 
@@ -274,9 +272,9 @@ GROUP BY hero_a, hero_b ORDER BY bands DESC
    - Tests check names (snake_case, ≤ 40 characters, no `$`) and that this document lists every event and param.
 2. **`script.js`**: graph events at their handlers. `method` comes through `runAction` / `toggleSynergies` /
    `clearAll`, and `applyRoute` passes `link` (opened with the page) or `history` (back / forward) as the source.
-3. **`draft-ui.js`**: `primaryAction(name, { method })` and `fillBand` compare the state before and after the action
+3. **`draft-ui.js`**: `primaryAction(name, { method })` compares the state before and after the action
    (`trackDraft`), so a pick is tracked the same way whatever started it. `setTab(tab, { via })`,
    `openCards({ source })` and the popover dwell were added.
 4. **`index.html`**: the PostHog loader, `posthog.init` (skipped on localhost), then `analytics.js`.
-5. P2 / P3 helpers: `draftChanges(before, after, { method })` (in `attempt` and `setCarryOver`) turns side changes,
-   removals and reorders into events, `navDirection` gives back / forward, and `gestureOf` names a d3-zoom gesture.
+5. P2 / P3 helpers: `draftChanges(before, after, { method })` (in `attempt` and `setCarryOver`) turns carry-over ban
+   changes into events, `navDirection` gives back / forward, and `gestureOf` names a d3-zoom gesture.

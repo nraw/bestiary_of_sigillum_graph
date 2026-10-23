@@ -58,7 +58,7 @@
             "publisher": { "@type": "Organization", "name": "Intaglyph", "url": "https://www.intaglyph.ru" }
         },
         "featureList": [
-            "Draft assistant: build a band of three or run a two-player ban / pick draft with explained suggestions",
+            "Draft assistant: a two-player ban / pick draft with explained suggestions, and the bands that beat each finished band",
             "Band scoring with synergies, conflicts and counters against the opponent",
             "Interactive hero synergy graph of traits, conditions and terrain",
             "Search heroes by name, #id, trait, role or attribute",
@@ -258,30 +258,12 @@
         <button class="draft-bar" id="draftBar" type="button" aria-controls="analysisPanel" aria-expanded="false"></button>
 
         <section class="panel draft-main" id="draftMain" aria-label="Draft">
-            <div class="mode-switch" role="radiogroup" aria-label="Draft mode">
-                <button class="mode-btn" type="button" role="radio" data-mode="two-player" aria-checked="true">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3.5"/><circle cx="16.5" cy="9" r="3"/><path d="M2 20c0-3.6 2.7-6.5 6-6.5s6 2.9 6 6.5M14 14.2c3.6-.6 7 1.9 7 5.8"/></svg>
-                    Two-player draft<span class="mode-dot" hidden aria-label="(draft in progress)"></span>
-                </button>
-                <button class="mode-btn" type="button" role="radio" data-mode="solo" aria-checked="false">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
-                    Build my band<span class="mode-dot" hidden aria-label="(draft in progress)"></span>
-                </button>
-            </div>
-
             <div class="setup" id="twoPlayerSetup" hidden></div>
             <ol class="sequence" id="sequence" aria-label="Draft order" hidden></ol>
-            <div class="excluded" id="excludedBox">
-                <div class="mini-heading">
-                    <span id="excludedTitle">Excluded</span>
-                    <button class="link-btn" type="button" id="addExcluded">+ Exclude hero</button>
-                </div>
-                <div class="excluded-chips" id="excludedChips" data-drop="excluded"></div>
-            </div>
 
             <section class="draft-section" id="bandSection" aria-labelledby="bandHeading">
                 <div class="section-head">
-                    <h2 class="draft-heading" id="bandHeading">Your Band</h2>
+                    <h2 class="draft-heading" id="bandHeading">Player 1</h2>
                     <span class="turn-tag" id="bandTurn" hidden></span>
                     <div class="head-actions">
                         <button class="btn btn-ghost" type="button" id="undoBtn" title="Undo (Ctrl/⌘+Z)">
@@ -295,14 +277,10 @@
 
             <section class="draft-section" id="againstSection" aria-labelledby="againstHeading">
                 <div class="section-head">
-                    <h2 class="draft-heading draft-heading--enemy" id="againstHeading">Against</h2>
+                    <h2 class="draft-heading" id="againstHeading">Player 2</h2>
                     <span class="turn-tag" id="againstTurn" hidden></span>
-                    <span class="hint" id="againstHint">Heroes you expect to face</span>
-                    <div class="head-actions">
-                        <button class="link-btn" type="button" id="addEnemy">+ Add enemy</button>
-                    </div>
                 </div>
-                <div class="against" id="againstRow" data-drop="enemies"></div>
+                <div class="slots" id="againstRow"></div>
             </section>
 
             <p class="complete-note" id="completeNote" hidden>
@@ -352,10 +330,11 @@
                 <h2 class="draft-heading" id="analysisHeading">Band Analysis</h2>
                 <button class="icon-btn sheet-close" type="button" id="analysisClose" aria-label="Close band analysis">✕</button>
             </div>
-            <div class="player-switch" id="focusSwitch" role="radiogroup" aria-label="Analyse the band of" hidden>
+            <div class="player-switch" id="focusSwitch" role="radiogroup" aria-label="Analyse the band of">
                 <button type="button" role="radio" data-focus="1" aria-checked="true">Player 1</button>
                 <button type="button" role="radio" data-focus="2" aria-checked="false">Player 2</button>
             </div>
+            <button class="btn btn-ghost view-graph" type="button" id="viewInGraph">View band in graph →</button>
             <section class="analysis-block" aria-labelledby="balanceHeading">
                 <h3 class="mini-heading" id="balanceHeading">Team balance</h3>
                 <p class="analysis-sub" id="balanceSummary"></p>
@@ -385,7 +364,12 @@
             </section>
             <!-- Synergy, Careful with, Themes, Matchup, Durability: each row opens the inspector -->
             <div id="analysisSections"></div>
-            <button class="btn btn-ghost view-graph" type="button" id="viewInGraph">View band in graph →</button>
+            <!-- Finished drafts: the strongest bands against the analysed band; each opens the inspector -->
+            <section class="analysis-block beats" id="beatsBlock" aria-labelledby="beatsHeading" hidden>
+                <h3 class="mini-heading" id="beatsHeading">What beats this band</h3>
+                <p class="analysis-sub" id="beatsSub"></p>
+                <ol class="beats-list" id="beatsList"></ol>
+            </section>
         </aside>
 
         <div class="tile-pop" id="tilePopover" role="dialog" aria-labelledby="popHeading" hidden></div>
@@ -421,9 +405,9 @@
             <section class="intro-step">
                 <h3><span class="intro-num" aria-hidden="true">II</span>Draft</h3>
                 <ul>
-                    <li>Build a band of three, or draft against a friend</li>
+                    <li>Draft against a friend, picks and bans in turn</li>
                     <li>Every suggestion scored and explained</li>
-                    <li>Finish with reference cards and a share link</li>
+                    <li>Finish with reference cards, a share link and the bands that beat yours</li>
                 </ul>
             </section>
         </div>

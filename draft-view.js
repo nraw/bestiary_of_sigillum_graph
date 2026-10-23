@@ -114,7 +114,7 @@
             : Draft.suggestPick(state, ctx, Infinity, { player: step.player });
         const plays = ban ? (step.player === 1 ? 2 : 1) : step.player;
         const band = Draft.bands(state)[plays];
-        const vs = state.format === 'solo' ? 'Against' : `Player ${plays === 1 ? 2 : 1}`;
+        const vs = `Player ${plays === 1 ? 2 : 1}`;
         const own = ban ? `Player ${plays}'s band` : 'your band';
         return { action: ban ? 'ban' : 'select', player: step.player, items: list.map(s => suggestionItem(s, band, own, vs)) };
     }
@@ -173,7 +173,7 @@
     // support, conflicts; vs the opponent: the matchup), then what the hero or band brings in general (roles,
     // themes, durability). `group`: 'interaction' | 'general' | 'ban'. `band`: the picks of whoever would play
     // `name`; `own`: what to call that band; `vs`: who they face; `opponents`: their heroes. Info lines are left out.
-    function popoverSections(reasons, name, { band = [], own = 'your band', vs = 'Against', opponents = [] } = {}) {
+    function popoverSections(reasons, name, { band = [], own = 'your band', vs = 'the opponent', opponents = [] } = {}) {
         const sections = new Map();
         const put = (key, reason, make) => {
             if (!sections.has(key)) sections.set(key, { key, reasons: [], ...make() });
@@ -268,14 +268,12 @@
 
     function stepLabel(state) {
         const step = Draft.currentStep(state);
-        if (!step) return state.format === 'solo' ? 'Band complete' : 'Draft complete';
-        if (state.format === 'solo') return `Your pick ${state.band.length + 1} of 3`;
+        if (!step) return 'Draft complete';
         const done = state.history.filter(h => h.player === step.player && h.action === step.action).length;
         return `Player ${step.player} ${step.action} ${done + 1} of 3`;
     }
 
     function sequence(state) {
-        if (state.format === 'solo') return null;
         return Draft.draftSequence(state.format).map((s, index) => ({
             index, player: s.player, action: s.action,
             hero: index < state.history.length ? state.history[index].hero : null,
@@ -322,21 +320,31 @@
         return { index, hero: shown[index] || null, preview: index >= band.length && Boolean(shown[index]) };
     });
 
-    // In two-player mode a taken hero belongs to Player 1 or Player 2 (there is no "you")
+    // A taken hero belongs to Player 1 or Player 2 (there is no "you")
     function unavailable(state, name, bands) {
-        if (state.format !== 'solo') {
-            if (bands[1].includes(name)) return 'player1';
-            if (bands[2].includes(name)) return 'player2';
-        }
+        if (bands[1].includes(name)) return 'player1';
+        if (bands[2].includes(name)) return 'player2';
         return Draft.unavailableReason(state, name);
     }
 
+    // The end of the band analysis once the draft is complete: the strongest bands against the analysed band,
+    // each with how it fares against it (its matchup lines, counters first) and every reason for the inspector
+    function beatsView(target, player, ctx) {
+        const vs = `Player ${player}`;
+        const bands = Draft.counterBands(target, ctx).map(b => {
+            const matchup = popoverSections(b.reasons, null, { band: b.heroes, own: 'this band', vs, opponents: target })
+                .find(x => x.key === 'matchup');
+            return { heroes: b.heroes, label: b.heroes.map(titleCase).join(' + '), images: b.heroes.map(image), score: b.score,
+                counters: b.reasons.filter(r => r.kind === 'counter').length, lines: matchup ? matchup.lines : [], reasons: b.reasons };
+        });
+        return { title: `What beats ${vs}'s band`, target: [...target], vs, counteredBy: Draft.counteredBy(target, ctx).map(titleCase), bands };
+    }
+
     function draftView(state, ctx, options = {}) {
-        const solo = state.format === 'solo';
         const step = Draft.currentStep(state);
         const acting = step ? step.player : null;
         const bands = Draft.bands(state);
-        const focus = solo ? 1 : options.player || acting || 1;
+        const focus = options.player || acting || 1;
         const other = focus === 1 ? 2 : 1;
         const pool = ctx.heroes.map(h => h.name).filter(n => Draft.isAvailable(state, n));
         const added = { 1: [], 2: [] };
@@ -357,7 +365,7 @@
         const available = poolEntries.filter(p => p.available).length;
 
         // Analysis of the focus band against the other; a preview shows when it's the focus band's turn
-        const rowOptions = { own: solo ? 'your band' : `Player ${focus}'s band`, vs: solo ? 'Against' : `Player ${other}`, opponents: bands[other] };
+        const rowOptions = { own: `Player ${focus}'s band`, vs: `Player ${other}`, opponents: bands[other] };
         const base = withSections(analysis(bands[focus], bands[other], pool, ctx), bands[focus], rowOptions);
         let result = base;
         if (added[focus].length) {
@@ -374,23 +382,22 @@
         }
 
         const banLists = Draft.bans(state);
+        const complete = Draft.isComplete(state);
+        result = { ...result, beats: complete ? beatsView(bands[focus], focus, ctx) : null };
 
         return {
-            mode: solo ? 'solo' : 'two-player',
             format: state.format,
-            complete: Draft.isComplete(state),
+            complete,
             step: { ...(step || { player: null, action: null }), label: stepLabel(state) },
             sequence: sequence(state),
             pool: poolEntries,
             counts: { available, unavailable: poolEntries.length - available },
             focus,
-            slots: solo ? slotsFor(bands[1], added[1]) : null,
-            against: solo ? [...state.enemies] : null,
-            players: solo ? null : [1, 2].map(player => ({
+            players: [1, 2].map(player => ({
                 player, label: `Player ${player}`, acting: player === acting,
                 slots: slotsFor(bands[player], added[player]), bans: banLists[player]
             })),
-            excluded: solo ? [...state.excluded] : [...state.carryOverBans],
+            carryOverBans: [...state.carryOverBans],
             suggestions: ranked,
             analysis: result
         };
@@ -401,10 +408,6 @@
     // `hero`: just that hero's card (opened from the pool)
     function referenceSides(state, { hero = null } = {}) {
         if (hero) return [{ key: 'hero', label: titleCase(hero), heroes: [hero] }];
-        if (state.format === 'solo') {
-            return [{ key: 'mine', label: 'Your band', heroes: [...state.band] },
-                ...(state.enemies.length ? [{ key: 'against', label: 'Against', heroes: [...state.enemies] }] : [])];
-        }
         const bands = Draft.bands(state);
         return [1, 2].map(p => ({ key: String(p), label: `Player ${p}`, heroes: bands[p] }));
     }
@@ -424,15 +427,12 @@
     }
 
     // The graph's draft button for a selected hero: what the current step would do with it
-    const TAKEN = { picked: 'Already picked', facing: 'Already picked', banned: 'Banned', excluded: 'Excluded' };
-    const TAKEN_SOLO = { picked: 'In your band', facing: 'Facing it', excluded: 'Excluded' };
+    const TAKEN = { picked: 'Already picked', facing: 'Already picked', banned: 'Banned' };
     function graphAction(state, name) {
-        const solo = state.format === 'solo';
         const reason = Draft.unavailableReason(state, name);
-        if (reason) return { label: (solo ? TAKEN_SOLO : TAKEN)[reason], enabled: false };
+        if (reason) return { label: TAKEN[reason], enabled: false };
         const step = Draft.currentStep(state);
-        if (!step) return { label: solo ? 'Band is full' : 'Draft complete', enabled: false };
-        if (solo) return { label: 'Add to band', enabled: true };
+        if (!step) return { label: 'Draft complete', enabled: false };
         return { label: `${step.action === 'ban' ? 'Ban' : 'Pick'} for Player ${step.player}`, enabled: true };
     }
 

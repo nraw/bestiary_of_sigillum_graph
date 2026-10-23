@@ -31,17 +31,10 @@ test('round trip for every format, with or without a leading #', () => {
     assert.deepStrictEqual(S.decodeDraft(S.encodeDraft(standard, heroes), heroes), { state: standard });
 });
 
-test('solo bands use the same scheme with vs and ex lists, without the undo history', () => {
-    let s = D.setExcluded(D.createDraft('solo'), ['LIBRORUM']);
-    s = D.setEnemies(s, ['SAXUM', 'MAGNUS']);
-    s = pickAll(s, ['FERRARIUS', 'TEMPUS', 'FIDEA']);
-    const code = S.encodeDraft(s, heroes);
-    assert.strictEqual(code, `draft/solo/${['FERRARIUS', 'TEMPUS', 'FIDEA'].map(id).join('.')}/vs${id('SAXUM')}.${id('MAGNUS')}/ex${id('LIBRORUM')}`);
-    const { state } = S.decodeDraft(code, heroes);
-    assert.deepStrictEqual([state.band, state.enemies, state.excluded], [s.band, s.enemies, s.excluded]);
-    assert.deepStrictEqual(state.past, []);
-    const plain = pickAll(D.createDraft('solo'), ['FERRARIUS', 'TEMPUS', 'FIDEA']);
-    assert.strictEqual(S.encodeDraft(plain, heroes), `draft/solo/${['FERRARIUS', 'TEMPUS', 'FIDEA'].map(id).join('.')}`);
+test('links to an old "Build my band" band say that mode is gone', () => {
+    const old = `draft/solo/${['FERRARIUS', 'TEMPUS', 'FIDEA'].map(id).join('.')}/vs${id('SAXUM')}/ex${id('LIBRORUM')}`;
+    assert.deepStrictEqual(S.decodeDraft(old, heroes), { error: 'Links to a single band from "Build my band" no longer open.' });
+    assert.match(S.decodeDraft(`draft/standard/${FINISHED.map(id).join('.')}/vs${id('AQUS')}`, heroes).error, /Unknown part "vs/);
 });
 
 test('bad links are rejected with a message', () => {

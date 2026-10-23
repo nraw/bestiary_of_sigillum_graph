@@ -10,33 +10,44 @@ const heroes = require('../bestiary_reference_cards.json').bestiary_of_sigillum.
 const ctx = D.createContext(heroes);
 const pickAll = (state, names) => names.reduce((s, n) => D.applyAction(s, n), state);
 
-function soloState() {
-    let s = D.setExcluded(D.createDraft('solo'), ['LIBRORUM', 'TENEBRIS']);
-    s = D.setEnemies(s, ['SAXUM', 'ILLESEBRA', 'MAGNUS']);
-    return pickAll(s, ['FERRARIUS', 'BALLISTARIUS']);
+// A two-player draft with these picks (and bans) for each player, made in sequence order
+function drafted(p1, p2 = [], { format = 'standard', bans1 = [], bans2 = [], carryOverBans = [] } = {}) {
+    const queue = { '1pick': [...p1], '2pick': [...p2], '1ban': [...bans1], '2ban': [...bans2] };
+    let s = D.createDraft(format, { carryOverBans });
+    for (const step of D.draftSequence(format)) {
+        const next = queue[`${step.player}${step.action}`];
+        if (!next.length) break;
+        s = D.applyAction(s, next.shift());
+    }
+    assert.ok(Object.values(queue).every(q => !q.length), 'picks out of sequence');
+    return s;
 }
 
+// Player 1 picks next, holding Ferrarius and Ballistarius against Saxum and Illesebra
+const midDraft = () => drafted(['FERRARIUS', 'BALLISTARIUS'], ['SAXUM', 'ILLESEBRA'], { carryOverBans: ['LIBRORUM', 'TENEBRIS'] });
+const others = (...taken) => heroes.map(h => h.name).filter(n => !taken.includes(n));
+
 test('pool: every hero appears once with why it is unavailable', () => {
-    const v = V.draftView(soloState(), ctx);
+    const v = V.draftView(midDraft(), ctx);
     assert.strictEqual(v.pool.length, 36);
     const reason = Object.fromEntries(v.pool.map(p => [p.name, p.unavailableReason]));
-    assert.strictEqual(reason.FERRARIUS, 'picked');
-    assert.strictEqual(reason.SAXUM, 'facing');
-    assert.strictEqual(reason.LIBRORUM, 'excluded');
+    assert.strictEqual(reason.FERRARIUS, 'player1');
+    assert.strictEqual(reason.SAXUM, 'player2');
+    assert.strictEqual(reason.LIBRORUM, 'banned');
     assert.strictEqual(reason.AQUS, null);
     v.pool.forEach(p => assert.strictEqual(p.available, p.unavailableReason === null, p.name));
-    assert.deepStrictEqual(v.counts, { available: 29, unavailable: 7 });
+    assert.deepStrictEqual(v.counts, { available: 30, unavailable: 6 });
 });
 
 test('pool entries carry display facts', () => {
-    const fidea = V.draftView(D.createDraft('solo'), ctx).pool.find(p => p.name === 'FIDEA');
+    const fidea = V.draftView(D.createDraft('standard'), ctx).pool.find(p => p.name === 'FIDEA');
     assert.deepStrictEqual(
         { display: fidea.display, attribute: fidea.attribute, size: fidea.size, battleRoles: fidea.battleRoles, image: fidea.image },
         { display: 'Fidea', attribute: 'Intelligence', size: 'Small', battleRoles: ['Supporter'], image: 'hero_images/fidea.png' });
 });
 
 test('pool entries list the terms the search finds them by, each once and tagged with its kind', () => {
-    const fidea = V.draftView(D.createDraft('solo'), ctx).pool.find(p => p.name === 'FIDEA');
+    const fidea = V.draftView(D.createDraft('standard'), ctx).pool.find(p => p.name === 'FIDEA');
     const kinds = Object.fromEntries(fidea.terms.map(t => [t.text, t.kind]));
     assert.strictEqual(kinds.Intelligence, 'attribute');
     assert.strictEqual(kinds.Small, 'size');
@@ -47,17 +58,17 @@ test('pool entries list the terms the search finds them by, each once and tagged
     assert.strictEqual(new Set(texts).size, texts.length);
 });
 
-test('slots: 3 in pick order', () => {
-    const v = V.draftView(soloState(), ctx);
-    assert.deepStrictEqual(v.slots.map(s => s.hero), ['FERRARIUS', 'BALLISTARIUS', null]);
-    assert.ok(v.slots.every(s => !('startsOnCastle' in s)), 'the Castle note is gone from the cards');
-    assert.ok(v.slots.every(s => s.preview === false));
-    assert.deepStrictEqual(v.against, ['SAXUM', 'ILLESEBRA', 'MAGNUS']);
-    assert.deepStrictEqual(v.excluded, ['LIBRORUM', 'TENEBRIS']);
+test('slots: 3 per player in pick order, and the carried-over bans', () => {
+    const v = V.draftView(midDraft(), ctx);
+    assert.deepStrictEqual(v.players[0].slots.map(s => s.hero), ['FERRARIUS', 'BALLISTARIUS', null]);
+    assert.deepStrictEqual(v.players[1].slots.map(s => s.hero), ['SAXUM', 'ILLESEBRA', null]);
+    assert.ok(v.players.every(p => p.slots.every(s => s.preview === false)));
+    assert.deepStrictEqual(v.carryOverBans, ['LIBRORUM', 'TENEBRIS']);
+    ['mode', 'slots', 'against', 'excluded'].forEach(key => assert.ok(!(key in v), `no solo ${key}`));
 });
 
 test('every chip comes from an engine reason, positives first, at least one warning kept', () => {
-    const v = V.draftView(soloState(), ctx);
+    const v = V.draftView(midDraft(), ctx);
     assert.ok(v.suggestions.items.length > 0);
     v.suggestions.items.forEach(item => {
         const ids = new Set(item.reasons.map(r => r.id));
@@ -101,27 +112,28 @@ test('every battle role has a plain-language explanation', () => {
 });
 
 test('a full band is complete and has nothing left to rank', () => {
-    const empty = V.draftView(D.createDraft('solo'), ctx);
+    const empty = V.draftView(D.createDraft('standard'), ctx);
     assert.ok(!('completions' in empty), 'completions live in the tile popover (Best with) now');
-    const full = V.draftView(pickAll(D.createDraft('solo'), ['FIDEA', 'GOETIUM', 'MESSUM']), ctx);
+    const full = V.draftView(drafted(['FIDEA', 'GOETIUM', 'MESSUM'], ['AQUS', 'IRATUS', 'SAXUM']), ctx);
     assert.strictEqual(full.suggestions.items.length, 0);
     assert.ok(full.complete);
 });
 
 test('analysis: best reachable score while incomplete, band score when full', () => {
-    const s = soloState();
+    const s = midDraft();
     const v = V.draftView(s, ctx);
     assert.strictEqual(v.analysis.score.complete, false);
-    assert.strictEqual(v.analysis.score.percent, D.suggestBands(s, ctx, 1)[0].topPercent);
+    const pool = v.pool.filter(p => p.available).map(p => p.name);
+    assert.strictEqual(v.analysis.score.percent, D.bestBand(D.myBand(s), pool, D.opponentBand(s), ctx).topPercent);
     assert.strictEqual(v.analysis.score.label, `Best reachable: ${V.percentLabel(v.analysis.score.percent)}`);
     assert.strictEqual(v.suggestions.items[0].topPercent, v.analysis.score.percent, 'last pick: top suggestion = best band');
-    const full = V.draftView(D.applyAction(s, 'FIDEA'), ctx);
+    const full = V.draftView(D.applyAction(s, 'FIDEA'), ctx, { player: 1 });
     assert.strictEqual(full.analysis.score.complete, true);
     assert.match(full.analysis.score.label, /^Band: Top \d+%$/);
 });
 
 test('analysis: roles list who covers each role', () => {
-    const v = V.draftView(soloState(), ctx);
+    const v = V.draftView(midDraft(), ctx);
     assert.deepStrictEqual(v.analysis.roles.map(r => r.role), D.BATTLE_ROLES);
     assert.strictEqual(v.analysis.coveredCount, 2);
     const missing = v.analysis.roles.filter(r => r.coveredBy === null);
@@ -129,13 +141,13 @@ test('analysis: roles list who covers each role', () => {
 });
 
 test('preview marks the previewed slot and the analysis change, without changing state', () => {
-    const s = soloState();
+    const s = midDraft();
     const plain = V.draftView(s, ctx);
     assert.ok(plain.analysis.roles.every(r => r.change === null));
     assert.strictEqual(plain.analysis.score.change, null);
 
     const v = V.draftView(s, ctx, { preview: 'FIDEA' });
-    assert.deepStrictEqual(v.slots[2], { index: 2, hero: 'FIDEA', preview: true });
+    assert.deepStrictEqual(v.players[0].slots[2], { index: 2, hero: 'FIDEA', preview: true });
     const supporter = v.analysis.roles.find(r => r.role === 'Supporter');
     assert.deepStrictEqual([supporter.coveredBy, supporter.change], ['FIDEA', 'added']);
     assert.ok(v.analysis.score.change && typeof v.analysis.score.change.from === 'number');
@@ -147,19 +159,19 @@ test('preview marks the previewed slot and the analysis change, without changing
 });
 
 test('preview of a complete band fills every empty slot', () => {
-    const s = D.applyAction(D.createDraft('solo'), 'FERRARIUS');
+    const s = drafted(['FERRARIUS'], ['AQUS']);
     const v = V.draftView(s, ctx, { preview: ['FERRARIUS', 'BALLISTARIUS', 'TEMPUS'] });
-    assert.deepStrictEqual(v.slots.map(x => [x.hero, x.preview]), [['FERRARIUS', false], ['BALLISTARIUS', true], ['TEMPUS', true]]);
+    assert.deepStrictEqual(v.players[0].slots.map(x => [x.hero, x.preview]), [['FERRARIUS', false], ['BALLISTARIUS', true], ['TEMPUS', true]]);
 });
 
 test('previewing an unavailable hero is ignored', () => {
-    const v = V.draftView(soloState(), ctx, { preview: 'SAXUM' });
-    assert.ok(v.slots.every(x => !x.preview));
+    const v = V.draftView(midDraft(), ctx, { preview: 'SAXUM' });
+    assert.ok(v.players.every(p => p.slots.every(x => !x.preview)));
 });
 
 test('step text, and no intro text', () => {
-    const empty = V.draftView(D.createDraft('solo'), ctx);
-    assert.strictEqual(empty.step.label, 'Your pick 1 of 3');
+    const empty = V.draftView(D.createDraft('standard'), ctx);
+    assert.strictEqual(empty.step.label, 'Player 1 pick 1 of 3');
     assert.ok(!('intro' in empty));
     assert.ok(!('INTRO' in V));
 });
@@ -167,7 +179,7 @@ test('step text, and no intro text', () => {
 
 
 test('every available hero is ranked, and the pool carries each rank', () => {
-    const v = V.draftView(soloState(), ctx);
+    const v = V.draftView(midDraft(), ctx);
     assert.strictEqual(v.suggestions.items.length, v.counts.available, 'all candidates, not a top-N');
     v.suggestions.items.forEach((item, i) => {
         const entry = v.pool.find(p => p.name === item.name);
@@ -183,7 +195,6 @@ test('every available hero is ranked, and the pool carries each rank', () => {
 test('two-player: both players by number, sequence and bans, Player 1 first', () => {
     let s = D.createDraft('interleaved');
     let v = V.draftView(s, ctx);
-    assert.strictEqual(v.mode, 'two-player');
     assert.strictEqual(v.sequence.length, 12);
     assert.deepStrictEqual(v.sequence[0], { index: 0, player: 1, action: 'ban', hero: null, status: 'current' });
     assert.strictEqual(v.step.label, 'Player 1 ban 1 of 3');
@@ -243,8 +254,7 @@ test('two-player: analysis follows the acting player unless another is chosen', 
 
 test('tiles get at most 2 short chips, a warning is never cut', () => {
     assert.strictEqual(V.MAX_CHIPS, 2);
-    const s = pickAll(D.setEnemies(D.createDraft('solo'), ['SAXUM']), ['FERRARIUS', 'BALLISTARIUS']);
-    const v = V.draftView(s, ctx);
+    const v = V.draftView(drafted(['FERRARIUS', 'BALLISTARIUS'], ['SAXUM', 'AQUS']), ctx);
     v.suggestions.items.forEach(item => {
         assert.ok(item.chips.length <= 2, item.name);
         assert.ok(item.chips.every(c => !c.reasonId.startsWith('ban:')), 'the ban line is the same on every tile');
@@ -271,7 +281,7 @@ test('short chip texts', () => {
 });
 
 test('suggestions name the partners of their best band (Best with)', () => {
-    const s = D.applyAction(D.createDraft('solo'), 'FERRARIUS');
+    const s = drafted(['FERRARIUS'], ['AQUS']);
     V.draftView(s, ctx).suggestions.items.forEach(item => {
         assert.deepStrictEqual(item.bestWith, item.bestBand.filter(n => n !== item.name && n !== 'FERRARIUS'), item.name);
         assert.strictEqual(item.bestWith.length, 1);
@@ -279,8 +289,7 @@ test('suggestions name the partners of their best band (Best with)', () => {
 });
 
 test('pool: the roles a hero would add to this band (the rest are dimmed), and how many enemies it counters', () => {
-    const s = pickAll(D.setEnemies(D.createDraft('solo'), ['SAXUM', 'MAGNUS']), ['FERRARIUS', 'BALLISTARIUS']);
-    const v = V.draftView(s, ctx);
+    const v = V.draftView(drafted(['FERRARIUS', 'BALLISTARIUS'], ['SAXUM', 'MAGNUS']), ctx);
     const fills = n => v.pool.find(p => p.name === n).fills;
     assert.deepStrictEqual(fills('FIDEA'), ['Supporter']);
     assert.deepStrictEqual(fills('TEMPUS'), ['Controller', 'Supporter']);
@@ -290,10 +299,10 @@ test('pool: the roles a hero would add to this band (the rest are dimmed), and h
         assert.strictEqual(p.counters, counters, p.name);
     });
     assert.ok(v.pool.some(p => p.counters > 0), 'someone counters Saxum or Magnus');
-    const flexible = V.draftView(D.applyAction(D.createDraft('solo'), 'TOXICUM'), ctx);
+    const flexible = V.draftView(drafted(['TOXICUM'], ['AQUS']), ctx);
     assert.deepStrictEqual(flexible.pool.find(p => p.name === 'MALLEUS').fills, ['Controller', 'Attacker', 'Supporter'],
         'a flexible band leaves every role open');
-    const empty = V.draftView(D.createDraft('solo'), ctx);
+    const empty = V.draftView(D.createDraft('standard'), ctx);
     empty.pool.forEach(p => assert.deepStrictEqual(p.fills, p.battleRoles, 'no band yet: every role counts'));
     const ban = V.draftView(D.applyAction(D.createDraft('ban-first'), 'SAXUM'), ctx);
     ban.pool.forEach(p => assert.deepStrictEqual(p.fills, p.battleRoles, 'ban steps: nothing dimmed'));
@@ -311,7 +320,7 @@ test('strength: one dot per 1.5 points, at most 5; a net loss is a warning witho
 });
 
 test('popover sections: interactions with the band, interactions with the opponent, then what the hero brings in general', () => {
-    const v = V.draftView(pickAll(D.setEnemies(D.createDraft('solo'), ['SAXUM']), ['TOXICUM']), ctx);
+    const v = V.draftView(drafted(['TOXICUM'], ['SAXUM']), ctx);
     const tempus = itemOf(v, 'TEMPUS');
     assert.deepStrictEqual(tempus.sections.map(x => x.key).filter(k => k !== 'matchup'), ['team', 'general']);
     const team = tempus.sections[0];
@@ -328,12 +337,12 @@ test('popover sections: interactions with the band, interactions with the oppone
             x.lines.forEach(l => assert.deepStrictEqual(l.reasons.map(r => r.id), l.ids));
         });
         const matchup = item.sections.find(x => x.key === 'matchup');
-        if (matchup) assert.deepStrictEqual([matchup.label, matchup.group], ['Interactions vs Against', 'interaction']);
+        if (matchup) assert.deepStrictEqual([matchup.label, matchup.group], ['Interactions vs Player 2', 'interaction']);
     });
 });
 
 test('popover lines: the same help to several teammates is one line', () => {
-    const v = V.draftView(pickAll(D.createDraft('solo'), ['TOXICUM', 'MAGNUS']), ctx);
+    const v = V.draftView(drafted(['TOXICUM', 'MAGNUS'], ['AQUS', 'IRATUS']), ctx);
     const team = itemOf(v, 'ARBORUS').sections.find(x => x.key === 'team');
     assert.strictEqual(team.title, 'Arborus with Toxicum and Magnus');
     const keeps = team.lines.find(l => l.text === 'Arborus keeps Toxicum and Magnus alive');
@@ -343,7 +352,7 @@ test('popover lines: the same help to several teammates is one line', () => {
 });
 
 test('popover lines name the abilities behind a single relation', () => {
-    const v = V.draftView(pickAll(D.createDraft('solo'), ['TOXICUM']), ctx);
+    const v = V.draftView(drafted(['TOXICUM'], ['AQUS']), ctx);
     const line = itemOf(v, 'EQUITA').sections[0].lines.find(l => l.ids[0].startsWith('synergy:TOXICUM:Poison'));
     const relation = line.reasons[0].relations[0];
     assert.strictEqual(line.text, S.describeRelation(relation));
@@ -363,28 +372,31 @@ test('popover sections on a ban step: the ban first, then the rival\'s reasons',
 const sectionOf = (v, key) => v.analysis.sections.find(x => x.key === key);
 
 test('analysis sections: the same sections and lines as the popover, for the whole band', () => {
-    const v = V.draftView(pickAll(D.createDraft('solo'), ['TOXICUM', 'MAGNUS', 'ARBORUS']), ctx);
+    const band = ['TOXICUM', 'MAGNUS', 'ARBORUS'];
+    const opponents = ['AQUS', 'IRATUS', 'CERBERUS'];
+    const v = V.draftView(drafted(band, opponents), ctx);
     const team = sectionOf(v, 'team');
-    assert.deepStrictEqual([team.label, team.group, team.title], ['Interactions within your band', 'interaction', 'Your band']);
+    assert.deepStrictEqual([team.label, team.group, team.title], ['Interactions within Player 1\'s band', 'interaction', 'Player 1\'s band']);
     assert.ok(team.lines.some(l => l.text === 'Arborus keeps Toxicum and Magnus alive'), 'the same help merged, as in the popover');
     assert.ok(team.lines.some(l => l.text === 'Toxicum and Magnus move enemies into position for Arborus'));
     const general = sectionOf(v, 'general');
     assert.deepStrictEqual([general.label, general.group], ['General', 'general']);
     // Every reason but role coverage (Team balance shows it) and info lines lands on exactly one line
-    const reasons = D.scoreTeam(['TOXICUM', 'MAGNUS', 'ARBORUS'], ctx).reasons.filter(r => r.factor !== 'coverage' && r.kind !== 'info');
+    const reasons = [...D.scoreTeam(band, ctx).reasons, ...D.scoreMatchup(band, opponents, ctx).reasons]
+        .filter(r => r.factor !== 'coverage' && r.kind !== 'info');
     assert.deepStrictEqual(v.analysis.sections.flatMap(sectionIds).sort(), reasons.map(r => r.id).sort());
     v.analysis.sections.forEach(x => x.lines.forEach(l => assert.ok(V.TOPICS[l.topic], `${l.text}: ${l.topic}`)));
-    assert.deepStrictEqual(V.draftView(D.createDraft('solo'), ctx).analysis.sections, []);
+    assert.deepStrictEqual(V.draftView(D.createDraft('standard'), ctx).analysis.sections, []);
 });
 
 test('analysis sections: conflicts sit with the band\'s interactions, counters and threats with the opponent\'s', () => {
     const clash = ctx.relations.find(r => r.type === 'conflict' && r.supplier !== r.needer);
-    const careful = V.draftView(pickAll(D.createDraft('solo'), [clash.supplier, clash.needer]), ctx);
+    const careful = V.draftView(drafted([clash.supplier, clash.needer], others(clash.supplier, clash.needer).slice(0, 2)), ctx);
     assert.ok(sectionOf(careful, 'team').lines.some(l => l.kind === 'warning' && l.topic === 'conflict'));
     const counter = ctx.relations.find(r => r.type === 'counter' && r.rule !== 'size');
-    const facing = V.draftView(D.applyAction(D.setEnemies(D.createDraft('solo'), [counter.supplier]), counter.needer), ctx);
+    const facing = V.draftView(drafted([counter.needer], [counter.supplier]), ctx);
     const matchup = sectionOf(facing, 'matchup');
-    assert.deepStrictEqual([matchup.label, matchup.group], ['Interactions vs Against', 'interaction']);
+    assert.deepStrictEqual([matchup.label, matchup.group], ['Interactions vs Player 2', 'interaction']);
     assert.ok(matchup.lines.some(l => l.kind === 'warning' && l.text === S.describeRelation(counter)));
     const two = V.draftView(pickAll(D.createDraft('standard'), ['TOXICUM', 'SAXUM', 'EQUITA']), ctx, { player: 1 });
     assert.strictEqual(sectionOf(two, 'team').label, 'Interactions within Player 1\'s band');
@@ -401,14 +413,14 @@ test('every line has a topic for its bullet colour', () => {
     ];
     cases.forEach(([reason, topic]) => assert.strictEqual(V.topicOf(reason), topic, reason.id));
     Object.values(V.TOPICS).forEach(t => assert.ok(t.label, 'each topic has a legend label'));
-    const v = V.draftView(pickAll(D.setEnemies(D.createDraft('solo'), ['SAXUM']), ['TOXICUM']), ctx);
+    const v = V.draftView(drafted(['TOXICUM'], ['SAXUM']), ctx);
     v.suggestions.items.forEach(item => item.sections.forEach(x => x.lines.forEach(l => assert.ok(V.TOPICS[l.topic], `${item.name}: ${l.text}`))));
 });
 
 test('score breakdown: the points per factor, adding up to the band\'s value', () => {
     const band = ['TOXICUM', 'TEMPUS', 'EQUITA'];
-    const v = V.draftView(D.setEnemies(pickAll(D.createDraft('solo'), band), ['SAXUM']), ctx);
-    const total = D.scoreTeam(band, ctx).total + D.scoreMatchup(band, ['SAXUM'], ctx).total;
+    const v = V.draftView(drafted(band, ['SAXUM', 'AQUS', 'IRATUS']), ctx);
+    const total = D.scoreTeam(band, ctx).total + D.scoreMatchup(band, ['SAXUM', 'AQUS', 'IRATUS'], ctx).total;
     const sum = v.analysis.breakdown.reduce((t, f) => t + f.delta, 0);
     assert.ok(Math.abs(sum - total) < 1e-9);
     assert.deepStrictEqual(v.analysis.breakdown.map(f => f.label).filter(l => ['Roles', 'Synergy', 'Themes'].includes(l)), ['Roles', 'Synergy', 'Themes']);
@@ -416,12 +428,12 @@ test('score breakdown: the points per factor, adding up to the band\'s value', (
 });
 
 test('score breakdown: every factor is listed, in a fixed order, even at zero', () => {
-    const v = V.draftView(pickAll(D.createDraft('solo'), ['TOXICUM']), ctx);
+    const v = V.draftView(drafted(['TOXICUM']), ctx, { player: 1 });
     assert.deepStrictEqual(v.analysis.breakdown.map(f => f.factor), ['coverage', 'synergy', 'theme', 'durability', 'conflict', 'matchup']);
     const matchup = v.analysis.breakdown.find(f => f.factor === 'matchup');
     assert.deepStrictEqual([matchup.delta, matchup.reasons], [0, []]);
     v.analysis.breakdown.forEach(f => f.reasons.forEach(r => assert.notStrictEqual(r.kind, 'info')));
-    assert.deepStrictEqual(V.draftView(D.createDraft('solo'), ctx).analysis.breakdown, [], 'nothing to break down without a hero');
+    assert.deepStrictEqual(V.draftView(D.createDraft('standard'), ctx).analysis.breakdown, [], 'nothing to break down without a hero');
 });
 
 test('sortPool: recommended by rank, counters first, A–Z by name, or by card id', () => {
@@ -442,7 +454,7 @@ test('sortPool: recommended by rank, counters first, A–Z by name, or by card i
 });
 
 test('preview flags the lines only the previewed hero brings', () => {
-    const s = pickAll(D.createDraft('solo'), ['TOXICUM', 'TEMPUS']);
+    const s = drafted(['TOXICUM', 'TEMPUS'], ['AQUS', 'IRATUS']);
     const lines = V.draftView(s, ctx, { preview: 'EQUITA' }).analysis.sections.flatMap(x => x.lines);
     assert.ok(lines.find(l => l.ids.some(id => id.startsWith('synergy:TOXICUM:Poison'))).preview);
     assert.ok(lines.some(l => !l.preview), 'what the band already has is not flagged');
@@ -452,7 +464,7 @@ test('preview flags the lines only the previewed hero brings', () => {
 // ---- Inspector -------------------------------------------------------------------------------------
 
 test('inspectView: one item per line, each with only its own card evidence', () => {
-    const v = V.draftView(pickAll(D.createDraft('solo'), ['TOXICUM', 'MAGNUS']), ctx);
+    const v = V.draftView(drafted(['TOXICUM', 'MAGNUS'], ['AQUS', 'IRATUS']), ctx);
     const team = v.suggestions.items.find(i => i.name === 'ARBORUS').sections.find(x => x.key === 'team');
     const view = V.inspectView(team.reasons, ctx, { title: team.title });
     assert.strictEqual(view.title, team.title);
@@ -507,14 +519,11 @@ test('collapse shows the first items and counts the rest exactly', () => {
 
 // ---- Reference cards modal --------------------------------------------------------------
 
-test('reference cards: one tab per player, or your band and Against in solo', () => {
+test('reference cards: one tab per player', () => {
     const s = pickAll(D.createDraft('standard'), ['TOXICUM', 'SAXUM', 'TEMPUS', 'MALLEUS', 'EQUITA', 'FERRARIUS']);
     assert.deepStrictEqual(V.referenceSides(s), [
         { key: '1', label: 'Player 1', heroes: ['TOXICUM', 'TEMPUS', 'EQUITA'] },
         { key: '2', label: 'Player 2', heroes: ['SAXUM', 'MALLEUS', 'FERRARIUS'] }]);
-    const band = pickAll(D.createDraft('solo'), ['FIDEA', 'GOETIUM', 'MESSUM']);
-    assert.deepStrictEqual(V.referenceSides(band), [{ key: 'mine', label: 'Your band', heroes: ['FIDEA', 'GOETIUM', 'MESSUM'] }]);
-    assert.deepStrictEqual(V.referenceSides(D.setEnemies(band, ['SAXUM'])).map(x => x.key), ['mine', 'against']);
 });
 
 test('reference cards for one hero (from the pool): a single side with just that card', () => {
@@ -547,14 +556,6 @@ test('rollFrames alternates cleanly between two candidates', () => {
 });
 
 test('graphAction: the graph\'s draft button follows the current step', () => {
-    const solo = D.createDraft('solo');
-    assert.deepStrictEqual(V.graphAction(solo, 'AQUS'), { label: 'Add to band', enabled: true });
-    assert.deepStrictEqual(V.graphAction(pickAll(solo, ['AQUS']), 'AQUS'), { label: 'In your band', enabled: false });
-    assert.deepStrictEqual(V.graphAction(D.setEnemies(solo, ['AQUS']), 'AQUS'), { label: 'Facing it', enabled: false });
-    assert.deepStrictEqual(V.graphAction(D.setExcluded(solo, ['AQUS']), 'AQUS'), { label: 'Excluded', enabled: false });
-    assert.deepStrictEqual(V.graphAction(pickAll(solo, ['TEMPUS', 'MANUS', 'CERBERUS']), 'AQUS'),
-        { label: 'Band is full', enabled: false });
-
     const banFirst = D.createDraft('ban-first');
     assert.deepStrictEqual(V.graphAction(banFirst, 'AQUS'), { label: 'Ban for Player 1', enabled: true });
     assert.deepStrictEqual(V.graphAction(pickAll(banFirst, ['TEMPUS']), 'AQUS'), { label: 'Ban for Player 2', enabled: true });
@@ -569,11 +570,41 @@ test('graphAction: the graph\'s draft button follows the current step', () => {
 });
 
 test('theme lines lead with the theme (the bullet colour says it is one): members or effects after it', () => {
-    const v = V.draftView(pickAll(D.createDraft('solo'), ['TOXICUM', 'TEMPUS', 'EQUITA']), ctx);
+    const v = V.draftView(drafted(['TOXICUM', 'TEMPUS', 'EQUITA'], ['AQUS', 'IRATUS', 'CERBERUS']), ctx);
     const lines = v.analysis.sections.flatMap(x => x.lines).filter(l => l.topic === 'theme');
     assert.ok(lines.length > 0 && lines.every(l => !l.text.startsWith('Theme:')));
     const cooldowns = lines.find(l => l.ids[0] === 'theme:Cooldowns');
     assert.match(cooldowns.text, /^Cooldowns: \w+, \w+ and \w+$/);
     assert.deepStrictEqual(cooldowns.text.replace('Cooldowns: ', '').split(/, | and /).sort(), ['Equita', 'Tempus', 'Toxicum']);
     assert.strictEqual(lines.find(l => l.ids[0] === 'theme:Debuffs').text, 'Debuffs: Poison');
+});
+
+// ---- What beats this band (end of the band analysis) -------------------------------------------
+
+test('what beats this band: once the draft is complete, the strongest bands against the analysed band', () => {
+    const mine = ['TOXICUM', 'TEMPUS', 'EQUITA'];
+    const theirs = ['SAXUM', 'MALLEUS', 'FERRARIUS'];
+    const s = drafted(mine, theirs);
+    assert.strictEqual(V.draftView(D.undo(s), ctx, { player: 1 }).analysis.beats, null, 'not before the draft is complete');
+    const beats = V.draftView(s, ctx).analysis.beats;
+    assert.deepStrictEqual([beats.title, beats.target, beats.vs], ['What beats Player 1\'s band', mine, 'Player 1']);
+    assert.deepStrictEqual(beats.bands.map(b => b.heroes), D.counterBands(mine, ctx).map(b => b.heroes));
+    assert.deepStrictEqual(beats.counteredBy, D.counteredBy(mine, ctx).map(S.titleCase));
+    const first = beats.bands[0];
+    assert.strictEqual(first.label, first.heroes.map(S.titleCase).join(' + '));
+    assert.deepStrictEqual(first.images, first.heroes.map(n => `hero_images/${n.toLowerCase()}.png`));
+    assert.deepStrictEqual(first.reasons, D.counterBands(mine, ctx)[0].reasons, 'the inspector gets every reason');
+    // How it beats the band: its matchup lines, counters first
+    assert.ok(first.lines.length > 0 && first.lines.every(l => l.topic === 'matchup'));
+    assert.strictEqual(first.lines[0].kind, 'counter');
+    assert.strictEqual(first.counters, first.reasons.filter(r => r.kind === 'counter').length);
+    const p2 = V.draftView(s, ctx, { player: 2 }).analysis.beats;
+    assert.deepStrictEqual([p2.title, p2.target], ['What beats Player 2\'s band', theirs]);
+});
+
+test('what beats this band: a band no card counters says so', () => {
+    const safe = ['FERRARIUS', 'ARBORUS', 'TEMPUS'];
+    const beats = V.draftView(drafted(safe, ['AQUS', 'IRATUS', 'SAXUM']), ctx).analysis.beats;
+    assert.deepStrictEqual(beats.counteredBy, []);
+    assert.ok(beats.bands.length === 3 && beats.bands.every(b => b.counters === 0));
 });

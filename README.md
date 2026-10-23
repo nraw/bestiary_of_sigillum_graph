@@ -12,7 +12,7 @@ This project visualizes the complete character database from the Bestiary of Sig
 
 ## Features
 
-- **Draft Assistant**: Build a band of three or follow a two-player ban / pick draft, with scored and explained suggestions
+- **Draft Assistant**: Follow a two-player ban / pick draft with scored and explained suggestions; a finished draft shows the bands that beat each side
 - **Shareable Selections**: Every hero or trait you select has its own address (`?hero=aqus`, `?trait=stun`) with its own page title, so links and back / forward work
 - **Interactive Network Graph**: Pan, zoom, and explore character connections
 - **Smart Search**: Autocomplete with live filtering of the graph; search heroes by name or `#id`

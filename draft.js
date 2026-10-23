@@ -1,5 +1,5 @@
 // Draft assistant engine (no DOM): draft formats and immutable draft state, battle roles,
-// band scoring with reasons, and pick / band / ban / swap suggestions.
+// band scoring with reasons, pick / ban suggestions and the bands that beat a band.
 // Loaded in the browser as window.Draft (after synergy.js) and in Node via require().
 (function (root) {
     const Synergy = typeof module !== 'undefined' && module.exports ? require('./synergy.js') : root.Synergy;
@@ -7,7 +7,6 @@
 
     const BATTLE_ROLES = ['Controller', 'Attacker', 'Supporter'];
     const BAND_SIZE = 3;
-    const MAX_ENEMIES = 3;
 
     // ---- Draft formats ---------------------------------------------------------------------
 
@@ -16,8 +15,7 @@
     const FORMATS = {
         standard: () => repeat(3, [step(1, 'pick'), step(2, 'pick')]),
         'ban-first': () => [...repeat(3, [step(1, 'ban'), step(2, 'ban')]), ...FORMATS.standard()],
-        interleaved: () => repeat(3, [step(1, 'ban'), step(2, 'ban'), step(1, 'pick'), step(2, 'pick')]),
-        solo: () => repeat(3, [step(1, 'pick')])
+        interleaved: () => repeat(3, [step(1, 'ban'), step(2, 'ban'), step(1, 'pick'), step(2, 'pick')])
     };
     const DRAFT_FORMATS = Object.keys(FORMATS);
 
@@ -27,45 +25,27 @@
     }
 
     // ---- Draft state -----------------------------------------------------------------------
-    // Two-player: { format, me, carryOverBans, history: [{ player, action, hero }] }
-    // Solo:       { format: 'solo', me: 1, band, excluded, enemies, past: [snapshots for undo] }
+    // { format, me, carryOverBans, history: [{ player, action, hero }] }
 
-    const isSolo = state => state.format === 'solo';
     const other = player => (player === 1 ? 2 : 1);
 
     function createDraft(format, options = {}) {
         draftSequence(format);
-        if (format === 'solo') {
-            return { format, me: 1, band: [], excluded: [...(options.excluded || [])], enemies: [...(options.enemies || [])], past: [] };
-        }
         return { format, me: options.me === 2 ? 2 : 1, carryOverBans: [...(options.carryOverBans || [])], history: [] };
     }
 
     const historyOf = (state, action, player) => state.history
         .filter(h => h.action === action && h.player === player).map(h => h.hero);
 
-    function bands(state) {
-        if (isSolo(state)) return { 1: [...state.band], 2: [...state.enemies] };
-        return { 1: historyOf(state, 'pick', 1), 2: historyOf(state, 'pick', 2) };
-    }
-
-    function bans(state) {
-        if (isSolo(state)) return { 1: [], 2: [] };
-        return { 1: historyOf(state, 'ban', 1), 2: historyOf(state, 'ban', 2) };
-    }
+    const bands = state => ({ 1: historyOf(state, 'pick', 1), 2: historyOf(state, 'pick', 2) });
+    const bans = state => ({ 1: historyOf(state, 'ban', 1), 2: historyOf(state, 'ban', 2) });
 
     const bandOf = (state, player) => bands(state)[player];
     const myBand = state => bandOf(state, state.me);
     const opponentBand = state => bandOf(state, other(state.me));
 
-    // Why a hero cannot be picked: picked (your band) | facing (opponent / enemies) | excluded | banned | null
+    // Why a hero cannot be picked: picked (your band) | facing (the opponent's) | banned | null
     function unavailableReason(state, name) {
-        if (isSolo(state)) {
-            if (state.band.includes(name)) return 'picked';
-            if (state.enemies.includes(name)) return 'facing';
-            if (state.excluded.includes(name)) return 'excluded';
-            return null;
-        }
         if (myBand(state).includes(name)) return 'picked';
         if (opponentBand(state).includes(name)) return 'facing';
         if (state.carryOverBans.includes(name) || state.history.some(h => h.action === 'ban' && h.hero === name)) return 'banned';
@@ -75,96 +55,24 @@
     const isAvailable = (state, name) => unavailableReason(state, name) === null;
     const availableHeroes = (state, heroes) => heroes.filter(h => isAvailable(state, h.name));
 
-    function currentStep(state) {
-        if (isSolo(state)) return state.band.length < BAND_SIZE ? step(1, 'pick') : null;
-        return draftSequence(state.format)[state.history.length] || null;
-    }
-
+    const currentStep = state => draftSequence(state.format)[state.history.length] || null;
     const isComplete = state => currentStep(state) === null;
-
-    const snapshot = state => ({ band: [...state.band], excluded: [...state.excluded], enemies: [...state.enemies] });
-    const soloChange = (state, changes) => ({ ...state, ...changes, past: [...state.past, snapshot(state)] });
-
-    function requireSolo(state, what) {
-        if (!isSolo(state)) throw new Error(`${what} is only available when building a band (solo)`);
-    }
 
     function applyAction(state, name) {
         const current = currentStep(state);
         if (!current) throw new Error('The draft is complete');
         if (!isAvailable(state, name)) throw new Error(`${name} is not available (${unavailableReason(state, name)})`);
-        if (isSolo(state)) return soloChange(state, { band: [...state.band, name] });
         return { ...state, history: [...state.history, { ...current, hero: name }] };
     }
 
     // Clear the draft (keeping its format and carry-over bans) as a step that undo reverses
     function reset(state) {
-        const fresh = isSolo(state) ? createDraft('solo') : createDraft(state.format, { me: state.me, carryOverBans: state.carryOverBans });
-        return { ...fresh, resetFrom: state };
+        return { ...createDraft(state.format, { me: state.me, carryOverBans: state.carryOverBans }), resetFrom: state };
     }
 
     function undo(state) {
-        const empty = isSolo(state) ? !state.past.length : !state.history.length;
-        if (empty) return state.resetFrom || state;
-        if (isSolo(state)) {
-            return { ...state, ...state.past[state.past.length - 1], past: state.past.slice(0, -1) };
-        }
+        if (!state.history.length) return state.resetFrom || state;
         return { ...state, history: state.history.slice(0, -1) };
-    }
-
-    function uniqueList(names, what) {
-        if (new Set(names).size !== names.length) throw new Error(`${what} lists a hero twice`);
-        return [...names];
-    }
-
-    function setEnemies(state, names) {
-        requireSolo(state, 'Setting enemies');
-        const enemies = uniqueList(names, 'Facing');
-        if (enemies.length > MAX_ENEMIES) throw new Error(`At most ${MAX_ENEMIES} enemies`);
-        enemies.forEach(n => {
-            if (state.band.includes(n)) throw new Error(`${n} is in your band`);
-            if (state.excluded.includes(n)) throw new Error(`${n} is excluded`);
-        });
-        return soloChange(state, { enemies });
-    }
-
-    function setExcluded(state, names) {
-        requireSolo(state, 'Excluding heroes');
-        const excluded = uniqueList(names, 'Excluded');
-        excluded.forEach(n => {
-            if (state.band.includes(n)) throw new Error(`${n} is in your band`);
-            if (state.enemies.includes(n)) throw new Error(`${n} is an enemy`);
-        });
-        return soloChange(state, { excluded });
-    }
-
-    function removePick(state, name) {
-        requireSolo(state, 'Removing a pick');
-        if (!state.band.includes(name)) throw new Error(`${name} is not in your band`);
-        return soloChange(state, { band: state.band.filter(n => n !== name) });
-    }
-
-    function replacePick(state, out, name) {
-        requireSolo(state, 'Swapping a hero');
-        if (!state.band.includes(out)) throw new Error(`${out} is not in your band`);
-        if (!isAvailable(state, name)) throw new Error(`${name} is not available (${unavailableReason(state, name)})`);
-        return soloChange(state, { band: state.band.map(n => (n === out ? name : n)) });
-    }
-
-    function fillBand(state, names) {
-        requireSolo(state, 'Filling the band');
-        uniqueList(names, 'The band');
-        if (state.band.length + names.length > BAND_SIZE) throw new Error(`A band has ${BAND_SIZE} heroes`);
-        names.forEach(n => { if (!isAvailable(state, n)) throw new Error(`${n} is not available (${unavailableReason(state, n)})`); });
-        return soloChange(state, { band: [...state.band, ...names] });
-    }
-
-    function movePick(state, from, to) {
-        requireSolo(state, 'Reordering the band');
-        const band = [...state.band];
-        if (from < 0 || from >= band.length || to < 0 || to >= band.length) throw new Error('No hero in that slot');
-        band.splice(to, 0, band.splice(from, 1)[0]);
-        return soloChange(state, { band });
     }
 
     // ---- Hero facts and battle roles -------------------------------------------------------
@@ -249,7 +157,7 @@
             relations: Synergy.computeSynergies(heroes),
             themeRarity: new Map(THEMES.map(t => [t.name, themeRarity(t, heroes)])),
             weights: { ...DEFAULT_WEIGHTS, ...weights },
-            cache: { team: new Map(), distribution: new Map() }
+            cache: { team: new Map(), distribution: new Map(), counters: new Map() }
         };
     }
 
@@ -580,19 +488,6 @@
         ...(opponents.length ? scoreMatchup(band, opponents, ctx).reasons : [])
     ];
 
-    function suggestBands(state, ctx, limit = 5, options = {}) {
-        const { band, opponents } = sides(state, options.player);
-        const pool = availableNames(state, ctx);
-        if (band.length >= BAND_SIZE) {
-            const score = bandValue(band, opponents, ctx);
-            return [{ heroes: [...band], score, topPercent: topPercent(score, opponents, ctx), reasons: reasonsFor(band, opponents, ctx) }];
-        }
-        return completions(band, pool, opponents, ctx).slice(0, limit).map(c => ({
-            heroes: c.heroes, score: c.score, topPercent: topPercent(c.score, opponents, ctx),
-            reasons: reasonsFor(c.heroes, opponents, ctx)
-        }));
-    }
-
     // Best finished band reachable from `band` using heroes in `pool` (null if the pool is too small)
     function bestBand(band, pool, opponents, ctx) {
         const best = completions(band, pool.filter(n => !band.includes(n)), opponents, ctx)[0];
@@ -674,29 +569,36 @@
         return { ...current, items };
     }
 
-    // For a full band: the best replacement for each slot that improves the band
-    function suggestSwaps(state, ctx, options = {}) {
-        const { band, opponents } = sides(state, options.player || state.me);
-        if (band.length < BAND_SIZE) return [];
-        const current = bandValue(band, opponents, ctx);
-        const pool = availableNames(state, ctx);
-        return band.map((out, i) => {
-            const best = pool.map(name => {
-                const swapped = band.map((n, j) => (j === i ? name : n));
-                return { out, in: name, heroes: swapped, score: bandValue(swapped, opponents, ctx) };
-            }).sort((a, b) => b.score - a.score || a.in.localeCompare(b.in))[0];
-            return best && best.score > current ? { ...best, topPercent: topPercent(best.score, opponents, ctx) } : null;
-        }).filter(Boolean).sort((a, b) => b.score - a.score);
+    // ---- What beats a band -----------------------------------------------------------------
+
+    // Heroes whose cards counter someone in the band, A–Z
+    const counteredBy = (band, ctx) => [...new Set(ctx.relations
+        .filter(r => r.type === 'counter' && band.includes(r.needer) && !band.includes(r.supplier))
+        .map(r => r.supplier))].sort();
+
+    // The strongest bands against `band` from every other hero, scored like any band (team plus matchup), best
+    // first. Each shares at most `maxShared` heroes with a band above it, so the answers differ.
+    function counterBands(band, ctx, { limit = 3, maxShared = 1 } = {}) {
+        const key = bandKey(band);
+        if (!ctx.cache.counters.has(key)) {
+            const pool = ctx.heroes.map(h => h.name).filter(n => !band.includes(n));
+            ctx.cache.counters.set(key, completions([], pool, band, ctx));
+        }
+        const chosen = [];
+        for (const c of ctx.cache.counters.get(key)) {
+            if (chosen.length >= limit) break;
+            if (chosen.every(b => b.heroes.filter(n => c.heroes.includes(n)).length <= maxShared)) chosen.push(c);
+        }
+        return chosen.map(c => ({ heroes: c.heroes, score: c.score, reasons: reasonsFor(c.heroes, band, ctx) }));
     }
 
     const api = {
         BATTLE_ROLES, DRAFT_FORMATS, DEFAULT_WEIGHTS, THEMES,
         draftSequence, createDraft, applyAction, undo, reset, currentStep, isComplete,
         bands, bans, myBand, opponentBand, unavailableReason, isAvailable, availableHeroes, randomHero,
-        setEnemies, setExcluded, removePick, movePick, replacePick, fillBand,
         size, attackRange, battleRoles, roleEvidence, reasonEvidence, enablerText, versatility,
         createContext, roleCoverage, fillableRoles, scoreTeam, scoreMatchup, allBands, topPercent, bestBand, bandPercent,
-        suggestPick, suggestBands, suggestBan, suggestFor, suggestSwaps
+        suggestPick, suggestBan, suggestFor, counterBands, counteredBy
     };
 
     if (typeof module !== 'undefined' && module.exports) {

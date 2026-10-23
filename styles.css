@@ -1357,7 +1357,6 @@ kbd {
     text-transform: uppercase;
     color: var(--gold);
 }
-.draft-heading--enemy { color: var(--chip-warning); }
 .mini-heading {
     display: flex;
     justify-content: space-between;
@@ -1370,7 +1369,7 @@ kbd {
     text-transform: uppercase;
     color: var(--bronze);
 }
-.hint, .muted, .analysis-sub { color: var(--text-muted); font-size: 0.92rem; }
+.muted, .analysis-sub { color: var(--text-muted); font-size: 0.92rem; }
 .link-btn {
     background: none;
     border: none;
@@ -1395,24 +1394,6 @@ kbd {
 .pool-toggles { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 0.95rem; cursor: pointer; }
 .toggle input { accent-color: var(--gold); }
-.excluded { border-top: 1px solid var(--border); padding-top: 8px; }
-.excluded-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; min-height: 28px; border-radius: 8px; }
-.ex-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 4px 2px 10px;
-    border: 1px solid var(--border-strong);
-    border-radius: 14px;
-    background: var(--surface-2);
-    color: var(--text-muted);
-    text-decoration: line-through;
-    text-decoration-color: rgba(185, 167, 140, 0.6);
-    font-size: 0.92rem;
-}
-.ex-chip.is-banned { padding-right: 10px; }
-.ex-chip button { background: none; border: none; color: var(--text-muted); padding: 0 4px; text-decoration: none; }
-.ex-chip button:hover { color: var(--gold-bright); }
 .pool-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .step-badge {
     padding: 4px 12px;
@@ -1473,7 +1454,7 @@ kbd {
     transform: translateY(-1px);
 }
 .tile-main[aria-disabled="true"] { cursor: default; }
-.tile-portrait, .slot-portrait, .enemy-portrait, .face-portrait, .picker-portrait {
+.tile-portrait, .slot-portrait, .face-portrait, .picker-portrait {
     object-fit: cover;
     object-position: center 15%;
     border-radius: 50%;
@@ -1504,9 +1485,8 @@ kbd {
     letter-spacing: 0.06em;
     white-space: nowrap;
 }
-.is-facing .tile-badge { background: #6E1F14; }
 .hero-tile.is-unavailable .tile-main { filter: grayscale(0.85) brightness(0.62); }
-.hero-tile.is-excluded .tile-name, .hero-tile.is-banned .tile-name { text-decoration: line-through; }
+.hero-tile.is-banned .tile-name { text-decoration: line-through; }
 .tile-corner {
     position: absolute;
     top: 6px; right: 6px;
@@ -1560,36 +1540,9 @@ kbd {
 }
 .role-pill .ico { width: 13px; height: 13px; stroke-width: 2.2; }
 .tile-main .role-pill, .slot .role-pill { color: #57412E; }
-.enemy-card .role-pill { color: var(--bronze); }
 
-/* Mode switch */
+/* Draft column */
 .draft-main { display: flex; flex-direction: column; gap: 16px; }
-.mode-switch { display: flex; gap: 10px; }
-.mode-btn {
-    position: relative;
-    flex: 1;
-    max-width: 320px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 10px 16px;
-    border-radius: 10px;
-    border: 1px solid var(--border-strong);
-    background: var(--surface-2);
-    font-family: 'Cinzel', serif;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-muted);
-}
-.mode-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.mode-btn[aria-checked="true"] {
-    color: var(--gold-bright);
-    border-color: var(--gold);
-    box-shadow: 0 0 0 1px var(--gold), 0 0 18px rgba(242, 199, 107, 0.2);
-}
-.mode-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
-
 /* Two-player setup and sequence tracker */
 .setup { display: flex; flex-wrap: wrap; gap: 14px; }
 .setup-summary { color: var(--text-muted); font-style: italic; }
@@ -1632,7 +1585,7 @@ kbd {
 .section-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
 .head-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 /* Two-player: the band whose turn it is */
-.draft-section.is-acting > .slots, .draft-section.is-acting > .against { padding: 8px; margin: -8px; border-radius: 12px; box-shadow: 0 0 0 1px var(--gold), 0 0 22px rgba(242, 199, 107, 0.14); }
+.draft-section.is-acting > .slots { padding: 8px; margin: -8px; border-radius: 12px; box-shadow: 0 0 0 1px var(--gold), 0 0 22px rgba(242, 199, 107, 0.14); }
 .draft-section.is-acting.is-p2 > .slots { box-shadow: 0 0 0 1px var(--crimson-bright), 0 0 22px rgba(184, 50, 74, 0.2); }
 .turn-tag { padding: 1px 10px; border-radius: 10px; background: var(--gold); color: var(--ink); font-family: 'Cinzel', serif; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .is-p2 .turn-tag { background: var(--crimson-bright); color: #fff; }
@@ -1669,8 +1622,8 @@ kbd {
 }
 .slot.is-preview { opacity: 0.6; border-style: dashed; }
 [data-card] { cursor: pointer; }
-.slot[data-card]:hover, .enemy-card[data-card]:hover { box-shadow: 0 0 0 1px var(--gold), 0 0 16px rgba(242, 199, 107, 0.3); }
-.slot.is-drop-target, .against.is-drop-target, .excluded-chips.is-drop-target { box-shadow: 0 0 0 2px var(--gold-bright); }
+.slot[data-card]:hover { box-shadow: 0 0 0 1px var(--gold), 0 0 16px rgba(242, 199, 107, 0.3); }
+.slot.is-drop-target, .slots.is-drop-target { box-shadow: 0 0 0 2px var(--gold-bright); }
 .slot-num { position: absolute; top: 8px; left: 10px; font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.05rem; }
 .slot.is-empty .slot-num { color: var(--text-muted); }
 .slot-num--id { top: auto; bottom: 8px; }
@@ -1694,44 +1647,6 @@ kbd {
     background: var(--gold); color: var(--ink);
     font-family: 'Cinzel', serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
 }
-.slot-remove {
-    position: absolute; top: 6px; right: 6px;
-    width: 24px; height: 24px;
-    border-radius: 50%;
-    border: none;
-    background: var(--ink);
-    color: var(--parchment);
-    font-size: 0.8rem;
-}
-.slot-remove:hover { background: var(--crimson-bright); }
-.slot-move { display: flex; gap: 6px; opacity: 0; transition: opacity 0.2s; }
-.slot:hover .slot-move, .slot:focus-within .slot-move { opacity: 1; }
-.slot-move button { border: 1px solid #8A6A43; background: rgba(255, 251, 238, 0.5); border-radius: 4px; color: var(--ink); font-size: 0.7rem; padding: 1px 6px; }
-.slot[draggable="true"] { cursor: grab; }
-
-/* Against row */
-.against { display: flex; flex-wrap: wrap; gap: 10px; border-radius: 8px; min-height: 40px; }
-.against.slots { display: grid; gap: 12px; }
-.enemy-card {
-    position: relative;
-    width: 128px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 14px 8px 8px;
-    border-radius: 8px;
-    border: 1px solid #7A2A20;
-    background: linear-gradient(180deg, rgba(139, 30, 51, 0.32), rgba(21, 17, 14, 0.9));
-    box-shadow: inset 0 0 0 1px rgba(226, 83, 58, 0.25);
-}
-.enemy-card .attr-banner { left: 6px; }
-.enemy-card .slot-num { left: auto; right: 10px; color: var(--text-muted); }
-.enemy-mark { color: var(--chip-warning); width: 13px; height: 13px; vertical-align: -1px; }
-.enemy-portrait { width: 56px; height: 56px; border-color: #7A2A20; }
-.enemy-name { font-family: 'Cinzel', serif; font-weight: 600; font-size: 0.86rem; text-transform: uppercase; letter-spacing: 0.04em; }
-.enemy-card .slot-remove { background: var(--surface-3); color: var(--text); }
-
 /* Reasons (Why block, threats, synergy) */
 .reason-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
 .reason { padding-left: 20px; position: relative; }
@@ -1810,6 +1725,20 @@ kbd {
 .info-tip:not(.is-dismissed):has(.info-btn:focus-visible) .info-pop, .info-tip.is-open .info-pop { visibility: visible; opacity: 1; }
 @media (hover: hover) { .info-tip:not(.is-dismissed):hover .info-pop { visibility: visible; opacity: 1; } } /* touch: hover sticks after a tap */
 .view-graph { justify-content: center; }
+/* Whose band is analysed: the switch spans the panel, as wide as View band in graph under it */
+#focusSwitch { display: flex; align-self: stretch; }
+#focusSwitch button { flex: 1; padding: 6px 12px; }
+/* What beats this band (finished drafts): one card per band; its head opens the inspector */
+.beats-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.beats-band { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.beats-open { display: flex; align-items: center; gap: 10px; padding: 0; border: none; background: none; color: var(--text); text-align: left; cursor: pointer; }
+.beats-open:hover .beats-name, .beats-open:focus-visible .beats-name, .beats-open:hover .pop-inspect { color: var(--gold-bright); }
+.beats-faces { display: flex; gap: 3px; flex: none; }
+.beats-face { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; }
+.beats-portrait { width: 32px; height: 32px; object-fit: cover; object-position: center 15%; border-radius: 50%; border: 2px solid #8A6A43; }
+.beats-name { font-family: 'Cinzel', serif; font-weight: 600; font-size: 0.9rem; letter-spacing: 0.03em; }
+.beats-none { font-style: italic; }
+.beats-graph { align-self: flex-start; font-size: 0.9rem; }
 /* What the roles mean: a disclosure under Team balance (on phones too, at the top of the sheet) */
 .role-help summary { cursor: pointer; color: var(--gold); font-size: 0.95rem; }
 .role-help summary:hover, .role-help summary:focus-visible { color: var(--gold-bright); }
@@ -1896,7 +1825,6 @@ kbd {
     .slots { gap: 8px; }
     .slot { min-height: 170px; }
     .slot-portrait { width: 64px; height: 64px; }
-    .mode-btn { font-size: 0.86rem; padding: 8px; }
     .tabs .tab { padding: 6px 8px; font-size: 0.78rem; }
 }
 
@@ -2120,10 +2048,6 @@ button.pop-sec-head:hover .pop-inspect { color: var(--gold-bright); }
     .draft-analysis.is-open { transform: none; visibility: visible; }
     .sheet-close { display: inline-flex; }
 
-    /* Once started, the mode switch shrinks to a single compact row */
-    .draft-main.is-started .mode-btn { padding: 5px 8px; font-size: 0.8rem; gap: 6px; }
-    .draft-main.is-started .mode-btn svg { width: 16px; height: 16px; }
-
     /* Filters collapse behind one button; the sort switch stays visible */
     .filters-toggle { display: inline-flex; padding: 4px 12px; font-size: 0.8rem; }
     .pool-filters { display: none; flex-direction: column; gap: 8px; }
@@ -2154,7 +2078,6 @@ button.pop-sec-head:hover .pop-inspect { color: var(--gold-bright); }
     .tab[aria-selected="true"] { background: rgba(217, 168, 78, 0.16); }
     .tabs .tab::after { display: none; }
     .draft-layout { min-height: 0; }
-    .mode-btn { max-width: none; }
 }
 
 /* Score breakdown: points per factor */

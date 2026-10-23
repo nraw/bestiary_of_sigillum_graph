@@ -29,13 +29,10 @@ test('interleaved format repeats ban, ban, pick, pick three times', () => {
         ['1b', '2b', '1p', '2p', '1b', '2b', '1p', '2p', '1b', '2b', '1p', '2p']);
 });
 
-test('solo format is 3 picks for the user only', () => {
-    assert.deepStrictEqual(D.draftSequence('solo'), [
-        { player: 1, action: 'pick' }, { player: 1, action: 'pick' }, { player: 1, action: 'pick' }]);
-});
-
-test('unknown format throws', () => {
+test('only the two-player formats exist; unknown formats (and the old solo band) throw', () => {
+    assert.deepStrictEqual(D.DRAFT_FORMATS, ['standard', 'ban-first', 'interleaved']);
     assert.throws(() => D.draftSequence('chaos'));
+    assert.throws(() => D.createDraft('solo'), /Unknown draft format/);
 });
 
 // ---- Two-player draft state ------------------------------------------------------------------
@@ -76,58 +73,6 @@ test('the draft ends after 3 picks each and undo restores the previous state exa
 test('undo at the start of a draft changes nothing', () => {
     const s = D.createDraft('standard');
     assert.deepStrictEqual(D.undo(s), s);
-});
-
-// ---- Solo state ------------------------------------------------------------------------------
-
-test('solo picks fill the band in order and stop at 3', () => {
-    const s = pickAll(D.createDraft('solo'), ['FERRARIUS', 'BALLISTARIUS', 'TEMPUS']);
-    assert.deepStrictEqual(D.myBand(s), ['FERRARIUS', 'BALLISTARIUS', 'TEMPUS']);
-    assert.strictEqual(D.currentStep(s), null);
-    assert.throws(() => D.applyAction(s, 'SAXUM'));
-});
-
-test('solo: excluded and enemy heroes cannot be picked, and are kept apart from the band', () => {
-    let s = D.createDraft('solo');
-    s = D.setExcluded(s, ['MAGNUS']);
-    s = D.setEnemies(s, ['SAXUM', 'ILLESEBRA']);
-    assert.throws(() => D.applyAction(s, 'MAGNUS'));
-    assert.throws(() => D.applyAction(s, 'SAXUM'));
-    s = D.applyAction(s, 'FERRARIUS');
-    assert.throws(() => D.setEnemies(s, ['FERRARIUS']));
-    assert.throws(() => D.setExcluded(s, ['FERRARIUS']));
-    assert.throws(() => D.setExcluded(s, ['SAXUM']), 'a hero cannot be both facing and excluded');
-    assert.throws(() => D.setEnemies(s, ['SAXUM', 'ILLESEBRA', 'MAGNUS', 'AQUS']));
-    assert.deepStrictEqual(D.opponentBand(s), ['SAXUM', 'ILLESEBRA']);
-    assert.deepStrictEqual(D.unavailableReason(s, 'MAGNUS'), 'excluded');
-    assert.deepStrictEqual(D.unavailableReason(s, 'SAXUM'), 'facing');
-    assert.deepStrictEqual(D.unavailableReason(s, 'FERRARIUS'), 'picked');
-    assert.strictEqual(D.unavailableReason(s, 'AQUS'), null);
-});
-
-test('solo: removing the middle hero keeps the others in order; movePick reorders', () => {
-    let s = pickAll(D.createDraft('solo'), ['FERRARIUS', 'BALLISTARIUS', 'TEMPUS']);
-    assert.deepStrictEqual(D.myBand(D.removePick(s, 'BALLISTARIUS')), ['FERRARIUS', 'TEMPUS']);
-    assert.deepStrictEqual(D.myBand(D.movePick(s, 0, 2)), ['BALLISTARIUS', 'TEMPUS', 'FERRARIUS']);
-    assert.deepStrictEqual(D.myBand(D.movePick(s, 2, 1)), ['FERRARIUS', 'TEMPUS', 'BALLISTARIUS']);
-});
-
-test('solo: undo reverses band, enemy and exclusion changes one at a time', () => {
-    const s0 = D.createDraft('solo');
-    const s1 = D.applyAction(s0, 'FERRARIUS');
-    const s2 = D.setEnemies(s1, ['SAXUM']);
-    const s3 = D.removePick(s2, 'FERRARIUS');
-    assert.deepStrictEqual(D.undo(s3), s2);
-    assert.deepStrictEqual(D.undo(D.undo(s3)), s1);
-    assert.deepStrictEqual(D.undo(s1), s0);
-});
-
-test('solo editing functions throw in two-player formats', () => {
-    const s = D.createDraft('standard');
-    assert.throws(() => D.setEnemies(s, ['SAXUM']));
-    assert.throws(() => D.setExcluded(s, ['SAXUM']));
-    assert.throws(() => D.removePick(s, 'SAXUM'));
-    assert.throws(() => D.movePick(s, 0, 1));
 });
 
 // ---- Hero facts and battle roles -------------------------------------------------------------
@@ -256,7 +201,7 @@ test('matchup is zero with no opponent and rewards counters', () => {
 // ---- Suggestions -----------------------------------------------------------------------------
 
 test('first pick from an empty draft: versatile heroes lead, Ferrarius is in the top half, Fidea in the bottom third', () => {
-    const list = names(D.suggestPick(D.createDraft('solo'), ctx, Infinity));
+    const list = names(D.suggestPick(D.createDraft('standard'), ctx, Infinity));
     assert.strictEqual(list.length, 36);
     list.slice(0, 10).forEach(n => assert.ok(D.battleRoles(byName[n]).length >= 2, `${n} is a single-role first pick`));
     assert.ok(list.indexOf('FERRARIUS') < 18, `Ferrarius at ${list.indexOf('FERRARIUS') + 1}`);
@@ -264,19 +209,22 @@ test('first pick from an empty draft: versatile heroes lead, Ferrarius is in the
 });
 
 test('poor first picks get a warning reason', () => {
-    const fidea = D.suggestPick(D.createDraft('solo'), ctx, Infinity).find(s => s.name === 'FIDEA');
+    const fidea = D.suggestPick(D.createDraft('standard'), ctx, Infinity).find(s => s.name === 'FIDEA');
     assert.ok(fidea.reasons.some(r => r.id === 'versatility:poor-first-pick' && r.kind === 'warning'));
 });
 
 test('second pick after a Controller+Attacker first pick: the top suggestion can support', () => {
-    const s = D.applyAction(D.createDraft('solo'), 'VINCTUM');
+    const s = D.applyAction(D.createDraft('standard'), 'VINCTUM');
     assert.deepStrictEqual(D.battleRoles(byName.VINCTUM).includes('Supporter'), false);
-    const top = D.suggestPick(s, ctx, 1)[0];
+    const top = D.suggestPick(s, ctx, 1, { player: 1 })[0];
     assert.ok(D.battleRoles(byName[top.name]).includes('Supporter'), top.name);
 });
 
+// Player 1 holds Ferrarius and Ballistarius against Aqus, and picks next
+const ferrariusBallistarius = () => pickAll(D.createDraft('standard'), ['FERRARIUS', 'AQUS', 'BALLISTARIUS', 'IRATUS']);
+
 test('a suggestion that fills a missing role says which role', () => {
-    const s = pickAll(D.createDraft('solo'), ['FERRARIUS', 'BALLISTARIUS']);
+    const s = ferrariusBallistarius();
     const fidea = D.suggestPick(s, ctx, Infinity).find(p => p.name === 'FIDEA');
     const fills = fidea.reasons.find(r => r.id === 'fills');
     assert.ok(fills && fills.kind === 'positive' && fills.delta > 0);
@@ -291,9 +239,7 @@ test('a suggestion that fills a missing role says which role', () => {
 });
 
 test('suggestions never include unavailable heroes', () => {
-    let s = D.setExcluded(D.createDraft('solo'), ['MAGNUS']);
-    s = D.setEnemies(s, ['SAXUM']);
-    s = D.applyAction(s, 'FERRARIUS');
+    const s = pickAll(D.createDraft('standard', { carryOverBans: ['MAGNUS'] }), ['FERRARIUS', 'SAXUM']);
     const list = names(D.suggestPick(s, ctx, Infinity));
     assert.strictEqual(list.length, 33);
     ['MAGNUS', 'SAXUM', 'FERRARIUS'].forEach(n => assert.ok(!list.includes(n), n));
@@ -301,43 +247,33 @@ test('suggestions never include unavailable heroes', () => {
 
 test('a hero that counters the opponent ranks higher with that opponent set', () => {
     const counter = ctx.relations.find(r => r.type === 'counter');
-    const base = D.applyAction(D.createDraft('solo'), 'FERRARIUS');
-    const without = names(D.suggestPick(base, ctx, Infinity));
+    const base = D.applyAction(D.createDraft('standard'), 'FERRARIUS');
+    const without = names(D.suggestPick(base, ctx, Infinity, { player: 1 }));
     if (counter.supplier === 'FERRARIUS' || counter.needer === 'FERRARIUS') return;
-    const withOpp = names(D.suggestPick(D.setEnemies(base, [counter.needer]), ctx, Infinity));
+    const withOpp = names(D.suggestPick(D.applyAction(base, counter.needer), ctx, Infinity));
     assert.ok(withOpp.indexOf(counter.supplier) < without.indexOf(counter.supplier) || without.indexOf(counter.supplier) === 0);
 });
 
-test('suggestions carry a best-band percentile, matching the completions on the last pick', () => {
-    const s = pickAll(D.createDraft('solo'), ['FERRARIUS', 'BALLISTARIUS']);
-    const picks = D.suggestPick(s, ctx, 5);
-    const bands = D.suggestBands(s, ctx, 5);
-    assert.deepStrictEqual(picks.map(p => p.topPercent), bands.map(b => b.topPercent));
-    assert.deepStrictEqual(picks.map(p => p.name), bands.map(b => b.heroes[2]));
-    picks.forEach(p => assert.ok(p.topPercent > 0 && p.topPercent <= 100));
-});
-
-test('suggestBands completes the current band and never uses unavailable heroes', () => {
-    let s = D.setExcluded(D.createDraft('solo'), ['TEMPUS']);
-    s = D.applyAction(s, 'FERRARIUS');
-    const bands = D.suggestBands(s, ctx, 20);
-    assert.strictEqual(bands.length, 20);
-    bands.forEach(b => {
-        assert.strictEqual(b.heroes[0], 'FERRARIUS');
-        assert.strictEqual(b.heroes.length, 3);
-        assert.ok(!b.heroes.includes('TEMPUS'));
+test('suggestions carry a best-band percentile, matching the finished band on the last pick', () => {
+    const s = ferrariusBallistarius();
+    const opponents = D.opponentBand(s);
+    D.suggestPick(s, ctx, 5).forEach(p => {
+        assert.deepStrictEqual(p.bestBand, ['FERRARIUS', 'BALLISTARIUS', p.name]);
+        assert.strictEqual(p.topPercent, D.bandPercent(p.bestBand, opponents, ctx));
+        assert.ok(p.topPercent > 0 && p.topPercent <= 100);
     });
-    for (let i = 1; i < bands.length; i++) assert.ok(bands[i - 1].score >= bands[i].score);
 });
 
-test('from an empty band all but one curated band are in the top 30% of suggestBands', t => {
-    const all = D.suggestBands(D.createDraft('solo'), ctx, Infinity);
+test('all but one curated band are in the top 30% of every possible band', t => {
+    const all = D.allBands(heroes.map(h => h.name))
+        .map(b => ({ heroes: b, score: D.scoreTeam(b, ctx).total }))
+        .sort((a, b) => b.score - a.score || a.heroes.join('|').localeCompare(b.heroes.join('|')));
     assert.strictEqual(all.length, 7140);
     const keyOf = b => [...b].sort().join('|');
     const rank = new Map(all.map((b, i) => [keyOf(b.heroes), i]));
     checkOutliers(t, data.recommended_bands
         .filter(b => rank.get(keyOf(b.heroes)) >= 7140 * 0.3)
-        .map(b => `${b.heroes.join(', ')} is suggestion #${rank.get(keyOf(b.heroes)) + 1}`));
+        .map(b => `${b.heroes.join(', ')} is band #${rank.get(keyOf(b.heroes)) + 1}`));
 });
 
 test('two-player suggestions are for whoever acts; ban steps suggest bans', () => {
@@ -352,41 +288,49 @@ test('two-player suggestions are for whoever acts; ban steps suggest bans', () =
     assert.ok(pick.items.every(i => i.name !== 'SAXUM' && i.name !== 'TEMPUS'));
 });
 
-test('a full band gets swap suggestions that improve it', () => {
-    const s = pickAll(D.createDraft('solo'), ['FIDEA', 'GOETIUM', 'MESSUM']);
-    const swaps = D.suggestSwaps(s, ctx);
-    assert.strictEqual(swaps.length, 3);
-    const current = D.scoreTeam(D.myBand(s), ctx).total;
-    swaps.forEach(sw => {
-        assert.ok(D.myBand(s).includes(sw.out) && !D.myBand(s).includes(sw.in));
-        assert.ok(sw.score > current);
+// ---- What beats a band ---------------------------------------------------------------------
+
+const valueAgainst = (band, opponents) => D.scoreTeam(band, ctx).total + D.scoreMatchup(band, opponents, ctx).total;
+
+test('counterBands: the strongest bands against a band, from the other heroes, best first', () => {
+    const band = ['TOXICUM', 'TEMPUS', 'EQUITA'];
+    const list = D.counterBands(band, ctx);
+    assert.strictEqual(list.length, 3);
+    const pool = heroes.map(h => h.name).filter(n => !band.includes(n));
+    const best = Math.max(...D.allBands(pool).map(b => valueAgainst(b, band)));
+    assert.ok(Math.abs(list[0].score - best) < 1e-9, 'the first is the best band against it');
+    list.forEach((b, i) => {
+        assert.strictEqual(b.heroes.length, 3);
+        assert.ok(b.heroes.every(n => !band.includes(n)), b.heroes.join());
+        assert.ok(Math.abs(b.score - valueAgainst(b.heroes, band)) < 1e-9);
+        assert.deepStrictEqual(b.reasons.map(r => r.id),
+            [...D.scoreTeam(b.heroes, ctx).reasons, ...D.scoreMatchup(b.heroes, band, ctx).reasons].map(r => r.id));
+        if (i) assert.ok(list[i - 1].score >= b.score, 'best first');
     });
+    assert.ok(list[0].reasons.some(r => r.kind === 'counter' && r.victim === 'EQUITA'), 'it counters Equita');
+    assert.strictEqual(D.counterBands(band, ctx, { limit: 1 }).length, 1);
 });
 
-test('solo: replacePick swaps a hero in place as one undo step', () => {
-    const s = pickAll(D.createDraft('solo'), ['FERRARIUS', 'BALLISTARIUS', 'TEMPUS']);
-    const r = D.replacePick(s, 'BALLISTARIUS', 'FIDEA');
-    assert.deepStrictEqual(D.myBand(r), ['FERRARIUS', 'FIDEA', 'TEMPUS']);
-    assert.deepStrictEqual(D.undo(r), s);
-    assert.throws(() => D.replacePick(s, 'SAXUM', 'FIDEA'), 'not in band');
-    assert.throws(() => D.replacePick(s, 'TEMPUS', 'FERRARIUS'), 'already picked');
-    assert.throws(() => D.replacePick(D.createDraft('standard'), 'A', 'B'));
+test('counterBands are varied: each shares at most one hero with a band above it', () => {
+    const list = D.counterBands(['TOXICUM', 'TEMPUS', 'EQUITA'], ctx, { limit: 5 });
+    assert.strictEqual(list.length, 5);
+    list.forEach((b, i) => list.slice(0, i).forEach(above =>
+        assert.ok(above.heroes.filter(n => b.heroes.includes(n)).length <= 1, `${b.heroes} vs ${above.heroes}`)));
 });
 
-test('solo: fillBand adds several heroes as one undo step', () => {
-    const s = D.applyAction(D.createDraft('solo'), 'FERRARIUS');
-    const f = D.fillBand(s, ['BALLISTARIUS', 'TEMPUS']);
-    assert.deepStrictEqual(D.myBand(f), ['FERRARIUS', 'BALLISTARIUS', 'TEMPUS']);
-    assert.deepStrictEqual(D.undo(f), s);
-    assert.throws(() => D.fillBand(s, ['BALLISTARIUS', 'TEMPUS', 'FIDEA']), 'too many');
-    assert.throws(() => D.fillBand(D.setEnemies(s, ['SAXUM']), ['SAXUM']), 'unavailable');
-    assert.throws(() => D.fillBand(s, ['FIDEA', 'FIDEA']), 'duplicate');
+test('counteredBy: the heroes whose cards counter someone in the band', () => {
+    assert.deepStrictEqual(D.counteredBy(['TOXICUM', 'TEMPUS', 'EQUITA'], ctx), ['CABALLUS', 'FRIGUS']);
+    const victims = new Set(ctx.relations.filter(r => r.type === 'counter').map(r => r.needer));
+    const safe = ['FERRARIUS', 'ARBORUS', 'TEMPUS'];
+    assert.ok(safe.every(n => !victims.has(n)));
+    assert.deepStrictEqual(D.counteredBy(safe, ctx), []);
+    D.counterBands(safe, ctx).forEach(b => assert.ok(!b.reasons.some(r => r.kind === 'counter'), 'nothing to counter'));
 });
 
 test('suggestion reasons name the role filled instead of a generic coverage count', () => {
-    const first = D.suggestPick(D.createDraft('solo'), ctx, 5);
+    const first = D.suggestPick(D.createDraft('standard'), ctx, 5);
     first.forEach(p => assert.ok(!p.reasons.some(r => r.factor === 'coverage'), `${p.name}: versatility explains a first pick`));
-    const s = pickAll(D.createDraft('solo'), ['FERRARIUS', 'BALLISTARIUS']);
+    const s = ferrariusBallistarius();
     D.suggestPick(s, ctx, Infinity).forEach(p => assert.ok(!p.reasons.some(r => r.id === 'coverage'), p.name));
 });
 
@@ -402,19 +346,14 @@ test('fillable roles: every role the hero could take that adds one the band lack
 
 // ---- UX support: reset as an undo step, ban wording, structured reasons ----------------------
 
-test('reset is an undoable step in both modes', () => {
+test('reset is an undoable step', () => {
     const two = pickAll(D.createDraft('ban-first', { carryOverBans: ['MAGNUS'] }), ['SAXUM', 'TEMPUS']);
     const fresh = D.reset(two);
     assert.deepStrictEqual([fresh.format, fresh.history, fresh.carryOverBans], ['ban-first', [], ['MAGNUS']]);
     assert.deepStrictEqual(D.undo(fresh), two);
     const picked = D.applyAction(fresh, 'FIDEA');
     assert.deepStrictEqual(D.undo(D.undo(picked)), two, 'undo walks back through the reset');
-
-    const solo = pickAll(D.setEnemies(D.createDraft('solo'), ['SAXUM']), ['FERRARIUS', 'TEMPUS']);
-    const cleared = D.reset(solo);
-    assert.deepStrictEqual([cleared.band, cleared.enemies, cleared.excluded], [[], [], []]);
-    assert.deepStrictEqual(D.undo(cleared), solo);
-    const blank = D.createDraft('solo');
+    const blank = D.createDraft('standard');
     assert.strictEqual(D.undo(blank), blank, 'nothing to undo without a reset');
 });
 
@@ -462,7 +401,7 @@ test('randomHero chooses among the available candidates using the given rng', ()
 test('randomHero returns null when no candidate is available or the draft is complete', () => {
     const s = pickAll(D.createDraft('standard'), ['FERRARIUS']);
     assert.strictEqual(D.randomHero(s, ['FERRARIUS'], () => 0), null);
-    const done = pickAll(D.createDraft('solo'), ['FERRARIUS', 'TEMPUS', 'IRATUS']);
+    const done = pickAll(D.createDraft('standard'), ['FERRARIUS', 'TEMPUS', 'IRATUS', 'SAXUM', 'AQUS', 'FIDEA']);
     assert.ok(D.isComplete(done));
     assert.strictEqual(D.randomHero(done, ['MAGNUS'], () => 0), null);
 });
@@ -485,12 +424,13 @@ const evidenceOf = (reason, hero) => D.reasonEvidence(reason, ctx).find(e => e.h
 const linkTags = e => e.links.map(l => `${l.role}:${l.label}`).sort();
 
 test('every reason with heroes names card evidence for each of them', () => {
-    const solo = D.setEnemies(D.createDraft('solo'), ['SAXUM', 'MORTUM']);
+    const facing = pickAll(D.createDraft('standard'), ['TOXICUM', 'SAXUM']);
     const reasons = [
         ...[['TOXICUM', 'TEMPUS', 'EQUITA'], ['IGNIFER', 'EQUITA', 'TOXICUM'], ['REDUX', 'FERRARIUS', 'ARMUS'], ['CARNIFEX', 'TOXICUM', 'LIBRORUM']]
             .flatMap(band => [...D.scoreTeam(band, ctx).reasons, ...D.scoreMatchup(band, ['SAXUM', 'MORTUM', 'GOETIUM'], ctx).reasons]),
-        ...D.suggestPick(solo, ctx, Infinity).flatMap(s => s.reasons),
-        ...D.suggestPick(pickAll(solo, ['TOXICUM']), ctx, Infinity).flatMap(s => s.reasons)
+        ...D.suggestPick(D.applyAction(D.createDraft('standard'), 'SAXUM'), ctx, Infinity).flatMap(s => s.reasons),
+        ...D.suggestPick(facing, ctx, Infinity).flatMap(s => s.reasons),
+        ...D.suggestPick(pickAll(facing, ['AQUS', 'MORTUM']), ctx, Infinity).flatMap(s => s.reasons)
     ];
     reasons.filter(r => r.heroes.length).forEach(r => {
         const evidence = D.reasonEvidence(r, ctx);
@@ -563,8 +503,8 @@ test('enabler texts read as sentences: "and" between heroes, the verb agreeing w
 });
 
 test('role evidence in reasons names the role it proves', () => {
-    const s = D.applyAction(D.createDraft('solo'), 'TOXICUM');
-    const tempus = D.suggestPick(s, ctx, Infinity).find(x => x.name === 'TEMPUS');
+    const s = D.applyAction(D.createDraft('standard'), 'TOXICUM');
+    const tempus = D.suggestPick(s, ctx, Infinity, { player: 1 }).find(x => x.name === 'TEMPUS');
     const fills = tempus.reasons.find(r => r.id === 'fills');
     assert.ok(fills.roles.every(role => evidenceOf(fills, 'TEMPUS').notes.includes(role)));
     const protect = D.scoreTeam(['ARBORUS', 'TOXICUM', 'MAGNUS'], ctx).reasons.find(r => r.id === 'enabler:protection:TOXICUM');

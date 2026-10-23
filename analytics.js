@@ -35,7 +35,6 @@
 
         // Draft
         tab_view: ['tab', 'method'],
-        draft_mode_change: ['mode'],
         draft_format_change: ['format'],
         draft_start: ['format'],
         draft_pick: ['hero', 'format', 'player', 'pick_number', 'method', 'pool_sort', 'pool_rank', 'top_suggestion', 'filters_active'],
@@ -46,16 +45,14 @@
         hero_popover_view: ['hero', 'popover_mode', 'pool_rank'],
         analysis_inspect: ['section', 'line_index', 'source'],
         score_factor_open: ['factor'],
+        counter_band_open: ['rank', 'band', 'target_band'],
         view_in_graph: ['source'],
         cards_open: ['source', 'hero'],
         share: ['method', 'content_type', 'format', 'band'],
         shared_link_open: ['result', 'format', 'band', 'error'],
         draft_reset: ['format', 'picks_made'],
         draft_undo: ['method'],
-        draft_fill_band: ['hero', 'band'],
         draft_random: ['surface', 'hero'],
-        draft_remove: ['hero', 'format'],
-        draft_reorder: ['method'],
         draft_side_change: ['control', 'hero', 'method'],
         draft_blocked: ['error'],
         pool_filter: ['filter_type', 'filter_value', 'state'],
@@ -104,7 +101,7 @@
                     onError(error);
                 }
             },
-            // True the first time `key` is seen in this page load (hover views, solo completions)
+            // True the first time `key` is seen in this page load (hover views, completions)
             once(key) {
                 if (seen.has(key)) return false;
                 seen.add(key);
@@ -183,15 +180,6 @@
     function draftEvents(before, after, extra = {}) {
         if (!before || !after || before.format !== after.format) return [];
         const events = [];
-        if (after.format === 'solo') {
-            if (!before.band.every(h => after.band.includes(h))) return [];
-            const added = after.band.filter(h => !before.band.includes(h));
-            if (!added.length) return [];
-            if (!before.band.length) events.push({ name: 'draft_start', params: { format: after.format } });
-            added.forEach(hero => events.push({ name: 'draft_pick', params: {
-                hero, format: after.format, player: 1, pick_number: after.band.indexOf(hero) + 1, ...extra } }));
-            return events;
-        }
         const h = before.history;
         if (after.history.length !== h.length + 1 || !h.every((e, i) => sameEntry(e, after.history[i]))) return [];
         const step = after.history[h.length];
@@ -247,28 +235,16 @@
 
     const added = (from, to) => to.filter(h => !from.includes(h));
 
-    // Edits to a draft besides picks and bans (draftEvents): who you face or exclude, carried-over bans, and the
-    // solo band losing a hero or changing order. `extra.method` says how (menu, picker, drag, chip, button, keyboard).
+    // Edits to a draft besides picks and bans (draftEvents): the carried-over bans, set before the draft starts.
+    // `extra.method` says how (picker, chip).
     function draftChanges(before, after, extra = {}) {
         if (!before || !after || before.format !== after.format) return [];
-        const events = [];
-        const side = (list, from = [], to = []) => {
-            added(from, to).forEach(hero => events.push({ name: 'draft_side_change', params: { control: `${list}_add`, hero, ...extra } }));
-            added(to, from).forEach(hero => events.push({ name: 'draft_side_change', params: { control: `${list}_remove`, hero, ...extra } }));
-        };
-        if (after.format !== 'solo') {
-            side('carry_over', before.carryOverBans, after.carryOverBans);
-            return events;
-        }
-        side('enemy', before.enemies, after.enemies);
-        side('exclude', before.excluded, after.excluded);
-        const gone = added(after.band, before.band);
-        if (gone.length === 1 && after.band.length === before.band.length - 1) {
-            events.push({ name: 'draft_remove', params: { hero: gone[0], format: after.format } });
-        } else if (!gone.length && after.band.length === before.band.length && after.band.some((h, i) => h !== before.band[i])) {
-            events.push({ name: 'draft_reorder', params: { ...extra } });
-        }
-        return events;
+        const from = before.carryOverBans || [];
+        const to = after.carryOverBans || [];
+        return [
+            ...added(from, to).map(hero => ({ name: 'draft_side_change', params: { control: 'carry_over_add', hero, ...extra } })),
+            ...added(to, from).map(hero => ({ name: 'draft_side_change', params: { control: 'carry_over_remove', hero, ...extra } }))
+        ];
     }
 
     // Graph history: moving to a lower position is back
