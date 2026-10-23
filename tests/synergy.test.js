@@ -190,6 +190,15 @@ test('synergyArcs can focus on one hero', () => {
     ]);
 });
 
+test('synergyArcs can keep one line category (legend filter)', () => {
+    const counters = S.synergyArcs(relations, null, { category: 'counter' });
+    assert.strictEqual(counters.length, 23);
+    assert.ok(counters.every(x => x.category === 'counter'));
+    assert.deepStrictEqual(S.synergyArcs(relations, 'GOETIUM', { category: 'conflict' })
+        .map(x => (x.a === 'GOETIUM' ? x.b : x.a)).sort(), ['MECHANICUS', 'VINCTUM']);
+    assert.strictEqual(S.synergyArcs(relations, null, { category: null }).length, 157);
+});
+
 test('describeRelation words each relation for arc tooltips', () => {
     const find = (type, needer, supplier) => relations.find(r => r.type === type && r.needer === needer && r.supplier === supplier);
     assert.strictEqual(S.describeRelation(find('partner', 'ILLESEBRA', 'ARMUS')),

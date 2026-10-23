@@ -202,11 +202,12 @@
     const ARC_CATEGORIES = ['partner', 'conflict', 'counter'];
 
     // Hero-to-hero lines: one per (pair, category) with sorted ends a < b; aToB means
-    // a helps/hurts b (supplier -> needer). Optionally only arcs touching `focus`.
-    function synergyArcs(relations, focus = null) {
+    // a helps/hurts b (supplier -> needer). Optionally only arcs touching `focus`, or of one `category`.
+    function synergyArcs(relations, focus = null, { category = null } = {}) {
         const arcs = new Map();
         relations.forEach(r => {
             if (!ARC_CATEGORIES.includes(r.type)) return;
+            if (category && r.type !== category) return;
             if (focus && r.needer !== focus && r.supplier !== focus) return;
             const [a, b] = [r.supplier, r.needer].sort();
             const key = `${r.type}|${a}|${b}`;

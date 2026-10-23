@@ -38,6 +38,7 @@ const state = {
     role: null,
     showAllNames: false,
     showSynergies: false,
+    synergyCategory: null, // legend filter: only this synergy line category (partner / conflict / counter)
     bandFocus: null, // { mine, theirs } hero names sent from the Draft tab
     fromDraft: false, // a hero opened from the Draft tab: show Back to draft
     showOpponent: true, // band view: the opposing band and its counters with mine
@@ -482,6 +483,7 @@ function setupToolbar() {
 function toggleSynergies() {
     state.showSynergies = !state.showSynergies;
     if (state.showSynergies) state.role = null; // its legend control is hidden while synergies show
+    else state.synergyCategory = null;
     hideTooltip();
     trackEvent('synergy_toggle', 'View', state.showSynergies ? 'on' : 'off');
     render();
@@ -554,7 +556,7 @@ function fitToFocus(node) {
 // Frame the selected hero together with every hero it has a synergy line to
 function fitToSynergies(node) {
     const names = new Set([node.name]);
-    synergyArcs(synergyRelations, node.name).forEach(a => { names.add(a.a); names.add(a.b); });
+    synergyArcs(synergyRelations, node.name, { category: state.synergyCategory }).forEach(a => { names.add(a.a); names.add(a.b); });
     fitView(nodesData.filter(n => n.type === 'hero' && names.has(n.name)));
 }
 
@@ -565,7 +567,7 @@ function clearSelection() {
 }
 
 function clearAll() {
-    Object.assign(state, { selectedId: null, picked: null, term: '', category: 'All', labelCategory: null, attribute: null, role: null, bandFocus: null });
+    Object.assign(state, { selectedId: null, picked: null, term: '', category: 'All', labelCategory: null, attribute: null, role: null, synergyCategory: null, bandFocus: null });
     document.getElementById('searchInput').value = '';
     closeSuggestions();
     trackEvent('filter_cleared', 'Filter', 'Clear All');
@@ -586,12 +588,14 @@ function render() {
     if (band) {
         // A drafted band: its synergy lines (within it and to the pool) and, if shown, the opponent's counters
         const view = currentBandView();
-        arcs = view.arcs;
+        arcs = state.synergyCategory ? view.arcs.filter(a => a.category === state.synergyCategory) : view.arcs;
         highlight = new Map(nodesData.map(n => [n.id, n.type === 'hero' ? view.states.get(n.name) : 'dim']));
     } else if (synergyMode) {
         const focus = selectedNode ? selectedNode.name : null;
-        arcs = synergyArcs(synergyRelations, focus);
+        arcs = synergyArcs(synergyRelations, focus, { category: state.synergyCategory });
         const heroId = name => nodesData.find(n => n.type === 'hero' && n.name === name).id;
+        // Under the legend's line filter only heroes with such a line stay lit
+        const lined = state.synergyCategory ? new Set(arcs.flatMap(a => [heroId(a.a), heroId(a.b)])) : null;
         if (focus) {
             highlight = new Map(nodesData.map(n => [n.id, 'dim']));
             highlight.set(state.selectedId, 'selected');
@@ -599,7 +603,7 @@ function render() {
         } else {
             if (filterSet) arcs = arcs.filter(a => filterSet.has(heroId(a.a)) && filterSet.has(heroId(a.b)));
             highlight = new Map(nodesData.map(n => [n.id,
-                n.type === 'label' || (filterSet && !filterSet.has(n.id)) ? 'dim' : 'none']));
+                n.type === 'label' || (filterSet && !filterSet.has(n.id)) || (lined && !lined.has(n.id)) ? 'dim' : 'none']));
         }
     }
     drawSynergyArcs(arcs, synergyMode && (Boolean(selectedNode) || Boolean(band)));
@@ -671,6 +675,7 @@ function updateHeaderState(filterSet) {
     if (state.attribute) active.push(`${HERO_ATTRIBUTES[state.attribute].label} heroes`);
     if (state.labelCategory) active.push(`${LABEL_SHAPES[state.labelCategory].label} traits`);
     if (state.role) active.push(`${ROLE_INFO[state.role].label} edges`);
+    if (state.synergyCategory) active.push(`${SYNERGY_STYLE[state.synergyCategory].label} lines`);
     if (state.term.trim()) active.push(`“${state.term.trim()}”`);
 
     const roleLinks = state.role ? filterByRole(linksData, state.role).links.size : 0;
@@ -715,6 +720,9 @@ function updateHeaderState(filterSet) {
     });
     document.querySelectorAll('.legend-filter[data-role]').forEach(item => {
         item.setAttribute('aria-pressed', String(item.dataset.role === state.role));
+    });
+    document.querySelectorAll('.legend-filter[data-synergy]').forEach(item => {
+        item.setAttribute('aria-pressed', String(item.dataset.synergy === state.synergyCategory));
     });
 }
 
@@ -1365,10 +1373,11 @@ function renderLegend() {
         </div>
 
         <div class="legend-section" data-legend="synergy" hidden>
-        <h3 class="legend-title">Synergy lines <small>arrow: who helps or hurts whom</small></h3>
+        <h3 class="legend-title">Synergy lines <small>arrow: who helps or hurts whom · click to filter</small></h3>
         <ul class="legend-list">
             ${Object.entries(SYNERGY_STYLE).map(([key, st]) => `
-                <li>${synergySwatch(key)} ${st.label} <small class="legend-hint">${st.hint}</small></li>`).join('')}
+                <li><button type="button" class="legend-filter" data-synergy="${key}" aria-pressed="false">
+                    ${synergySwatch(key)} ${st.label} <small class="legend-hint">${st.hint}</small></button></li>`).join('')}
         </ul>
         </div>
 
@@ -1382,6 +1391,22 @@ function renderLegend() {
     document.getElementById('legendBody').addEventListener('click', event => {
         const item = event.target.closest('.legend-filter');
         if (!item) return;
+        if (item.dataset.synergy) {
+            // Keeps the selection: a selected hero then shows only its lines of this kind
+            state.synergyCategory = state.synergyCategory === item.dataset.synergy ? null : item.dataset.synergy;
+            state.picked = null;
+            trackEvent('legend_filter', 'Filter', `synergy: ${item.dataset.synergy}`);
+            hideTooltip();
+            render();
+            const selected = nodesById.get(state.selectedId);
+            if (state.bandFocus) return;
+            if (selected?.type === 'hero') fitToSynergies(selected);
+            else if (state.synergyCategory) {
+                const names = new Set(synergyArcs(synergyRelations, null, { category: state.synergyCategory }).flatMap(a => [a.a, a.b]));
+                fitView(nodesData.filter(n => n.type === 'hero' && names.has(n.name)));
+            } else fitToFilter();
+            return;
+        }
         if (item.dataset.role) {
             state.role = state.role === item.dataset.role ? null : item.dataset.role;
             Object.assign(state, { labelCategory: null, attribute: null, category: 'All', term: '', selectedId: null, path: null });
