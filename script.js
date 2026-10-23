@@ -7,10 +7,11 @@ const {
     ROLES, ROLE_INFO, linkDirection, linkSummary, abilityTraits, linkAbilities, traitHeroesByRole, filterByRole, trimSegment, gradientVector,
     vitalityTokens, TOKEN_RADIUS, ATTRIBUTE_GLYPHS, GLYPHS, attributeGlyph, glyphSymbol
 } = window.GraphLogic;
-const { encodeRoute, decodeRoute, isGraphRoute } = window.GraphRoute;
+const { encodeRoute, decodeRoute, isLegacyRoute, routeMeta, historyStep } = window.GraphRoute;
 const { computeSynergies, heroSynergies, synergySummary, synergyArcs, arcAbilities, describeRelation, titleCase, abilityList, formationVerb } = window.Synergy;
 
 let heroesData = [];
+let traitDescriptions = {};
 let synergyRelations = [];
 let layoutSize = null; // simulation coordinates: the graph size at setup
 let baseForce = null; // base forceX / forceY strengths
@@ -117,7 +118,8 @@ async function init() {
         heroesData = data.bestiary_of_sigillum.characters;
         synergyRelations = computeSynergies(heroesData);
 
-        ({ nodes: nodesData, links: linksData } = buildGraph(heroesData, data.bestiary_of_sigillum.trait_descriptions));
+        traitDescriptions = data.bestiary_of_sigillum.trait_descriptions;
+        ({ nodes: nodesData, links: linksData } = buildGraph(heroesData, traitDescriptions));
         nodesById = new Map(nodesData.map(n => [n.id, n]));
         adjacency = buildAdjacency(linksData);
 
@@ -509,6 +511,7 @@ function runAction(action) {
 function selectNode(id, { source = 'graph', center = true, picked = null } = {}) {
     const node = nodesById.get(id);
     if (!node) return;
+    searchTyping = false; // a picked result (or any selection) is a step of its own
     state.selectedId = id;
     state.picked = picked;
     state.bandFocus = null;
@@ -1180,6 +1183,7 @@ function setupSearch() {
         state.role = null;
         state.attribute = null;
         state.selectedId = null;
+        searchTyping = true;
         updateSuggestions();
         render();
         if (input.value.trim().length >= 3) trackEvent('search_used', 'Search', input.value.trim());
@@ -1638,10 +1642,9 @@ function currentRoute() {
     return { type: node.type === 'hero' ? 'hero' : 'trait', name: node.name };
 }
 
-// The URL of the current selection; no hash when nothing is selected
+// The URL of the current selection (?hero= / ?trait= / ?band=); the bare page when nothing is selected
 function routeUrl() {
-    const route = currentRoute();
-    return route.type === 'none' ? location.pathname + location.search : encodeRoute(route);
+    return location.pathname + encodeRoute(currentRoute());
 }
 
 const routeNames = () => ({
@@ -1649,17 +1652,53 @@ const routeNames = () => ({
     traits: nodesData.filter(n => n.type === 'label').map(n => n.name)
 });
 
+// Title, description and canonical address follow the selection, so search engines index ?hero= addresses
+// as pages of their own; no selection (or a band) restores the page's own metadata
+const pageMeta = (() => {
+    const tags = {
+        title: { get: () => document.title, set: v => { document.title = v; } },
+        description: 'meta[name="description"]', ogTitle: 'meta[property="og:title"]', ogDescription: 'meta[property="og:description"]',
+        twitterTitle: 'meta[name="twitter:title"]', twitterDescription: 'meta[name="twitter:description"]',
+        canonical: 'link[rel="canonical"]', ogUrl: 'meta[property="og:url"]'
+    };
+    const attr = el => (el.tagName === 'LINK' ? 'href' : 'content');
+    const el = key => document.querySelector(tags[key]);
+    const read = key => (typeof tags[key] === 'string' ? el(key)?.getAttribute(attr(el(key))) : tags[key].get());
+    const defaults = Object.fromEntries(Object.keys(tags).map(k => [k, read(k)]));
+    const write = (key, value) => {
+        if (typeof tags[key] !== 'string') return tags[key].set(value);
+        const node = el(key);
+        if (node && value != null) node.setAttribute(attr(node), value);
+    };
+    return route => {
+        const meta = routeMeta(route, { heroes: heroesData, traitDescriptions }, defaults.canonical);
+        const values = meta ? {
+            title: meta.title, description: meta.description, ogTitle: meta.title, ogDescription: meta.description,
+            twitterTitle: meta.title, twitterDescription: meta.description, canonical: meta.canonical, ogUrl: meta.canonical
+        } : defaults;
+        Object.entries(values).forEach(([key, value]) => write(key, value));
+    };
+})();
+
+// Typing in the search box clears the selection; the address waits for a picked result (historyStep)
+let searchTyping = false;
+
 function syncRoute() {
     if (!routing || restoringRoute || document.body.dataset.tab === 'draft') return;
     const url = routeUrl();
-    const same = url.startsWith('#') ? location.hash === url : !location.hash || location.hash === '#graph';
-    if (same) return;
+    const step = historyStep({ url, current: location.pathname + location.search + location.hash, typing: searchTyping, term: state.term.trim() });
+    if (step === 'defer') return;
+    searchTyping = false;
+    pageMeta(currentRoute());
+    if (step === 'replace') history.replaceState(history.state, '', url);
+    if (step !== 'push') return;
     navTop = ++navIndex;
     history.pushState({ ...history.state, graphNav: navIndex }, '', url);
     updateNavButtons();
 }
 
 function applyRoute(route) {
+    searchTyping = false;
     restoringRoute = true;
     try {
         if (route.type === 'band') {
@@ -1675,6 +1714,7 @@ function applyRoute(route) {
     } finally {
         restoringRoute = false;
     }
+    pageMeta(currentRoute());
 }
 
 function updateNavButtons() {
@@ -1684,20 +1724,25 @@ function updateNavButtons() {
 
 function setupRouting() {
     navIndex = navTop = history.state?.graphNav ?? 0;
-    const route = decodeRoute(location.hash, routeNames());
+    const route = decodeRoute(location, routeNames());
     if (route) applyRoute(route);
-    // A graph link to an unknown hero or trait opens the plain graph
-    else if (isGraphRoute(location.hash)) history.replaceState(history.state, '', location.pathname + location.search);
+    // An old #graph/… link becomes its ?hero= address; a link to an unknown hero or trait opens the plain graph
+    if (isLegacyRoute(location.hash) || !route) {
+        history.replaceState(history.state, '', location.pathname + (route ? encodeRoute(route) : ''));
+    }
     history.replaceState({ ...history.state, graphNav: navIndex }, '');
     routing = true;
+    pageMeta(currentRoute());
     updateNavButtons();
 
     window.addEventListener('popstate', event => {
-        const next = decodeRoute(location.hash, routeNames());
-        if (!next) {
-            // A draft link is the Draft tab's; a graph link to an unknown hero or trait keeps the current view
-            if (isGraphRoute(location.hash)) history.replaceState(history.state, '', routeUrl());
-            return;
+        // A draft link is the Draft tab's (draft-ui.js)
+        if (location.hash && !isLegacyRoute(location.hash)) return;
+        const next = decodeRoute(location, routeNames());
+        if (!next || isLegacyRoute(location.hash)) {
+            // An old #graph/… link pasted into the address bar, or a link to an unknown hero or trait
+            history.replaceState(history.state, '', next ? location.pathname + encodeRoute(next) : routeUrl());
+            if (!next) return;
         }
         if (typeof event.state?.graphNav === 'number') {
             navIndex = event.state.graphNav;

@@ -7,7 +7,8 @@
     const { encodeDraft, decodeDraft, isDraftLink } = window.DraftShare;
     const { escapeHtml, vitalityTokensSvg, ATTRIBUTES, attributeGlyph } = window.GraphLogic;
     const { titleCase } = window.Synergy;
-    const { isGraphRoute } = window.GraphRoute;
+    const { isLegacyRoute } = window.GraphRoute;
+    const Intro = window.Intro;
 
     const STORAGE_KEY = 'bestiary-draft-v1';
     const FORMAT_INFO = {
@@ -122,6 +123,7 @@
             render();
             setTab(shared || hash === '#draft' ? 'draft' : 'graph', { focus: false });
             if (shared) openSharedLink(hash);
+            setupIntro(hash);
             window.addEventListener('hashchange', () => {
                 const link = location.hash;
                 if (!isDraftLink(link)) return;
@@ -130,7 +132,7 @@
             });
             // Back / forward onto a graph selection shows the graph (script.js applies the selection)
             window.addEventListener('popstate', () => {
-                if (ui.tab === 'draft' && (!location.hash || isGraphRoute(location.hash))) setTab('graph', { focus: false });
+                if (ui.tab === 'draft' && (!location.hash || isLegacyRoute(location.hash))) setTab('graph', { focus: false });
             });
             document.addEventListener('bestiary:selection', event => {
                 ui.graphHero = event.detail.hero;
@@ -169,12 +171,12 @@
         const { state: shared, error } = decodeDraft(hash, ctx.heroes);
         const problem = error || (Draft.isComplete(shared) ? null : 'This shared draft is not finished yet.');
         if (problem) {
-            history.replaceState(history.state, '', '#draft');
+            history.replaceState(history.state, '', `${location.pathname}#draft`);
             toast(`Could not open the shared draft: ${problem}`);
             return;
         }
         ui.shared = { state: shared, code: hash.replace(/^#/, '') };
-        history.replaceState(history.state, '', `#${ui.shared.code}`);
+        history.replaceState(history.state, '', `${location.pathname}#${ui.shared.code}`);
         openCards();
     }
 
@@ -192,11 +194,12 @@
         const skip = document.querySelector('.skip-link'); // points at the visible view
         skip.href = tab === 'graph' ? '#graph' : '#bandHeading';
         skip.textContent = tab === 'graph' ? 'Skip to network graph' : 'Skip to your band';
-        const draftHash = ui.shared ? `#${ui.shared.code}` : '#draft';
+        // The Draft tab's address drops the graph's ?hero= selection (the graph tab writes it back)
+        const draftHash = `${location.pathname}${ui.shared ? `#${ui.shared.code}` : '#draft'}`;
         // The graph tab shows its selection's link (before the graph has loaded: the link it was opened with)
         const graph = window.BestiaryGraph;
         const graphUrl = graph?.ready ? graph.routeUrl()
-            : isGraphRoute(location.hash) ? location.hash : location.pathname + location.search;
+            : isLegacyRoute(location.hash) ? location.hash : location.pathname + location.search;
         history.replaceState(history.state, '', tab === 'draft' ? draftHash : graphUrl);
         if (tab === 'graph') window.BestiaryGraph?.refit();
         if (focus) $(tab === 'graph' ? 'tabGraph' : 'tabDraft').focus();
@@ -215,6 +218,25 @@
             window.BestiaryGraph?.clearBand();
             setTab('draft');
         });
+    }
+
+    // ---- First-visit intro -----------------------------------------------------------------
+
+    function setupIntro(hash) {
+        const dialog = $('introDialog');
+        const storage = (() => { try { return window.localStorage; } catch (error) { return null; } })();
+        $('introOpen').addEventListener('click', () => dialog.showModal());
+        dialog.addEventListener('close', () => Intro.markIntroSeen(storage));
+        dialog.addEventListener('click', event => {
+            const tab = event.target.closest('[data-intro-tab]')?.dataset.introTab;
+            const r = dialog.getBoundingClientRect();
+            const outside = event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom;
+            if (event.target === dialog && outside) dialog.close(); // backdrop click
+            if (!tab) return;
+            dialog.close();
+            setTab(tab);
+        });
+        if (Intro.shouldShowIntro({ seen: Intro.introSeen(storage), hash, search: location.search })) dialog.showModal();
     }
 
     // ---- Static controls -----------------------------------------------------------------
@@ -1384,7 +1406,7 @@
     }
 
     function shareUrl(s) {
-        return `${location.href.split('#')[0]}#${encodeDraft(s, ctx.heroes)}`;
+        return `${location.origin}${location.pathname}#${encodeDraft(s, ctx.heroes)}`;
     }
 
     function setupCards() {
@@ -1428,7 +1450,7 @@
             ui.cardHero = null;
             if (!ui.shared) return;
             ui.shared = null;
-            if (ui.tab === 'draft') history.replaceState(history.state, '', '#draft');
+            if (ui.tab === 'draft') history.replaceState(history.state, '', `${location.pathname}#draft`);
         });
     }
 

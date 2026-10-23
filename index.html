@@ -3,66 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bestiary of Sigillum - Interactive Hero Network Visualization | Character Database</title>
-    <meta name="description" content="Explore the complete Bestiary of Sigillum character database with an interactive network visualization. Discover heroes, their abilities, labels, and connections in this comprehensive guide to the fantasy game.">
-    <meta name="keywords" content="Bestiary of Sigillum, heroes, characters, network visualization, fantasy game, Intaglyph, character database, abilities, interactive guide">
+    <title>Bestiary of Sigillum Companion – Draft Assistant &amp; Hero Synergies</title>
+    <meta name="description" content="Free fan companion for the Bestiary of Sigillum board game: draft a band with explained picks and bans, explore hero synergies and counters, read every card.">
     <meta name="author" content="nraw">
-    <meta name="robots" content="index, follow">
-    
-    <!-- Open Graph / Facebook -->
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="theme-color" content="#0E0B09">
+    <meta name="color-scheme" content="dark">
+    <link rel="canonical" href="https://bos.nraw.eu/">
+
+    <!-- Icons: the header sigil (scripts/build_site_images.py); relative, the site lives under a sub-path -->
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="icons/icon-32.png" type="image/png" sizes="32x32">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="manifest" href="site.webmanifest">
+
+    <!-- Open Graph (Facebook, Discord, Slack, WhatsApp …) -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="">
-    <meta property="og:title" content="Bestiary of Sigillum - Interactive Hero Network Visualization">
-    <meta property="og:description" content="Explore the complete Bestiary of Sigillum character database with an interactive network visualization. Discover heroes, their abilities, and connections.">
-    <meta property="og:image" content="">
-    <meta property="og:site_name" content="Bestiary of Sigillum Network">
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="">
-    <meta property="twitter:title" content="Bestiary of Sigillum - Interactive Hero Network Visualization">
-    <meta property="twitter:description" content="Explore the complete Bestiary of Sigillum character database with an interactive network visualization.">
-    <meta property="twitter:image" content="">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    
-    <!-- Canonical URL -->
-    <link rel="canonical" href="">
-    
+    <meta property="og:url" content="https://bos.nraw.eu/">
+    <meta property="og:site_name" content="Bestiary of Sigillum Companion">
+    <meta property="og:title" content="Bestiary of Sigillum Companion – Draft Assistant &amp; Hero Synergies">
+    <meta property="og:description" content="Draft a band with explained picks and bans, see how every hero combines and counters, and read the reference cards. Unofficial, free fan tool.">
+    <meta property="og:image" content="https://bos.nraw.eu/icons/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Bestiary of Sigillum Companion: draft assistant, hero synergy graph and reference cards">
+    <meta property="og:locale" content="en_GB">
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Bestiary of Sigillum Companion – Draft Assistant &amp; Hero Synergies">
+    <meta name="twitter:description" content="Draft a band with explained picks and bans, see how every hero combines and counters, and read the reference cards.">
+    <meta name="twitter:image" content="https://bos.nraw.eu/icons/og-image.png">
+    <meta name="twitter:image:alt" content="Bestiary of Sigillum Companion: draft assistant, hero synergy graph and reference cards">
+
     <!-- Schema.org structured data -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
         "@type": "WebApplication",
-        "name": "Bestiary of Sigillum Network Visualization",
-        "description": "Interactive network visualization of characters from the Bestiary of Sigillum fantasy game",
-        "url": "",
-        "applicationCategory": "VisualizationApplication",
-        "operatingSystem": "Web Browser",
-        "author": {
-            "@type": "Person",
-            "name": "nraw"
-        },
+        "name": "Bestiary of Sigillum Companion",
+        "alternateName": ["Bestiary of Sigillum Draft Assistant", "Bestiary of Sigillum Hero Network"],
+        "description": "Free fan companion for the Bestiary of Sigillum board game: draft a band with explained picks and bans, explore hero synergies and counters, read every card.",
+        "url": "https://bos.nraw.eu/",
+        "image": "https://bos.nraw.eu/icons/og-image.png",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Any (web browser)",
+        "inLanguage": "en",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "author": { "@type": "Person", "name": "nraw", "url": "https://github.com/nraw" },
         "about": {
             "@type": "Game",
             "name": "Bestiary of Sigillum",
-            "publisher": {
-                "@type": "Organization",
-                "name": "Intaglyph",
-                "url": "https://www.intaglyph.ru"
-            }
+            "publisher": { "@type": "Organization", "name": "Intaglyph", "url": "https://www.intaglyph.ru" }
         },
         "featureList": [
-            "Interactive character network visualization",
-            "Search and filter heroes by name or abilities",
-            "View character details and abilities",
-            "Filter by character types and labels",
-            "Mobile-responsive design"
+            "Draft assistant: build a band of three or run a two-player ban / pick draft with explained suggestions",
+            "Band scoring with synergies, conflicts and counters against the opponent",
+            "Interactive hero synergy graph of traits, conditions and terrain",
+            "Search heroes by name, #id, trait, role or attribute",
+            "Reference cards for every hero, shareable draft links",
+            "Works on phones, tablets and desktop"
         ]
     }
     </script>
-    
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap">
     <link rel="stylesheet" href="styles.css">
     
     <!-- Google Analytics -->
@@ -88,6 +96,51 @@
             </linearGradient>
         </defs>
     </svg>
+    <!-- Without JavaScript (and for crawlers): what the site is, and a plain link to every hero's address -->
+    <noscript>
+        <section class="noscript panel">
+            <h2>Bestiary of Sigillum Companion</h2>
+            <p>The draft assistant and the hero synergy graph need JavaScript. The heroes:</p>
+            <ul class="noscript-heroes">
+                <li><a href="?hero=aqus">Aqus</a></li>
+                <li><a href="?hero=arborus">Arborus</a></li>
+                <li><a href="?hero=architectus">Architectus</a></li>
+                <li><a href="?hero=armus">Armus</a></li>
+                <li><a href="?hero=ballistarius">Ballistarius</a></li>
+                <li><a href="?hero=brewus">Brewus</a></li>
+                <li><a href="?hero=caballus">Caballus</a></li>
+                <li><a href="?hero=carnifex">Carnifex</a></li>
+                <li><a href="?hero=catapultus">Catapultus</a></li>
+                <li><a href="?hero=cerberus">Cerberus</a></li>
+                <li><a href="?hero=clamoris">Clamoris</a></li>
+                <li><a href="?hero=cornibus">Cornibus</a></li>
+                <li><a href="?hero=equita">Equita</a></li>
+                <li><a href="?hero=eresida">Eresida</a></li>
+                <li><a href="?hero=ferrarius">Ferrarius</a></li>
+                <li><a href="?hero=fidea">Fidea</a></li>
+                <li><a href="?hero=frigus">Frigus</a></li>
+                <li><a href="?hero=goetium">Goetium</a></li>
+                <li><a href="?hero=ignifer">Ignifer</a></li>
+                <li><a href="?hero=illesebra">Illesebra</a></li>
+                <li><a href="?hero=iratus">Iratus</a></li>
+                <li><a href="?hero=librorum">Librorum</a></li>
+                <li><a href="?hero=lignum">Lignum</a></li>
+                <li><a href="?hero=magnus">Magnus</a></li>
+                <li><a href="?hero=malleus">Malleus</a></li>
+                <li><a href="?hero=manus">Manus</a></li>
+                <li><a href="?hero=mechanicus">Mechanicus</a></li>
+                <li><a href="?hero=messum">Messum</a></li>
+                <li><a href="?hero=mortum">Mortum</a></li>
+                <li><a href="?hero=redux">Redux</a></li>
+                <li><a href="?hero=saturn">Saturn</a></li>
+                <li><a href="?hero=saxum">Saxum</a></li>
+                <li><a href="?hero=tempus">Tempus</a></li>
+                <li><a href="?hero=tenebris">Tenebris</a></li>
+                <li><a href="?hero=toxicum">Toxicum</a></li>
+                <li><a href="?hero=vinctum">Vinctum</a></li>
+            </ul>
+        </section>
+    </noscript>
     <a class="skip-link" href="#graph">Skip to network graph</a>
 
     <header class="header">
@@ -97,7 +150,7 @@
         </svg>
         <div class="header-titles">
             <h1 class="title">Bestiary of Sigillum</h1>
-            <p class="subtitle">Interactive Hero Network Visualization</p>
+            <p class="subtitle">Companion · Draft Assistant &amp; Hero Synergies</p>
         </div>
         <nav class="tabs" role="tablist" aria-label="Views">
             <button class="tab" role="tab" type="button" id="tabGraph" aria-controls="graphView" aria-selected="true">Graph</button>
@@ -336,6 +389,43 @@
     <!-- Shared by both tabs -->
     <div class="toast" id="draftToast" role="status" hidden></div>
 
+    <!-- Bottom-left corner: reopens the intro -->
+    <button class="icon-btn help-btn" type="button" id="introOpen" aria-label="What is this?" title="What is this?" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.9"/><path d="M12 17.2v.1"/></svg>
+    </button>
+
+    <!-- First visit (intro.js decides when): what the two tabs are for; reopened from the ? in the bottom-left corner -->
+    <dialog class="intro-dialog" id="introDialog" aria-labelledby="introTitle" aria-describedby="introLead">
+        <form method="dialog" class="intro-close"><button class="icon-btn" value="close" aria-label="Close">✕</button></form>
+        <svg class="intro-sigil" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17"/><path d="M20 3 L24 20 L20 37 L16 20 Z M3 20 L20 16 L37 20 L20 24 Z"/></svg>
+        <h2 class="intro-title" id="introTitle">Bestiary of Sigillum Companion</h2>
+        <p class="intro-lead" id="introLead">An unofficial companion for picking your heroes: see who works well together, who counters whom, and why.</p>
+        <div class="intro-steps">
+            <section class="intro-step">
+                <h3><span class="intro-num" aria-hidden="true">I</span>Graph</h3>
+                <ul>
+                    <li>Every hero, linked to the traits on their card</li>
+                    <li>Pick a hero or trait to see what it connects to</li>
+                    <li>Turn on <strong>Synergies</strong> for hero-to-hero lines: partners, clashes, counters</li>
+                    <li>Hover a line for the abilities behind it</li>
+                </ul>
+            </section>
+            <section class="intro-step">
+                <h3><span class="intro-num" aria-hidden="true">II</span>Draft</h3>
+                <ul>
+                    <li>Build a band of three, or draft against a friend</li>
+                    <li>Every suggestion scored and explained</li>
+                    <li>Finish with reference cards and a share link</li>
+                </ul>
+            </section>
+        </div>
+        <p class="intro-tip">Tip: press <kbd>/</kbd> to search. Reopen this from the <strong>?</strong> in the bottom-left corner.</p>
+        <div class="intro-actions tabs" role="group" aria-label="Open a tab">
+            <button class="tab" type="button" data-intro-tab="graph">Graph</button>
+            <button class="tab" type="button" data-intro-tab="draft">Draft</button>
+        </div>
+    </dialog>
+
     <!-- Reference cards for a finished draft (or a shared link): the cards of one side at a time -->
     <dialog class="cards-dialog" id="cardsDialog" aria-labelledby="cardsTitle">
         <header class="cards-head">
@@ -398,6 +488,7 @@
     <script src="draft-view.js"></script>
     <script src="draft-share.js"></script>
     <script src="script.js"></script>
+    <script src="intro.js"></script>
     <script src="draft-ui.js"></script>
 </body>
 </html>

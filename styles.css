@@ -1,5 +1,4 @@
-/* Import medieval-inspired fonts */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+/* Fonts (Cinzel, Crimson Text) are linked from the page head, preconnected */
 
 /* Palette: gold is reserved for emphasis (selection, primary actions);
    everything else sits on warm neutrals so the graph highlight reads first */
@@ -1316,14 +1315,19 @@ kbd {
 .tab + .tab { border-left: 1px solid var(--border-strong); }
 .tab:hover { color: var(--gold-bright); }
 .tab[aria-selected="true"] { color: var(--gold-bright); }
-.tab[aria-selected="true"]::after {
+/* Gold underline: drawn out from the centre on hover / focus, held on the open tab */
+.tab::after {
     content: '';
     position: absolute;
     left: 14px; right: 14px; bottom: 0;
     height: 2px;
     background: var(--gold);
     box-shadow: 0 0 10px rgba(242, 199, 107, 0.5);
+    transform: scaleX(0);
+    transition: transform 0.2s;
 }
+.tab:hover::after, .tab:focus-visible::after, .tab[aria-selected="true"]::after { transform: scaleX(1); }
+@media (prefers-reduced-motion: reduce) { .tab::after { transition: none; } }
 
 /* ------------------------------------------------------------------ */
 /* Draft tab                                                          */
@@ -2148,7 +2152,7 @@ button.pop-sec-head:hover .pop-inspect { color: var(--gold-bright); }
     .tabs .tab { padding: 7px 8px; font-size: 0.8rem; }
     .tab + .tab { border-left: 1px solid var(--border-strong); }
     .tab[aria-selected="true"] { background: rgba(217, 168, 78, 0.16); }
-    .tab[aria-selected="true"]::after { display: none; }
+    .tabs .tab::after { display: none; }
     .draft-layout { min-height: 0; }
     .mode-btn { max-width: none; }
 }
@@ -2300,3 +2304,84 @@ button.pop-sec-head:hover .pop-inspect { color: var(--gold-bright); }
 .fate-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.1rem; color: var(--gold-bright); }
 .fate-roll.is-fated { box-shadow: 0 0 0 3px #FFB347, 0 0 44px rgba(255, 140, 40, 0.85), 0 16px 40px rgba(0, 0, 0, 0.7); }
 .cards-dialog.is-single.is-cards-only .card-track { width: min(460px, 100%); margin: 0 auto; }
+
+/* ---- First-visit intro ------------------------------------------------------------------ */
+.help-btn {
+    position: fixed;
+    left: 5px;
+    bottom: 5px;
+    z-index: 45;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    background: rgba(21, 17, 14, 0.92);
+    color: var(--text-muted);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+.help-btn:hover, .help-btn:focus-visible { color: var(--gold-bright); border-color: var(--gold); box-shadow: 0 0 12px rgba(242, 199, 107, 0.25); }
+
+.intro-dialog {
+    margin: auto;
+    width: min(640px, 94vw);
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 28px 32px 22px;
+    border-radius: 14px;
+    border: 1px solid var(--border-strong);
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(139, 30, 51, 0.32), transparent 65%),
+        var(--surface);
+    color: var(--text);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), inset 0 0 0 6px var(--surface), inset 0 0 0 7px var(--border);
+    text-align: center;
+}
+.intro-dialog::backdrop { background: rgba(0, 0, 0, 0.72); }
+.intro-dialog[open] { animation: intro-in 0.35s ease-out; }
+@keyframes intro-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+@media (prefers-reduced-motion: reduce) { .intro-dialog[open] { animation: none; } }
+
+.intro-close { position: absolute; top: 12px; right: 12px; }
+.intro-close .icon-btn { border: 1px solid var(--border-strong); border-radius: 8px; }
+.intro-sigil { width: 46px; height: 46px; fill: none; stroke: var(--gold); stroke-width: 1.2; filter: drop-shadow(0 0 8px rgba(255, 154, 74, 0.35)); }
+.intro-title { margin-top: 8px; font-family: 'Cinzel', serif; font-size: 1.55rem; letter-spacing: 0.04em; color: var(--gold-bright); }
+.intro-lead { max-width: 52ch; margin: 8px auto 0; color: var(--text-muted); font-size: 1.08rem; }
+.intro-steps { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 20px; text-align: left; }
+.intro-step { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.intro-step h3 { display: flex; align-items: center; gap: 8px; font-family: 'Cinzel', serif; font-size: 1rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
+.intro-step ul { list-style: none; margin-top: 8px; display: grid; gap: 4px; font-size: 0.98rem; line-height: 1.35; }
+.intro-step li { position: relative; padding-left: 18px; }
+.intro-step li::before { content: '✦'; position: absolute; left: 0; top: 0.1em; color: var(--gold); font-size: 0.75em; }
+.intro-num {
+    display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 4px;
+    border: 1px solid var(--gold); border-radius: 50%;
+    font-size: 0.72rem; letter-spacing: 0; color: var(--gold-bright); background: rgba(139, 30, 51, 0.45);
+}
+.intro-tip { margin-top: 16px; color: var(--text-faint); font-size: 0.95rem; }
+.intro-tip kbd { padding: 0 6px; border: 1px solid var(--border-strong); border-radius: 4px; font-family: inherit; color: var(--text); }
+/* The header's Graph | Draft tabs (same underline on hover), so the two read as the same switch */
+.intro-actions { justify-content: center; gap: 0; margin-top: 14px; }
+.intro-actions .tab { padding: 10px 28px; font-size: 1.02rem; }
+.intro-actions .tab::after { left: 24px; right: 24px; bottom: 2px; }
+
+@media (max-width: 600px) {
+    .help-btn { width: 28px; height: 28px; }
+    .intro-dialog { padding: 22px 16px 18px; }
+    .intro-sigil { width: 36px; height: 36px; }
+    .intro-title { font-size: 1.2rem; padding: 0 30px; }
+    .intro-lead { font-size: 0.98rem; }
+    .intro-steps { grid-template-columns: 1fr; gap: 8px; margin-top: 14px; }
+    .intro-step { padding: 9px 12px; }
+    .intro-step ul { font-size: 0.94rem; }
+    /* Phones: the header tabs are a segmented control, and so are these */
+    .intro-actions { display: grid; grid-template-columns: 1fr 1fr; }
+    .intro-actions .tab { padding: 10px 8px; }
+    .intro-actions .tab:hover, .intro-actions .tab:focus-visible { background: rgba(217, 168, 78, 0.16); }
+}
+
+/* No JavaScript: the hero page links instead of the app */
+.noscript { margin: 0 var(--gap) var(--gap); padding: 18px 22px; }
+.noscript h2 { font-family: 'Cinzel', serif; color: var(--gold-bright); }
+.noscript p { margin-top: 8px; color: var(--text-muted); }
+.noscript a { color: var(--gold); }
+.noscript-heroes { list-style: none; margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 16px; }

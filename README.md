@@ -1,6 +1,8 @@
-# Bestiary of Sigillum - Interactive Hero Network Visualization
+# Bestiary of Sigillum Companion
 
-An interactive network visualization of heroes and their connections from the Bestiary of Sigillum fantasy game. Explore character relationships, abilities, and labels through an intuitive graph interface.
+A free, unofficial companion for the Bestiary of Sigillum board game: a draft assistant with explained picks and bans, and an interactive graph of how the heroes combine and counter each other.
+
+**Live site: [bos.nraw.eu](https://bos.nraw.eu/)**
 
 ## About
 
@@ -10,6 +12,8 @@ This project visualizes the complete character database from the Bestiary of Sig
 
 ## Features
 
+- **Draft Assistant**: Build a band of three or follow a two-player ban / pick draft, with scored and explained suggestions
+- **Shareable Selections**: Every hero or trait you select has its own address (`?hero=aqus`, `?trait=stun`) with its own page title, so links and back / forward work
 - **Interactive Network Graph**: Pan, zoom, and explore character connections
 - **Smart Search**: Autocomplete with live filtering of the graph; search heroes by name or `#id`
 - **Category Filtering**: Trait chips (Melee, Ranged, …) and clickable trait groups in the legend
@@ -73,6 +77,12 @@ The visualization uses `bestiary_reference_cards.json` as the primary data sourc
 - Associated labels and categories
 
 Source: https://boardgamegeek.com/filepage/266575/bestiary-of-sigillum-reference-cards
+
+### Favicon and Share Images
+
+```bash
+python3 scripts/build_site_images.py   # favicon, icons, social share image
+```
 
 ### Updating Hero Images
 
