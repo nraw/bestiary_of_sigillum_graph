@@ -1,36 +1,32 @@
 // Run with: node --test tests/*.test.js
-// Analytics (analytics.js): the GA4 event catalogue, payload cleaning and the draft / hover / search helpers
+// Analytics (analytics.js): the PostHog event catalogue, payload cleaning and the draft / hover / search helpers
 const test = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
 const A = require('../analytics.js');
 const Draft = require('../draft.js');
 
-test('every event name is GA4-safe and every param is a registered dimension or metric', () => {
-    const registered = new Set([...A.DIMENSIONS, ...A.METRICS, ...A.BUILT_IN]);
-    for (const [name, params] of Object.entries(A.EVENTS)) {
+const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+const params = [...new Set(Object.values(A.EVENTS).flat())];
+
+test('event and param names are snake_case and never PostHog\'s reserved $ names', () => {
+    for (const [name, list] of Object.entries(A.EVENTS)) {
         assert.match(name, /^[a-z][a-z0-9_]{0,39}$/, name);
-        assert.ok(params.length <= 25, `${name} has too many params`);
-        params.forEach(p => assert.ok(registered.has(p), `${name}.${p} is not registered`));
+        list.forEach(p => assert.match(p, /^[a-z][a-z0-9_]*$/, `${name}.${p}`));
     }
 });
 
-test('registered dimensions and metrics fit the GA4 free limits and are all used', () => {
-    assert.ok(A.DIMENSIONS.length <= 50);
-    assert.ok(A.METRICS.length <= 50);
-    const used = new Set(Object.values(A.EVENTS).flat());
-    [...A.DIMENSIONS, ...A.METRICS].forEach(p => assert.ok(used.has(p), `${p} is registered but never sent`));
+test('the plan in docs lists every event param', () => {
+    const doc = read('docs/analytics-tracking-plan.md');
+    params.forEach(p => assert.ok(doc.includes(p), `${p} missing from docs/analytics-tracking-plan.md`));
 });
 
-test('the plan in docs lists every registered dimension', () => {
-    const doc = require('node:fs').readFileSync(require('node:path').join(__dirname, '../docs/analytics-tracking-plan.md'), 'utf8');
-    [...A.DIMENSIONS, ...A.METRICS].forEach(p => assert.ok(doc.includes(p), `${p} missing from docs/analytics-tracking-plan.md`));
-});
-
-test('payload drops empty values, stringifies booleans and trims long strings', () => {
+test('payload drops empty values and keeps booleans, numbers and long strings as they are', () => {
     const p = A.payload('node_select', { node_type: 'hero', node_name: 'x'.repeat(150), source: null });
     assert.deepStrictEqual(Object.keys(p), ['node_type', 'node_name']);
-    assert.strictEqual(p.node_name.length, 100);
-    assert.deepStrictEqual(A.payload('arc_click', { hero_a: 'a', hero_b: 'b', synergy_category: 'x', hero_selected: false }).hero_selected, 'false');
+    assert.strictEqual(p.node_name.length, 150);
+    assert.strictEqual(A.payload('arc_click', { hero_a: 'a', hero_b: 'b', synergy_category: 'x', hero_selected: false }).hero_selected, false);
     assert.strictEqual(A.payload('draft_pick', { pick_number: 2 }).pick_number, 2);
     assert.deepStrictEqual(A.payload('names_toggle', { state: '' }), {});
 });
@@ -193,7 +189,7 @@ test('completionKey identifies a band so a solo band re-completed the same way i
     assert.notStrictEqual(a, c);
 });
 
-test('slug turns a section heading into a GA-friendly value', () => {
+test('slug turns a section heading into a property-friendly value', () => {
     assert.strictEqual(A.slug('Card Traits 4'), 'card_traits');
     assert.strictEqual(A.slug('  Works well with  '), 'works_well_with');
     assert.strictEqual(A.slug(''), null);
@@ -202,18 +198,28 @@ test('slug turns a section heading into a GA-friendly value', () => {
 test('the page tracker is one shared instance, off outside the live site (Node has no location)', () => {
     assert.strictEqual(A.pageTracker(), A.pageTracker());
     let sent = 0;
-    globalThis.gtag = () => { sent++; };
+    globalThis.posthog = { capture: () => { sent++; } };
     A.pageTracker().track('names_toggle', { state: 'on' });
-    delete globalThis.gtag;
+    delete globalThis.posthog;
     assert.strictEqual(sent, 0);
 });
 
-test('trackingMode: GA on the live site, the console with ?analytics_debug, otherwise off', () => {
-    assert.strictEqual(A.trackingMode({ hostname: 'bos.nraw.eu', search: '' }), 'gtag');
+test('trackingMode: PostHog on the live site, the console with ?analytics_debug, otherwise off', () => {
+    assert.strictEqual(A.trackingMode({ hostname: 'bos.nraw.eu', search: '' }), 'posthog');
     assert.strictEqual(A.trackingMode({ hostname: 'localhost', search: '' }), 'off');
     assert.strictEqual(A.trackingMode({ hostname: 'localhost', search: '?analytics_debug' }), 'console');
     assert.strictEqual(A.trackingMode({ hostname: 'bos.nraw.eu', search: '?hero=saxum&analytics_debug=1' }), 'console');
     assert.strictEqual(A.trackingMode({}), 'off');
+});
+
+test('index.html loads PostHog (EU) on the live site only, and no Google Analytics', () => {
+    const html = read('index.html');
+    assert.doesNotMatch(html, /gtag|googletagmanager|G-GQ4HDYYETG/);
+    assert.match(html, /posthog\.init\('phc_[A-Za-z0-9]+'/);
+    assert.match(html, /api_host: 'https:\/\/eu\.i\.posthog\.com'/);
+    assert.match(html, /autocapture: false/);
+    assert.match(html, /localhost\|127/, 'PostHog is not started on a local server');
+    assert.ok(html.indexOf('posthog.init') < html.indexOf('<script src="analytics.js">'), 'PostHog loads before analytics.js');
 });
 
 // ---- P2 / P3 helpers -----------------------------------------------------------------------
@@ -269,11 +275,10 @@ test('the P2 / P3 events are in the catalogue', () => {
 });
 
 test('the plan\'s event tables (§3) and EVENTS list the same events', () => {
-    const doc = require('node:fs').readFileSync(require('node:path').join(__dirname, '../docs/analytics-tracking-plan.md'), 'utf8');
-    const catalogue = doc.slice(doc.indexOf('## 3. Event catalogue'), doc.indexOf('## 4. GA4 setup'));
+    const doc = read('docs/analytics-tracking-plan.md');
+    const catalogue = doc.slice(doc.indexOf('## 3. Event catalogue'), doc.indexOf('## 4. PostHog setup'));
     const documented = new Set(catalogue.split('\n').filter(l => l.startsWith('| `'))
         .flatMap(l => [...l.split('|')[1].replace(/\*\(.*?\)\*/g, '').matchAll(/`([a-z_]+)`/g)].map(m => m[1])));
-    documented.delete('click'); // outbound clicks: GA4 Enhanced Measurement, not analytics.js
     assert.deepStrictEqual([...documented].filter(e => !A.EVENTS[e]), [], 'documented but never sent');
     assert.deepStrictEqual(Object.keys(A.EVENTS).filter(e => !documented.has(e)), [], 'sent but not documented');
 });

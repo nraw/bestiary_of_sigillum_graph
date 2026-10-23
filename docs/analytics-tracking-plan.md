@@ -1,17 +1,18 @@
-# Analytics tracking plan (GA4)
+# Analytics tracking plan (PostHog)
 
 Goal: know what people click in the graph, which heroes they draft and which bands they finish, and which
 features get used at all (synergy lines, All names, legend filters, the links in the hero panel, …).
 
-Property: `G-GQ4HDYYETG` (gtag.js in `index.html`).
+Project: PostHog EU Cloud, project `317993` (https://eu.posthog.com/project/317993), loaded in `index.html`.
+Until October 2026 the events went to Google Analytics 4 (property `G-GQ4HDYYETG`); that data stays in GA.
 
-**Status:** every event in §3 is built (`analytics.js`, wired into `script.js` / `draft-ui.js`; see §5). The one
-exception is outbound clicks, which GA4's Enhanced Measurement records by itself. `analytics.js` `EVENTS` is the
-source of truth for what is sent. `tests/analytics.test.js` fails if the §3 tables and `EVENTS` list different
-events, or if a registered param is missing here. Param values and descriptions are kept up to date by hand.
+**Status:** every event in §3 is built (`analytics.js`, wired into `script.js` / `draft-ui.js`; see §5).
+`analytics.js` `EVENTS` is the source of truth for what is sent. `tests/analytics.test.js` fails if the §3 tables and
+`EVENTS` list different events, or if a param is missing here. Param values and descriptions are kept up to date by hand.
 §1 describes the tracking as it was before this work.
 
-To stay inside GA4's 50 custom dimensions, some events reuse a shared param instead of adding their own.
+Some events reuse a shared param instead of adding their own (a leftover of GA4's 50-dimension limit, kept so the
+property list stays short).
 `control` is "which button or option" within its event: popover and menu actions, `history_nav`'s back / forward,
 the zoom gesture, and `draft_side_change`'s `enemy_add` / `exclude_remove` / `carry_over_add` / …. Also:
 `surface` says where (`draft_random`'s pool / slot / against dice), `target_type` is the kind of pool suggestion
@@ -36,20 +37,19 @@ hover tooltips, the intro dialog, tab switches, history back/forward, share link
 
 Probably being sent without you knowing: with Enhanced Measurement's "page changes based on browser history
 events" switched on (the default), every graph selection (`history.pushState` to `?hero=…`) and every tab switch
-(`replaceState`) may send its own `page_view`. Check this in DebugView (§4.1).
+(`replaceState`) may send its own `page_view`.
 
 ## 2. Conventions
 
-- Event names: `snake_case`, object first then verb (`draft_pick`, `edge_click`), 40 characters max. Use GA4's
-  recommended names where one fits (`search`, `share`, `tutorial_begin`).
-- Parameters: stick to a fixed set (§3.3) so the custom-dimension list stays under GA4's free limit of 50
-  event-scoped dimensions. Values are capped at 100 characters, and an event can carry at most 25 parameters.
+- Event names: `snake_case`, object first then verb (`draft_pick`, `edge_click`), 40 characters max. Never start a
+  name with `$` (PostHog's own events and properties).
+- Parameters (PostHog event properties): `snake_case`, from the fixed set in the §3 tables. Booleans and numbers are
+  sent as they are, so insights can filter on `top_suggestion = true` or `pick_number = 1`.
 - **Bands are sent as one key: the hero names sorted alphabetically and joined with commas** (`AQUS,BREWUS,SAXUM`),
   so the same band always gives the same string no matter what order it was picked in. Names are as in the data
-  (upper case, e.g. `AQUS,BREWUS,SAXUM`). 36 heroes give at most 7,140
-  three-hero bands, which GA4 can report on without lumping rows into "(other)" as long as the date range is sensible.
-- GA4 can't split one event into several rows, so "how often is each hero in a finished band" gets **one event per
-  hero** (`draft_complete_hero`) in addition to the band event.
+  (upper case, e.g. `AQUS,BREWUS,SAXUM`). 36 heroes give at most 7,140 three-hero bands.
+- "How often is each hero in a finished band" gets **one event per hero** (`draft_complete_hero`) in addition to the
+  band event, so a plain trends breakdown by `hero` answers it without SQL.
 - Toggles always send `state: on|off`. Filters send `state: on|off` too, so turning a filter off can be counted
   separately from turning it on.
 - `method` says how something was triggered, e.g. `button | click | keyboard | drag | menu | picker | chip | tap |
@@ -186,7 +186,7 @@ each different band key in a page load. Stronger signs that the user meant it ar
 | `cards_open` | P1 | `openCards` | `source` (complete_button, band_slot, popover, menu, inspect, shared_link), `hero` (empty for the whole band) |
 | `cards_side_switch` | P3 | `#cardsSwitch` | `side` |
 | `cards_only` | P3 | `#cardsOnly` | |
-| `share` *(GA4 recommended)* | **P1, key event** | `#shareLink` | `method` (native, clipboard, fallback), `content_type: draft`, `format`, `band` |
+| `share` | **P1, key event** | `#shareLink` | `method` (native, clipboard, fallback), `content_type: draft`, `format`, `band` |
 | `shared_link_open` | P1 | `openSharedLink` | `result` (ok/error), `format`, `band`, `error` |
 
 ### 3.3 Whole site
@@ -194,117 +194,89 @@ each different band key in a page load. Stronger signs that the user meant it ar
 | Event | P | When | Parameters |
 |---|---|---|---|
 | `app_loaded` | P1 | keep as is | `entry` (direct, hero_link, trait_link, band_link, draft_tab, draft_share), `hero_count` |
-| `tutorial_begin` *(GA4 recommended)* | P2 | the intro dialog opens | `method` (auto_first_visit, help_button) |
+| `tutorial_begin` | P2 | the intro dialog opens | `method` (auto_first_visit, help_button) |
 | `intro_tab` | P3 | `[data-intro-tab]` in the intro | `tab` |
 | `tutorial_complete` | P2 | the intro closes | `open_sec` (how long it was open) |
-| `click` (outbound) | P2 | automatic with Enhanced Measurement (Steam guide, BGG, Intaglyph) | built in: `link_url`, `link_domain`, `outbound` |
 | `app_error` / `draft_load_error` | P2 | the graph's / the Draft tab's load failing (the catch blocks in `init`) | `error` |
 
-**Parameters to register** (`analytics.js` `DIMENSIONS` / `METRICS`; a test keeps this list in step with the code):
+## 4. PostHog setup
 
-- Custom dimensions (event-scoped, 43 of the 50 allowed): `entry, error, node_type, node_name, source, hero, trait,
-  edge_role, hero_a, hero_b, synergy_category, hero_selected, state, method, control, filter_type, filter_value,
-  surface, link_kind, from_node, target_type, target_name, panel_section, draft_action, tab, mode, format, player,
-  pool_sort, top_suggestion, filters_active, band, opponent_band, bans_mine, bans_theirs, score_label, side,
-  popover_mode, section, line_index, factor, content_type, result`
-- Custom metrics: `hero_count, result_count, pick_number, pool_rank, band_top_percent, roles_covered, duration_sec,
-  position, picks_made, open_sec`
-- `search_term` is built in.
+### 4.1 Project settings
 
-That leaves 7 free dimensions. If they run out, low-value ones (`line_index`, `from_node`) can go.
+Nothing has to be registered: PostHog shows every event and property as soon as it arrives.
 
-Custom dimensions only fill in **from the day they are registered** and never retroactively, so register them
-before the release goes out.
+1. **What `index.html` turns on:** `$pageview` for the landing page only (`capture_pageview: true`), so graph selections
+   and tab switches don't each count as a page view; `$pageleave`; and `person_profiles: 'identified_only'` (anonymous
+   events, the cheapest kind). **Autocapture is off**: `analytics.js` sends everything. Outbound links (Steam guide,
+   BGG, Intaglyph) are not tracked; GA4 used to record them by itself.
+2. **Session replay, heatmaps, surveys:** leave them off in Project settings unless you want them. Replay records
+   what visitors do on screen, which needs a mention in a privacy notice.
+3. **Check the events arrive:** open the live site, then **Activity** (Live events) in PostHog. Each action should
+   show once with its properties. To see the events without PostHog, open any page with `?analytics_debug`, e.g.
+   `http://localhost:8000/?analytics_debug`; each event is logged to the console as `[analytics] name {params}` and
+   nothing is sent. A local server sends nothing at all (`index.html` doesn't start PostHog there).
+4. **Key events:** PostHog has no key-event flag. Put `draft_complete` and `share` on the dashboard (§4.2) instead.
+5. **Retention:** the free plan keeps a year of data.
 
-## 4. GA4 setup
+### 4.2 Insights (one dashboard)
 
-### 4.1 Admin
+Make a dashboard ("Bestiary") and add each insight to it, so they all sit on one page (also in a phone browser).
 
-1. **Data retention → 14 months** (Admin › Data collection › Data retention). The default is 2 months, and
-   Explorations can't go back further than that.
-2. **Enhanced Measurement**
-   - Page views: on, but **turn off "page changes based on browser history events"**. Otherwise every
-     `?hero=` push and tab `replaceState` sends a `page_view`, which double-counts what `node_select` and
-     `tab_view` already record. The first page view still records landing pages such as `?hero=saxum` coming
-     from search engines.
-   - Outbound clicks: on. Scrolls: off (the app is one screen, so scroll depth means nothing). Site search: off
-     (there's no query parameter). Form interactions: **off** (the dialogs' `<form method="dialog">` close
-     buttons would fire `form_submit`). Video and file downloads: off.
-   - After changing these, open the live site with DebugView (Admin › DebugView, e.g. with the Google Analytics
-     Debugger extension) and check that each event arrives exactly once. To see the events without GA, open any
-     page with `?analytics_debug`, e.g. `http://localhost:8000/?analytics_debug`; each event is logged to the
-     console as `[analytics] name {params}` and nothing is sent.
-3. **Key events**: mark `draft_complete` and `share` (and optionally `cards_open`) as key events.
-4. **Internal traffic**: localhost is handled already, since `index.html` skips `gtag('config')` there and
-   `analytics.js` sends nothing. To leave out your visits to the live site too, add an internal-traffic rule for
-   your IP (Admin › Data streams › Configure tag settings › Define internal traffic) and activate the filter.
-5. **Custom definitions**: register the dimensions and metrics listed in §3.3.
-6. **BigQuery export** (Admin › Product links › BigQuery, free on the daily export): recommended for the band
-   analysis. GA4's interface struggles with "most common bands" or "who is picked with whom", but in SQL each is
-   a few lines (§4.3).
+- **Feature adoption** (Trends): one series per event (synergy toggle, `names_toggle`, `legend_filter`,
+  `panel_link_click`, `edge_tooltip_view`, …), measured as **Unique users**, shown as a table. Add a `$pageview`
+  unique-users series and a formula (`A / Z * 100`) for "x % of visitors used it". Break down by `state` to see how
+  many turn a toggle back off.
+- **Graph interest** (Trends, total count, table): `node_select` broken down by `node_type` then `node_name`;
+  `edge_click` by `hero` and `trait`; `arc_click` by `synergy_category`.
+- **Draft funnel** (Funnels): `tab_view` (filter `tab = draft`) → `draft_start` → `draft_complete` → `cards_open` →
+  `share`. Break down by `format` with the breakdown attribution set to the `draft_start` step (`tab_view` has no
+  `format`).
+- **Hero meta** (Trends, total count, table): `draft_pick`, `draft_ban` and `draft_complete_hero` (filter
+  `side = mine`) as three series, broken down by `hero`.
+- **Do the recommendations help?** `draft_pick` broken down by `top_suggestion`, and by `pool_rank` (numeric breakdowns
+  can be binned). A funnel `hero_popover_view` → `draft_complete` against `tab_view` → `draft_complete` compares
+  people who read the explanations with everyone.
+- **User paths** starting at `app_loaded` to see what people do first.
 
-### 4.2 Reports to build (Explore)
-
-- **Feature adoption** (Free form): rows = Event name, values = Total users. Divide by Active users over the same
-  range to get "x % of users touched the synergy toggle / All names / a legend filter / a panel link / an edge
-  tooltip". Add a `state` breakdown to see how many turn the toggle back off.
-- **Graph interest** (Free form): `node_select` by `node_type` × `node_name`; `edge_click` by `hero` × `trait`;
-  `arc_click` by `synergy_category`.
-- **Draft funnel** (Funnel exploration, open funnel):
-  `tab_view (tab=draft)` → `draft_start` → `draft_pick (pick_number=1)` → `draft_complete` → `cards_open` → `share`,
-  broken down by `format`.
-- **Hero meta**: `draft_complete_hero` by `hero` (how often each hero ends up in a band), next to `draft_pick` by
-  `hero` and `draft_ban` by `hero` (pick and ban rates). Filter `side=mine`.
-- **Do the recommendations help?** `draft_pick` by `top_suggestion` and `pool_rank`; `hero_popover_view` /
-  `analysis_inspect` users vs `draft_complete` users.
-- **Path exploration** from `app_loaded` to see what people do first.
-- A **Looker Studio** dashboard on the BigQuery export if you want a permanent view.
-
-### 4.3 BigQuery examples
+### 4.3 SQL (SQL insight)
 
 ```sql
 -- Most common finished bands (last 30 days)
-SELECT
-  (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'band')   AS band,
-  (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'format') AS format,
-  COUNT(*) AS drafts, COUNT(DISTINCT user_pseudo_id) AS users
-FROM `PROJECT.analytics_XXXX.events_*`
-WHERE event_name = 'draft_complete'
-  AND _TABLE_SUFFIX >= FORMAT_DATE('%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY))
-GROUP BY band, format ORDER BY drafts DESC LIMIT 50;
+SELECT properties.band AS band, properties.format AS format,
+       count() AS drafts, count(DISTINCT distinct_id) AS users
+FROM events
+WHERE event = 'draft_complete' AND timestamp > now() - INTERVAL 30 DAY
+GROUP BY band, format ORDER BY drafts DESC LIMIT 50
 
 -- Hero pairs that end up in the same band
-WITH b AS (
-  SELECT SPLIT((SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'band'), ',') AS heroes
-  FROM `PROJECT.analytics_XXXX.events_*` WHERE event_name = 'draft_complete')
-SELECT x AS hero_a, y AS hero_b, COUNT(*) AS bands
-FROM b, UNNEST(heroes) x, UNNEST(heroes) y WHERE x < y
-GROUP BY 1, 2 ORDER BY bands DESC;
+SELECT tupleElement(pair, 1) AS hero_a, tupleElement(pair, 2) AS hero_b, count() AS bands
+FROM (
+    SELECT arrayJoin(arrayFlatten(arrayMap(x -> arrayMap(y -> (x, y), h), h))) AS pair
+    FROM (SELECT splitByChar(',', toString(properties.band)) AS h FROM events WHERE event = 'draft_complete')
+)
+WHERE hero_a < hero_b
+GROUP BY hero_a, hero_b ORDER BY bands DESC
 ```
 
 ## 5. Implementation (as built)
 
 1. **`analytics.js`**: pure and unit-tested (`tests/analytics.test.js`), loaded before `script.js`.
-   - `EVENTS` (event → allowed params), `DIMENSIONS` / `METRICS` (what to register in GA4). `payload` refuses
-     unknown events and params, drops empty values, turns booleans into `'true'` / `'false'` and caps strings at 100
-     characters. `createTracker` reports a bad call to the console instead of breaking the UI.
-   - `pageTracker()` is the one tracker both tabs share. `trackingMode` sends to gtag on the live site, logs to
-     the console with `?analytics_debug`, and is off on localhost.
+   - `EVENTS` (event → allowed params). `payload` refuses unknown events and params and drops empty values.
+     `createTracker` reports a bad call to the console instead of breaking the UI.
+   - `pageTracker()` is the one tracker both tabs share. `trackingMode` sends to `posthog.capture` on the live site,
+     logs to the console with `?analytics_debug`, and is off on localhost.
    - Helpers: `bandKey` (sorted and comma-joined), `once(key)` (first time per page load), `createDelay` (700 ms
      tooltip / popover dwell), `createSettledSearch` (a term is sent 1 s after typing stops or on blur, never
      twice in a row), `entryOf` (how the visit started).
    - `draftEvents(before, after, extra)` turns one user action into `draft_start` / `draft_pick` / `draft_ban`, and
      nothing for undo, reset or a new format. `completionEvents` / `completionKey` give the finished band plus one
      event per hero, sent once per band per page load.
-   - Tests check names (snake_case, ≤ 40 characters), ≤ 25 params, that every param is registered and every
-     registered param is used, and that this document lists them all.
+   - Tests check names (snake_case, ≤ 40 characters, no `$`) and that this document lists every event and param.
 2. **`script.js`**: graph events at their handlers. `method` comes through `runAction` / `toggleSynergies` /
    `clearAll`, and `applyRoute` passes `link` (opened with the page) or `history` (back / forward) as the source.
 3. **`draft-ui.js`**: `primaryAction(name, { method })` and `fillBand` compare the state before and after the action
    (`trackDraft`), so a pick is tracked the same way whatever started it. `setTab(tab, { via })`,
    `openCards({ source })` and the popover dwell were added.
-4. **`index.html`**: loads `analytics.js` and skips `gtag('config')` on localhost.
+4. **`index.html`**: the PostHog loader, `posthog.init` (skipped on localhost), then `analytics.js`.
 5. P2 / P3 helpers: `draftChanges(before, after, { method })` (in `attempt` and `setCarryOver`) turns side changes,
    removals and reorders into events, `navDirection` gives back / forward, and `gestureOf` names a d3-zoom gesture.
-6. Before deploying: register the dimensions and metrics above (the three new metrics are `position`, `picks_made`
-   and `open_sec`), set retention to 14 months, mark the key events and turn off history-based page views (§4.1).

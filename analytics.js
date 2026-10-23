@@ -1,9 +1,8 @@
-// Google Analytics 4 events (no DOM): the event catalogue, payload cleaning and the helpers behind
+// PostHog events (no DOM): the event catalogue, payload cleaning and the helpers behind
 // hover dwell, settled search and draft pick / completion events. Plan: docs/analytics-tracking-plan.md.
 // Loaded in the browser as window.Analytics and in Node via require().
 (function (root) {
-    // Every event and the params it may carry. Params must be registered in GA4 (Admin › Custom definitions)
-    // before they show up in reports: DIMENSIONS as event-scoped dimensions, METRICS as custom metrics.
+    // Every event and the params (PostHog event properties) it may carry
     const EVENTS = {
         app_loaded: ['entry', 'hero_count'],
         app_error: ['error'],
@@ -80,18 +79,7 @@
         tutorial_complete: ['open_sec']
     };
 
-    const DIMENSIONS = ['entry', 'error', 'node_type', 'node_name', 'source', 'hero', 'trait', 'edge_role', 'hero_a', 'hero_b',
-        'synergy_category', 'hero_selected', 'state', 'method', 'control', 'filter_type', 'filter_value', 'surface',
-        'link_kind', 'from_node', 'target_type', 'target_name', 'panel_section', 'draft_action', 'tab', 'mode', 'format',
-        'player', 'pool_sort', 'top_suggestion', 'filters_active', 'band', 'opponent_band', 'bans_mine', 'bans_theirs',
-        'score_label', 'side', 'popover_mode', 'section', 'line_index', 'factor', 'content_type', 'result'];
-    const METRICS = ['hero_count', 'result_count', 'pick_number', 'pool_rank', 'band_top_percent', 'roles_covered', 'duration_sec',
-        'position', 'picks_made', 'open_sec'];
-    const BUILT_IN = ['search_term'];
-
-    const MAX_VALUE = 100; // GA4 truncates longer event param values
-
-    // The params GA4 receives: empty values dropped, booleans as 'true' / 'false', strings capped
+    // The properties PostHog receives: empty values dropped, everything else as it is
     function payload(name, params = {}) {
         const allowed = EVENTS[name];
         if (!allowed) throw new Error(`Unknown analytics event: ${name}`);
@@ -99,14 +87,12 @@
         for (const [key, value] of Object.entries(params)) {
             if (!allowed.includes(key)) throw new Error(`${key} is not a param of ${name}`);
             if (value === null || value === undefined || value === '') continue;
-            out[key] = typeof value === 'boolean' ? String(value)
-                : typeof value === 'number' ? value
-                : String(value).slice(0, MAX_VALUE);
+            out[key] = value;
         }
         return out;
     }
 
-    // `send(name, params)` is gtag in the browser. A mistake in a tracking call is reported, never thrown at the UI.
+    // `send(name, params)` is posthog.capture in the browser. A mistake in a tracking call is reported, never thrown at the UI.
     function createTracker({ send, enabled = true, onError = () => {} }) {
         const seen = new Set();
         return {
@@ -227,7 +213,7 @@
         return `${state.format}|${bandKey(mine)}|${bandKey(theirs)}`;
     }
 
-    // A finished draft: the band event, then one event per hero (GA4 can't split a list into rows)
+    // A finished draft: the band event, then one event per hero (a row per hero without splitting the band key)
     function completionEvents(state, { bands, bans = { 1: [], 2: [] }, topPercent, scoreLabel, rolesCovered, durationSec }) {
         const { me, mine, theirs } = sides(state, bands);
         const format = state.format;
@@ -244,15 +230,15 @@
 
     // ?analytics_debug logs the events to the console instead of sending them (to check them on any server)
     const trackingMode = ({ hostname, search = '' }) => (/[?&]analytics_debug\b/.test(search) ? 'console'
-        : shouldTrack(hostname) ? 'gtag' : 'off');
+        : shouldTrack(hostname) ? 'posthog' : 'off');
 
-    // The page's tracker, shared by both tabs: events go to gtag (index.html) on the live site only
+    // The page's tracker, shared by both tabs: events go to PostHog (index.html) on the live site only
     let page = null;
     function pageTracker() {
         const mode = trackingMode(root.location || {});
         page = page || createTracker({
             send: mode === 'console' ? (name, params) => console.info('[analytics]', name, JSON.stringify(params))
-                : (name, params) => { if (typeof root.gtag === 'function') root.gtag('event', name, params); },
+                : (name, params) => { if (root.posthog && typeof root.posthog.capture === 'function') root.posthog.capture(name, params); },
             enabled: mode !== 'off',
             onError: error => console.warn('Analytics:', error.message)
         });
@@ -300,7 +286,7 @@
 
     const api = {
         draftChanges, navDirection, gestureOf,
-        EVENTS, DIMENSIONS, METRICS, BUILT_IN, payload, createTracker, pageTracker, trackingMode, shouldTrack, bandKey, slug, entryOf,
+        EVENTS, payload, createTracker, pageTracker, trackingMode, shouldTrack, bandKey, slug, entryOf,
         createDelay, createSettledSearch, draftEvents, completionKey, completionEvents
     };
 

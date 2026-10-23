@@ -104,7 +104,7 @@ function symbolPath(name, size) {
     return d3.symbol().type(SYMBOLS[name]).size(size)();
 }
 
-// Google Analytics events (analytics.js, plan: docs/analytics-tracking-plan.md)
+// PostHog events (analytics.js, plan: docs/analytics-tracking-plan.md)
 const analytics = window.Analytics.pageTracker();
 const track = analytics.track;
 const ENTRY = window.Analytics.entryOf({ search: location.search, hash: location.hash }); // before routing rewrites it

@@ -54,7 +54,7 @@
     };
 
     const $ = id => document.getElementById(id);
-    // Google Analytics events (analytics.js, plan: docs/analytics-tracking-plan.md)
+    // PostHog events (analytics.js, plan: docs/analytics-tracking-plan.md)
     const analytics = window.Analytics.pageTracker();
     const track = analytics.track;
     const popoverDelay = window.Analytics.createDelay({ wait: 700 });
