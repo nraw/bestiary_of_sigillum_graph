@@ -23,3 +23,8 @@ test('Band Analysis: the player switch on its own full row, then View band in gr
     assert.match(css, /#focusSwitch button \{[^}]*flex: 1;[^}]*\}/, 'its halves share the width');
     ['balanceHeading', 'scoreHeading', 'analysisSections'].forEach(id => assert.ok(at(id) < at('beatsBlock'), id));
 });
+
+test('the format picker (standard / ban phase first / interleaved) is not hidden in the markup: nothing un-hides it', () => {
+    assert.match(html, /<div class="setup" id="twoPlayerSetup">/);
+    assert.doesNotMatch(read('draft-ui.js'), /twoPlayerSetup'\)\.hidden/, 'draft-ui.js never hides it either');
+});
