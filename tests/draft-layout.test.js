@@ -35,8 +35,9 @@ const rule = selector => {
     return m[2];
 };
 
-test('empty band slots have one height for both players, before and after the first selection', () => {
-    assert.match(rule('.slot.is-empty'), /min-height: \d+px;/);
+test('empty band slots are full hero-card size for both players, before and after the first selection', () => {
+    assert.match(rule('.slot'), /min-height: 196px;/);
+    assert.doesNotMatch(rule('.slot.is-empty'), /min-height/, 'empty slots keep the hero-card height');
     assert.doesNotMatch(css, /\.is-started \.slot\.is-empty|\.is-p2 \.slot\.is-empty|#againstRow\.slots \.slot\.is-empty/,
         'no state- or player-specific slot heights');
 });
