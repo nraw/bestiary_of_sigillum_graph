@@ -1546,14 +1546,15 @@ kbd {
 /* Two-player setup and sequence tracker */
 .setup { display: flex; flex-wrap: wrap; gap: 14px; }
 .setup-summary { color: var(--text-muted); font-style: italic; }
-.setup-group { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+.setup-group { flex: 1 1 100%; border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px 10px; display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
 .setup-group legend { padding: 0 6px; font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bronze); }
-.radio-card, .radio-pill { display: inline-flex; align-items: flex-start; gap: 8px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; }
+.radio-card, .radio-pill { display: flex; align-items: flex-start; gap: 8px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; }
 .radio-card span { display: flex; flex-direction: column; }
 .radio-card small { color: var(--text-muted); font-size: 0.85rem; }
 .radio-card:has(input:checked), .radio-pill:has(input:checked) { border-color: var(--gold); background: rgba(217, 168, 78, 0.08); }
 .radio-card input, .radio-pill input { accent-color: var(--gold); margin-top: 4px; }
-.sequence { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; }
+.sequence { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; list-style: none; }
 .seq-step {
     display: flex;
     flex-direction: column;
@@ -1574,8 +1575,8 @@ kbd {
 .seq--extra .seq-action { color: var(--text-muted); }
 .seq-remove { margin-left: 2px; padding: 0 2px; border: none; background: none; color: var(--text-muted); font-size: 0.75rem; }
 .seq-remove:hover { color: var(--gold-bright); }
-.seq-add-item { display: flex; align-items: center; }
-.seq-add { padding: 4px 10px; border-radius: 8px; border: 1px dashed var(--border-strong); background: none; color: var(--gold); font-family: 'Cinzel', serif; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; }
+.seq-add-item { flex: none; display: flex; align-items: center; }
+.seq-add { white-space: nowrap; padding: 4px 10px; border-radius: 8px; border: 1px dashed var(--border-strong); background: none; color: var(--gold); font-family: 'Cinzel', serif; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; }
 .seq-add:hover { border-color: var(--gold); color: var(--gold-bright); }
 .seq--done { opacity: 0.6; }
 .seq--current { border-color: var(--gold); box-shadow: 0 0 12px rgba(242, 199, 107, 0.3); opacity: 1; }
@@ -1614,6 +1615,7 @@ kbd {
     box-shadow: inset 0 0 30px rgba(110, 72, 30, 0.35), 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 .slot.is-empty {
+    min-height: 132px;
     justify-content: center;
     background: none;
     border: 1px dashed var(--border-strong);
@@ -1632,6 +1634,7 @@ kbd {
 .slot-fate { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; background: none; border: none;
     color: var(--text-muted); font-family: 'Crimson Text', serif; font-style: italic; font-size: 0.92rem; }
 .slot-fate .ico { color: var(--gold); }
+.slot-fate.is-placeholder { visibility: hidden; }
 .slot-fate:hover { color: var(--gold-bright); text-shadow: 0 0 10px rgba(242, 199, 107, 0.45); }
 .slot.is-arrived { animation: slot-arrive 0.9s ease-out; }
 @keyframes slot-arrive {
@@ -1982,11 +1985,9 @@ button.pop-sec-head:hover .pop-inspect { color: var(--gold-bright); }
 .draft-bar { display: none; }
 .filters-toggle { display: none; }
 
-/* Desktop: one compact row for the draft order; slimmer empty slots in two-player mode */
+/* Desktop: one compact row for the draft order */
 .sequence { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
 .seq-step { flex: none; min-width: 56px; padding: 3px 6px; }
-#againstRow.slots .slot.is-empty, .draft-section.is-p2 .slot.is-empty,
-.draft-main.is-started .slot.is-empty { min-height: 120px; }
 
 
 @media (max-width: 900px) {

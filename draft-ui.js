@@ -1010,7 +1010,8 @@
                 <button class="slot-add" type="button" data-act="choose" ${choosable ? '' : 'disabled'}>
                     <span class="slot-plus" aria-hidden="true">+</span>Choose ${['1st', '2nd', '3rd'][slot.index]} hero</button>
                 ${choosable && fate ? `<button class="slot-fate" type="button" data-act="random"
-                    title="A random hero from those shown in the pool">${icon('Dice')}or let fate decide</button>` : ''}
+                    title="A random hero from those shown in the pool">${icon('Dice')}or let fate decide</button>`
+                    : `<span class="slot-fate is-placeholder" aria-hidden="true">${icon('Dice')}or let fate decide</span>`}
             </div>`;
         }
         const hero = heroOf(slot.hero);

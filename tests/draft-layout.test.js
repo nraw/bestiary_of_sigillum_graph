@@ -28,3 +28,31 @@ test('the format picker (standard / ban phase first / interleaved) is not hidden
     assert.match(html, /<div class="setup" id="twoPlayerSetup">/);
     assert.doesNotMatch(read('draft-ui.js'), /twoPlayerSetup'\)\.hidden/, 'draft-ui.js never hides it either');
 });
+
+const rule = selector => {
+    const m = css.match(new RegExp(`(^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\{([^}]*)\\}`));
+    assert.ok(m, `${selector} has a rule`);
+    return m[2];
+};
+
+test('empty band slots have one height for both players, before and after the first selection', () => {
+    assert.match(rule('.slot.is-empty'), /min-height: \d+px;/);
+    assert.doesNotMatch(css, /\.is-started \.slot\.is-empty|\.is-p2 \.slot\.is-empty|#againstRow\.slots \.slot\.is-empty/,
+        'no state- or player-specific slot heights');
+});
+
+test('every empty slot reserves the "let fate decide" line, so its + lines up with its neighbours', () => {
+    const ui = read('draft-ui.js');
+    assert.match(ui, /class="slot-fate is-placeholder" aria-hidden="true"/);
+    assert.match(css, /\.slot-fate\.is-placeholder \{[^}]*visibility: hidden;/);
+});
+
+test('the draft order row keeps one height in every format: "+ Add extra bans" never wraps or shrinks', () => {
+    assert.match(rule('.seq-add-item'), /flex: none;/);
+    assert.match(rule('.seq-add'), /white-space: nowrap;/);
+    assert.match(rule('.sequence'), /align-items: center;/);
+});
+
+test('the format cards share the width evenly', () => {
+    assert.match(rule('.setup-group'), /flex: 1 1 100%;[^]*display: grid;[^]*grid-template-columns: repeat\(auto-fit, minmax\(\d+px, 1fr\)\);/);
+});
