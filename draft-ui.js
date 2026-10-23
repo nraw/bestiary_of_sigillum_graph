@@ -1204,14 +1204,20 @@
         $('analysisSections').innerHTML = a.sections.length ? `<div class="analysis-block analysis-reasons">
             ${a.sections.map(x => sectionHtml(x, { interactive: true, limit: LIST_LIMIT, moreKey: x.key })).join('')}
             ${topicLegend(a.sections)}</div>` : '';
-        const most = Math.max(1, ...a.breakdown.map(f => Math.abs(f.delta)));
-        // Every factor, zero included; each row opens the inspector on what scores it
+        // Every factor, zero included, on one scale with zero in the middle; ticks mark the lowest and highest
+        // the factor reaches on its own (title: a band reaching it). Each row opens the inspector on what scores it
+        const pts = x => `${x > 0 ? '+' : x < 0 ? '−' : ''}${Math.abs(x).toFixed(1)}`;
+        const names = band => listText(band.map(titleCase));
+        const reachedBy = (band, opponents) => (band ? ` (${names(band)}${opponents ? ` vs ${names(opponents)}` : ''})` : '');
         $('scoreBreakdown').innerHTML = a.breakdown.map(f => `
             <li class="${f.delta < 0 ? 'is-loss' : f.delta === 0 ? 'is-zero' : ''}"><button type="button" class="bd-row" data-factor="${f.factor}"
-                    aria-label="${f.label}: ${f.delta === 0 ? 'no points' : `${f.delta > 0 ? 'plus' : 'minus'} ${Math.abs(f.delta).toFixed(1)}`}. Inspect">
+                    aria-label="${f.label}: ${f.delta === 0 ? 'no points' : `${f.delta > 0 ? 'plus' : 'minus'} ${Math.abs(f.delta).toFixed(1)}`}, range ${pts(f.min)} to ${pts(f.max)}. Inspect">
                 <span class="bd-label">${f.label}</span>
-                <span class="bd-bar" aria-hidden="true"><span style="width:${Math.round(Math.abs(f.delta) / most * 100)}%"></span></span>
-                <span class="bd-val">${f.delta > 0 ? '+' : f.delta < 0 ? '−' : ''}${Math.abs(f.delta).toFixed(1)}</span>
+                <span class="bd-bar" title="Range ${pts(f.min)}${reachedBy(f.minBand, f.minOpponents)} to ${pts(f.max)}${reachedBy(f.maxBand, f.maxOpponents)}">
+                    <span class="bd-range" style="left:${f.ticks.min.toFixed(2)}%;width:${(f.ticks.max - f.ticks.min).toFixed(2)}%"></span>
+                    <span class="bd-fill" style="left:${f.bar.left.toFixed(2)}%;width:${f.bar.width.toFixed(2)}%"></span>
+                    <span class="bd-tick" style="left:${f.ticks.min.toFixed(2)}%"></span><span class="bd-tick" style="left:${f.ticks.max.toFixed(2)}%"></span></span>
+                <span class="bd-val">${pts(f.delta)}</span>
                 <span class="bd-go" aria-hidden="true">›</span></button></li>`).join('');
         $('viewInGraph').disabled = !Draft.bands(state())[v.focus].length;
         renderBeats(a.beats);

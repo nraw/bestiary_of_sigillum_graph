@@ -510,3 +510,50 @@ test('role evidence in reasons names the role it proves', () => {
     const protect = D.scoreTeam(['ARBORUS', 'TOXICUM', 'MAGNUS'], ctx).reasons.find(r => r.id === 'enabler:protection:TOXICUM');
     assert.deepStrictEqual(evidenceOf(protect, 'TOXICUM').notes, ['Attacker', `Vitality ${byName.TOXICUM.vitality}`]);
 });
+
+// ---- Factor ranges --------------------------------------------------------------------------
+
+const FACTOR_KEYS = ['coverage', 'synergy', 'theme', 'durability', 'conflict', 'matchup'];
+const factorOf = (reasons, factor) => reasons.filter(r => r.factor === factor).reduce((t, r) => t + r.delta, 0);
+
+test('factorRanges: each factor\'s lowest and highest points over every real band, with a band reaching each', () => {
+    const ranges = D.factorRanges(ctx);
+    assert.deepStrictEqual(Object.keys(ranges), FACTOR_KEYS);
+    FACTOR_KEYS.filter(f => f !== 'matchup').forEach(f => {
+        const { min, max } = ranges[f];
+        assert.ok(min <= max, f);
+        ['min', 'max'].forEach(end => {
+            const band = ranges[f][`${end}Band`];
+            assert.strictEqual(band.length, 3, `${f} ${end} is reached by a band`);
+            assert.ok(Math.abs(factorOf(D.scoreTeam(band, ctx).reasons, f) - ranges[f][end]) < 1e-9, `${f} ${end}`);
+        });
+    });
+    // No band beats them (each factor on its own, not the best band overall)
+    D.allBands(heroes.map(h => h.name)).forEach(b => {
+        const reasons = D.scoreTeam(b, ctx).reasons;
+        FACTOR_KEYS.filter(f => f !== 'matchup').forEach(f => {
+            const v = factorOf(reasons, f);
+            assert.ok(v >= ranges[f].min - 1e-9 && v <= ranges[f].max + 1e-9, `${f}: ${b}`);
+        });
+    });
+    assert.strictEqual(D.factorRanges(ctx), ranges, 'cached on the context');
+});
+
+test('factorRanges: matchup is the best and worst a band can do against any other band', () => {
+    const { matchup } = D.factorRanges(ctx);
+    assert.ok(matchup.min < 0 && matchup.max > 0);
+    assert.strictEqual(matchup.min, -matchup.max, 'one side\'s counters are the other side\'s weaknesses');
+    [['max', matchup.maxBand, matchup.maxOpponents], ['min', matchup.minBand, matchup.minOpponents]].forEach(([end, band, opponents]) => {
+        assert.strictEqual(band.length, 3);
+        assert.strictEqual(opponents.length, 3);
+        assert.ok(!band.some(h => opponents.includes(h)), 'distinct heroes');
+        assert.ok(Math.abs(D.scoreMatchup(band, opponents, ctx).total - matchup[end]) < 1e-9, end);
+    });
+    // Spot check: no pairing of sample bands goes past it
+    const names = heroes.map(h => h.name);
+    const sample = D.allBands(names).filter((_, i) => i % 97 === 0);
+    sample.forEach(a => sample.filter(b => !b.some(h => a.includes(h))).forEach(b => {
+        const v = D.scoreMatchup(a, b, ctx).total;
+        assert.ok(v <= matchup.max + 1e-9 && v >= matchup.min - 1e-9);
+    }));
+});

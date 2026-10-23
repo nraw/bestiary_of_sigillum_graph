@@ -204,11 +204,22 @@
 
     // Points per scoring factor (they add up to the band's value)
     const FACTORS = [['coverage', 'Roles'], ['synergy', 'Synergy'], ['theme', 'Themes'], ['durability', 'Durability'], ['conflict', 'Conflicts'], ['matchup', 'Matchup']];
-    // Every factor, even at zero, with the reasons behind it (for the inspector); none for an empty band
-    const breakdown = (reasons, band) => (band.length ? FACTORS.map(([factor, label]) => {
-        const own = reasons.filter(r => r.factor === factor);
-        return { factor, label, delta: sum(own), reasons: own.filter(r => r.kind !== 'info') };
-    }) : []);
+    // Every factor, even at zero, with the reasons behind it (for the inspector); none for an empty band.
+    // Bars share one scale (the widest any factor can reach) with zero in the middle, so the same points draw
+    // the same bar; `ticks` mark how low and high the factor gets on its own (Draft.factorRanges), in % of the bar.
+    function breakdown(reasons, band, ctx) {
+        if (!band.length) return [];
+        const ranges = Draft.factorRanges(ctx);
+        const scale = Math.max(...Object.values(ranges).flatMap(r => [Math.abs(r.min), Math.abs(r.max)])) || 1;
+        const at = x => 50 + x / scale * 50;
+        return FACTORS.map(([factor, label]) => {
+            const own = reasons.filter(r => r.factor === factor);
+            const delta = sum(own);
+            const { min, max, minBand, maxBand, minOpponents, maxOpponents } = ranges[factor];
+            return { factor, label, delta, reasons: own.filter(r => r.kind !== 'info'), min, max, minBand, maxBand, minOpponents, maxOpponents,
+                bar: { left: Math.min(50, at(delta)), width: Math.abs(delta) / scale * 50 }, ticks: { min: at(min), max: at(max) } };
+        });
+    }
 
     // The pool's order: recommended (by suggestion rank), counters first, A–Z, or the card id. Unranked
     // heroes (or every hero, once the draft is over) follow in card id order.
@@ -303,7 +314,7 @@
 
     // The popover's sections for the whole band (role coverage is Team balance's) and the score breakdown,
     // once the reasons carry their preview flags
-    const withSections = (a, band, options) => ({ ...a, breakdown: breakdown(a.reasons, band),
+    const withSections = (a, band, ctx, options) => ({ ...a, breakdown: breakdown(a.reasons, band, ctx),
         sections: popoverSections(a.reasons.filter(r => r.factor !== 'coverage'), null, options) });
 
     // Heroes a preview adds to the acting player's band (one candidate, or a whole suggested band)
@@ -366,7 +377,7 @@
 
         // Analysis of the focus band against the other; a preview shows when it's the focus band's turn
         const rowOptions = { own: `Player ${focus}'s band`, vs: `Player ${other}`, opponents: bands[other] };
-        const base = withSections(analysis(bands[focus], bands[other], pool, ctx), bands[focus], rowOptions);
+        const base = withSections(analysis(bands[focus], bands[other], pool, ctx), bands[focus], ctx, rowOptions);
         let result = base;
         if (added[focus].length) {
             result = analysis([...bands[focus], ...added[focus]], bands[other], pool.filter(n => !added[focus].includes(n)), ctx);
@@ -378,7 +389,7 @@
                 return list.map(r => ({ ...r, preview: !known.has(r.id) }));
             };
             result.reasons = flag(result.reasons, base.reasons);
-            result = withSections(result, [...bands[focus], ...added[focus]], rowOptions);
+            result = withSections(result, [...bands[focus], ...added[focus]], ctx, rowOptions);
         }
 
         const banLists = Draft.bans(state);

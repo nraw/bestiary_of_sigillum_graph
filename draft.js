@@ -460,6 +460,36 @@
         return (better + 1) / scores.length * 100;
     }
 
+    const FACTORS = ['coverage', 'synergy', 'theme', 'durability', 'conflict', 'matchup'];
+
+    // Each factor's lowest and highest points on its own, over every band the roster allows, with a band
+    // reaching each end (not the best band overall). Matchup is the best and worst of any band against any
+    // other: it adds up hero by hero, so a band's best (worst) opponents are its three best (worst) match-ups.
+    function factorRanges(ctx) {
+        if (ctx.cache.ranges) return ctx.cache.ranges;
+        const names = ctx.heroes.map(h => h.name);
+        const ranges = Object.fromEntries(FACTORS.map(f => [f, { min: Infinity, max: -Infinity }]));
+        const reach = (f, value, band, opponents) => {
+            const r = ranges[f];
+            if (value < r.min) Object.assign(r, { min: value, minBand: band }, opponents && { minOpponents: opponents });
+            if (value > r.max) Object.assign(r, { max: value, maxBand: band }, opponents && { maxOpponents: opponents });
+        };
+        const vs = new Map(names.map(a => [a, new Map(names.filter(b => b !== a).map(b => [b, scoreMatchup([a], [b], ctx).total]))]));
+        allBands(names).forEach(band => {
+            const points = Object.fromEntries(FACTORS.map(f => [f, 0]));
+            scoreTeam(band, ctx).reasons.forEach(r => { points[r.factor] += r.delta; });
+            FACTORS.filter(f => f !== 'matchup').forEach(f => reach(f, points[f], band));
+            const against = names.filter(n => !band.includes(n))
+                .map(n => ({ n, v: band.reduce((t, a) => t + vs.get(a).get(n), 0) })).sort((a, b) => b.v - a.v);
+            const total = list => list.reduce((t, x) => t + x.v, 0);
+            const best = against.slice(0, BAND_SIZE), worst = against.slice(-BAND_SIZE);
+            reach('matchup', total(best), band, best.map(x => x.n));
+            reach('matchup', total(worst), band, worst.map(x => x.n));
+        });
+        ctx.cache.ranges = ranges;
+        return ranges;
+    }
+
     // ---- Suggestions -----------------------------------------------------------------------
 
     function sides(state, player) {
@@ -597,7 +627,7 @@
         draftSequence, createDraft, applyAction, undo, reset, currentStep, isComplete,
         bands, bans, myBand, opponentBand, unavailableReason, isAvailable, availableHeroes, randomHero,
         size, attackRange, battleRoles, roleEvidence, reasonEvidence, enablerText, versatility,
-        createContext, roleCoverage, fillableRoles, scoreTeam, scoreMatchup, allBands, topPercent, bestBand, bandPercent,
+        createContext, roleCoverage, fillableRoles, scoreTeam, scoreMatchup, allBands, topPercent, factorRanges, bestBand, bandPercent,
         suggestPick, suggestBan, suggestFor, counterBands, counteredBy
     };
 

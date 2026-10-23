@@ -2091,9 +2091,13 @@ button.pop-sec-head:hover .pop-inspect { color: var(--gold-bright); }
 .bd-go { color: var(--text-faint); }
 .bd-row:hover .bd-go, .bd-row:focus-visible .bd-go { color: var(--gold-bright); }
 .score-breakdown .is-zero .bd-label, .score-breakdown .is-zero .bd-val { color: var(--text-faint); }
-.bd-bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
-.bd-bar span { display: block; height: 100%; border-radius: 3px; background: var(--gold); }
-.score-breakdown .is-loss .bd-bar span { background: var(--chip-warning); }
+/* One scale for all factors, zero in the middle; ticks at the factor's lowest and highest */
+.bd-bar { position: relative; height: 6px; }
+.bd-range { position: absolute; top: 0; height: 100%; border-radius: 3px; background: rgba(201, 163, 106, 0.16); }
+.bd-bar::before { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--border-strong); }
+.bd-fill { position: absolute; top: 0; height: 100%; border-radius: 3px; background: var(--gold); }
+.score-breakdown .is-loss .bd-fill { background: var(--chip-warning); }
+.bd-tick { position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text-faint); }
 .bd-val { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Draft inspector: the reasons in words, then each hero's abilities behind them */

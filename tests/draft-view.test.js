@@ -608,3 +608,32 @@ test('what beats this band: a band no card counters says so', () => {
     assert.deepStrictEqual(beats.counteredBy, []);
     assert.ok(beats.bands.length === 3 && beats.bands.every(b => b.counters === 0));
 });
+
+test('score breakdown: one scale for every factor, zero in the middle, ticks at each factor\'s range', () => {
+    const band = ['TOXICUM', 'TEMPUS', 'EQUITA'];
+    const v = V.draftView(drafted(band, ['SAXUM', 'AQUS', 'IRATUS']), ctx);
+    const ranges = D.factorRanges(ctx);
+    const scale = Math.max(...Object.values(ranges).flatMap(r => [Math.abs(r.min), Math.abs(r.max)]));
+    v.analysis.breakdown.forEach(f => {
+        const r = ranges[f.factor];
+        assert.deepStrictEqual([f.min, f.max], [r.min, r.max], f.label);
+        const at = x => 50 + x / scale * 50;
+        assert.ok(Math.abs(f.ticks.min - at(r.min)) < 1e-9 && Math.abs(f.ticks.max - at(r.max)) < 1e-9, f.label);
+        assert.ok(Math.abs(f.bar.left - Math.min(50, at(f.delta))) < 1e-9, `${f.label} bar starts at zero or its value`);
+        assert.ok(Math.abs(f.bar.width - Math.abs(f.delta) / scale * 50) < 1e-9, `${f.label} width is the points, same scale`);
+        assert.ok(f.bar.left >= 0 && f.bar.left + f.bar.width <= 100 + 1e-9);
+        assert.strictEqual(f.maxBand.length, 3, 'the band reaching the top');
+        assert.strictEqual(Boolean(f.maxOpponents), f.factor === 'matchup', `${f.label}: opponents only for the matchup`);
+    });
+});
+
+test('score breakdown: the same points draw the same bar whichever factor and band', () => {
+    const a = V.draftView(drafted(['TOXICUM', 'TEMPUS', 'EQUITA'], ['SAXUM', 'AQUS', 'IRATUS']), ctx).analysis.breakdown;
+    const b = V.draftView(drafted(['ARCHITECTUS', 'ARMUS', 'ARBORUS'], ['SAXUM', 'AQUS', 'IRATUS']), ctx).analysis.breakdown;
+    const width = new Map();
+    [...a, ...b].forEach(f => {
+        const key = Math.abs(f.delta).toFixed(6);
+        if (width.has(key)) assert.ok(Math.abs(width.get(key) - f.bar.width) < 1e-9, f.label);
+        else width.set(key, f.bar.width);
+    });
+});
