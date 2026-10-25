@@ -1097,6 +1097,83 @@ kbd {
 }
 .footer a { color: var(--bronze); font-weight: 600; }
 .footer a:hover { color: var(--gold-bright); }
+.footer .donate-link { margin-left: 6px; }
+
+/* Donate links (Revolut): quiet gold text with the tabs' glow on hover */
+.donate-link::before { content: '⚜ '; }
+.donate-link { color: var(--gold); font-weight: 600; text-decoration: none; transition: color 0.2s, text-shadow 0.2s; }
+.donate-link:hover, .donate-link:focus-visible { color: var(--gold-bright); text-shadow: 0 0 8px rgba(217, 168, 78, 0.6); }
+/* A quiet line of its own under the draft-complete note, so it never competes with the button */
+.complete-donate { grid-column: 1 / -1; margin: 4px 0 0; padding-top: 8px; border-top: 1px solid var(--border); color: var(--text-faint); font-size: 0.92rem; font-style: italic; text-align: center; }
+/* The last pick (draft-ui.js celebrate): every hero shines at once, the note rises,
+   then a shine runs through its button and finally the donate link */
+.is-celebrating .slot:not(.is-empty) { animation: slot-glow 1.2s ease-out; }
+.is-celebrating .slot:not(.is-empty)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(105deg, transparent 35%, rgba(255, 233, 170, 0.85) 50%, transparent 65%) no-repeat;
+    background-size: 260% 100%;
+    background-position: 160% 0;
+    animation: shine-sweep 0.9s ease-in-out 0.1s;
+}
+.is-celebrating .complete-note { animation: note-rise 0.6s cubic-bezier(0.2, 0.8, 0.3, 1.2) 0.7s backwards, note-flare 1.4s ease-out 0.9s; }
+.is-celebrating .complete-seal { animation: seal-turn 1.1s ease-out 0.8s backwards; }
+.is-celebrating .complete-open::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(105deg, transparent 30%, rgba(255, 250, 225, 0.9) 50%, transparent 70%) no-repeat;
+    background-size: 260% 100%;
+    background-position: 160% 0;
+    animation: shine-sweep 0.75s ease-in-out 1.4s;
+}
+.is-celebrating .complete-donate .donate-link { animation: text-shine 0.9s ease-in-out 2.1s; }
+@keyframes shine-sweep { from { background-position: 160% 0; } to { background-position: -60% 0; } }
+@keyframes text-shine { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@keyframes slot-glow {
+    30% { box-shadow: inset 0 0 30px rgba(110, 72, 30, 0.35), 0 0 0 2px var(--gold-bright), 0 0 26px rgba(242, 199, 107, 0.6); }
+}
+@keyframes note-rise { from { opacity: 0; transform: translateY(10px) scale(0.98); } }
+@keyframes note-flare { 0% { box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.35), 0 0 0 rgba(242, 199, 107, 0); } 35% { box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.35), 0 0 22px rgba(242, 199, 107, 0.45); } }
+@keyframes seal-turn {
+    from { opacity: 0; transform: rotate(-90deg) scale(0.6); }
+    60% { filter: drop-shadow(0 0 12px rgba(255, 233, 170, 0.9)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .is-celebrating .slot, .is-celebrating .complete-note, .is-celebrating .complete-seal,
+    .is-celebrating .complete-donate .donate-link, .is-celebrating .slot::after, .is-celebrating .complete-open::after { animation: none; }
+    .is-celebrating .slot::after, .is-celebrating .complete-open::after { content: none; }
+}
+
+/* Narrow columns: the button drops under the title, full width */
+@media (max-width: 600px) {
+    .complete-note { grid-template-columns: auto minmax(0, 1fr); }
+    .complete-open { grid-column: 1 / -1; justify-content: center; }
+}
+.complete-donate .donate-link {
+    font-style: normal;
+    font-weight: 400;
+    border-bottom: 1px dotted var(--border-strong);
+    /* Always gradient-clipped text (the last pick's shimmer only moves it), so the end of the animation never repaints */
+    background: linear-gradient(100deg, var(--text-muted) 40%, #FFF1C9 50%, var(--text-muted) 60%) no-repeat;
+    background-size: 300% 100%;
+    background-position: 100% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+}
+.complete-donate .donate-link:hover, .complete-donate .donate-link:focus-visible {
+    background-image: linear-gradient(var(--gold-bright), var(--gold-bright));
+    border-bottom-color: var(--gold);
+}
+.intro-donate { margin-top: 8px; color: var(--text-faint); font-size: 0.92rem; }
+.intro-donate .donate-link::before { content: ''; }
 
 /* ------------------------------------------------------------------ */
 /* Responsive                                                         */
@@ -1978,7 +2055,38 @@ button.pop-sec-head:hover .pop-inspect { color: var(--gold-bright); }
 .sheet-close { display: none; }
 
 /* Finished draft note (when editing it in the columns) */
-.complete-note { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--gold); background: rgba(217, 168, 78, 0.08); }
+/* Draft complete: a sealed banner (the site's sigil), the cards button, then a quiet donate line */
+.complete-note {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 14px;
+    padding: 14px 16px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border-strong);
+    border-top: 2px solid var(--gold);
+    background: radial-gradient(120% 140% at 0% 0%, rgba(217, 168, 78, 0.14), rgba(217, 168, 78, 0.03) 60%);
+    box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.35);
+}
+.complete-seal {
+    width: 38px;
+    height: 38px;
+    fill: none;
+    stroke: var(--gold);
+    stroke-width: 1.2;
+    filter: drop-shadow(0 0 6px rgba(242, 199, 107, 0.45));
+}
+.complete-title {
+    margin: 0;
+    font-family: 'Cinzel', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--gold-bright);
+}
+.complete-eyebrow { margin: 0 0 2px; color: var(--text-faint); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; }
+.complete-open { position: relative; overflow: hidden; padding: 8px 16px; }
+.complete-open:hover { box-shadow: 0 0 14px rgba(242, 199, 107, 0.35); }
 
 /* Draft bar: phones only */
 .draft-bar { display: none; }

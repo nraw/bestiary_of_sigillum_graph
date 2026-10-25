@@ -447,7 +447,10 @@
         return { label: `${step.action === 'ban' ? 'Ban' : 'Pick'} for Player ${step.player}`, enabled: true };
     }
 
-    const api = { draftView, referenceSides, graphAction, rollFrames, chipsFor, chipKind, shortReason, strength, popoverSections, inspectView, topicOf, TOPICS,
+    // The finishing shine plays once, on the action that completes the draft (not on re-renders, undo or a reload)
+    const celebrates = (before, after) => !Draft.isComplete(before) && Draft.isComplete(after);
+
+    const api = { celebrates, draftView, referenceSides, graphAction, rollFrames, chipsFor, chipKind, shortReason, strength, popoverSections, inspectView, topicOf, TOPICS,
         collapse, sortPool, percentLabel, percentExplain, ROLE_INFO, MAX_CHIPS };
 
     if (typeof module !== 'undefined' && module.exports) {

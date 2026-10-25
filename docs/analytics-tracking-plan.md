@@ -195,6 +195,7 @@ finished a band every time it reached 3 heroes; its `draft_mode_change`, `draft_
 | `tutorial_begin` | P2 | the intro dialog opens | `method` (auto_first_visit, help_button) |
 | `intro_tab` | P3 | `[data-intro-tab]` in the intro | `tab` |
 | `tutorial_complete` | P2 | the intro closes | `open_sec` (how long it was open) |
+| `donate_click` | P2 | a `[data-donate]` link (Revolut) | `placement` (footer, intro, draft_end) |
 | `app_error` / `draft_load_error` | P2 | the graph's / the Draft tab's load failing (the catch blocks in `init`) | `error` |
 
 ## 4. PostHog setup
@@ -206,7 +207,7 @@ Nothing has to be registered: PostHog shows every event and property as soon as 
 1. **What `index.html` turns on:** `$pageview` for the landing page only (`capture_pageview: true`), so graph selections
    and tab switches don't each count as a page view; `$pageleave`; and `person_profiles: 'identified_only'` (anonymous
    events, the cheapest kind). **Autocapture is off**: `analytics.js` sends everything. Outbound links (Steam guide,
-   BGG, Intaglyph) are not tracked; GA4 used to record them by itself.
+   BGG, Intaglyph) are not tracked, except the Revolut donate links (`donate_click`); GA4 used to record them by itself.
 2. **Session replay, heatmaps, surveys:** leave them off in Project settings unless you want them. Replay records
    what visitors do on screen, which needs a mention in a privacy notice.
 3. **Check the events arrive:** open the live site, then **Activity** (Live events) in PostHog. Each action should

@@ -73,7 +73,8 @@
         // Whole site
         tutorial_begin: ['method'],
         intro_tab: ['tab'],
-        tutorial_complete: ['open_sec']
+        tutorial_complete: ['open_sec'],
+        donate_click: ['placement']
     };
 
     // The properties PostHog receives: empty values dropped, everything else as it is

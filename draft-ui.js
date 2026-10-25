@@ -3,7 +3,7 @@
 // this file draws (both unit tested). Only DOM, events and persistence live here.
 (function () {
     const Draft = window.Draft;
-    const { draftView, referenceSides, graphAction, rollFrames, inspectView, sortPool, percentLabel, percentExplain, ROLE_INFO, TOPICS, collapse } = window.DraftView;
+    const { celebrates, draftView, referenceSides, graphAction, rollFrames, inspectView, sortPool, percentLabel, percentExplain, ROLE_INFO, TOPICS, collapse } = window.DraftView;
     const { encodeDraft, decodeDraft, isDraftLink } = window.DraftShare;
     const { escapeHtml, vitalityTokensSvg, ATTRIBUTES, attributeGlyph } = window.GraphLogic;
     const { titleCase } = window.Synergy;
@@ -246,6 +246,11 @@
             dialog.showModal();
         };
         $('introOpen').addEventListener('click', () => open('help_button'));
+        // Donate links: the footer, the intro and a finished draft
+        document.addEventListener('click', event => {
+            const placement = event.target.closest('[data-donate]')?.dataset.donate;
+            if (placement) track('donate_click', { placement });
+        });
         dialog.addEventListener('close', () => {
             Intro.markIntroSeen(storage);
             if (openedAt) track('tutorial_complete', { open_sec: Math.round((Date.now() - openedAt) / 1000) });
@@ -394,6 +399,18 @@
             return;
         }
         window.Analytics.draftChanges(before, state(), how).forEach(e => track(e.name, e.params));
+        if (celebrates(before, state())) celebrate();
+    }
+
+    // The last pick: a gold shine over every hero, the note rises, then a shine over its button and the donate link (styles.css)
+    let celebrateTimer = null;
+    function celebrate() {
+        const root = $('draftView');
+        root.classList.remove('is-celebrating');
+        void root.offsetWidth; // restart the animations if it plays again
+        root.classList.add('is-celebrating');
+        clearTimeout(celebrateTimer);
+        celebrateTimer = setTimeout(() => root.classList.remove('is-celebrating'), 3200);
     }
 
     // `method`: what the user did to pick (tile, popover, menu, drag, random, graph, picker), for analytics

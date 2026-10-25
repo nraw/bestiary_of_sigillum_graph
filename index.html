@@ -283,10 +283,21 @@
                 <div class="slots" id="againstRow"></div>
             </section>
 
-            <p class="complete-note" id="completeNote" hidden>
-                <span id="completeText">Draft complete.</span>
-                <button class="btn btn-gold" type="button" id="openMatch">Open reference cards</button>
-            </p>
+            <div class="complete-note" id="completeNote" role="status" hidden>
+                <svg class="complete-seal" viewBox="0 0 40 40" aria-hidden="true">
+                    <circle cx="20" cy="20" r="17" />
+                    <path d="M20 3 L24 20 L20 37 L16 20 Z M3 20 L20 16 L37 20 L20 24 Z" />
+                </svg>
+                <div class="complete-text">
+                    <p class="complete-eyebrow">Draft complete</p>
+                    <h3 class="complete-title" id="completeText">The battle can begin!</h3>
+                </div>
+                <button class="btn btn-gold complete-open" type="button" id="openMatch">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z"/><path d="M12 6.5v13"/></svg>Open reference cards
+                </button>
+                <p class="complete-donate">Enjoyed the draft?
+                    <a class="donate-link" href="https://revolut.me/andrejmarsic" target="_blank" rel="noopener noreferrer" data-donate="draft_end">Buy the scribe an ale</a></p>
+            </div>
         </section>
 
         <aside class="panel draft-pool" aria-labelledby="poolHeading">
@@ -412,6 +423,8 @@
             </section>
         </div>
         <p class="intro-tip">Tip: press <kbd>/</kbd> to search. Reopen this from the <strong>?</strong> in the bottom-left corner.</p>
+        <p class="intro-donate">Free and ad-free. If it helps your games, you can
+            <a class="donate-link" href="https://revolut.me/andrejmarsic" target="_blank" rel="noopener noreferrer" data-donate="intro">buy the scribe an ale</a>.</p>
         <div class="intro-actions tabs" role="group" aria-label="Open a tab">
             <button class="tab" type="button" data-intro-tab="graph">Graph</button>
             <button class="tab" type="button" data-intro-tab="draft">Draft</button>
@@ -468,7 +481,8 @@
 
     <footer class="footer">
         <p>© 2025 nraw · Unofficial work based on the Bestiary of Sigillum. All rights to the original game belong to
-            <a href="https://www.intaglyph.ru" target="_blank" rel="noopener noreferrer">Intaglyph</a>.</p>
+            <a href="https://www.intaglyph.ru" target="_blank" rel="noopener noreferrer">Intaglyph</a>.
+            <a class="donate-link" href="https://revolut.me/andrejmarsic" target="_blank" rel="noopener noreferrer" data-donate="footer">Support this companion</a></p>
     </footer>
 
     <script src="https://d3js.org/d3.v7.min.js"></script>

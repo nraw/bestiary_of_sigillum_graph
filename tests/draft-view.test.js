@@ -643,3 +643,13 @@ test('score breakdown: the same points draw the same bar whichever factor and ba
         else width.set(key, f.bar.width);
     });
 });
+
+test('the finishing celebration plays only on the action that completes the draft', () => {
+    const almost = pickAll(D.createDraft('standard'), ['SAXUM', 'TEMPUS', 'FIDEA', 'GOETIUM', 'MESSUM']);
+    const done = D.applyAction(almost, 'ARMUS');
+    assert.ok(!D.isComplete(almost) && D.isComplete(done));
+    assert.strictEqual(V.celebrates(almost, done), true, 'the last pick');
+    assert.strictEqual(V.celebrates(done, done), false, 'a re-render of a finished draft');
+    assert.strictEqual(V.celebrates(done, almost), false, 'undoing the last pick');
+    assert.strictEqual(V.celebrates(D.createDraft('standard'), D.applyAction(D.createDraft('standard'), 'SAXUM')), false);
+});
